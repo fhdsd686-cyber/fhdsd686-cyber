@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مركز مهند للتكنولوجيا</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background-color: #0b111e; color: #f1f5f9; overflow-x: hidden; }
+
+    /* Top Header */
+    header {
+      background: #0f172a;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(0, 240, 255, 0.15);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .menu-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #00f0ff;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+    .brand-title { display: flex; flex-direction: column; }
+    .brand-title h1 { font-size: 0.95rem; font-weight: 800; color: #fff; }
+    .brand-title span { font-size: 0.65rem; color: #00f0ff; }
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #00f0ff, #0072ff);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: #0b111e;
+      font-size: 1.1rem;
+    }
+    .wallet-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 240, 255, 0.08);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: bold;
+      color: #38bdf8;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    /* Container & Search */
+    .container { padding: 16px; max-width: 500px; margin: auto; }
+    .search-bar { position: relative; margin-bottom: 20px; }
+    .search-bar input {
+      width: 100%;
+      background: #131d31;
+      border: 1px solid #1e293b;
+      padding: 12px 42px 12px 16px;
+      border-radius: 14px;
+      color: #fff;
+      font-size: 0.85rem;
+      outline: none;
+    }
+    .search-bar input:focus { border-color: #00f0ff; }
+    .search-bar i {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #64748b;
+    }
+
+    /* Grid Sections */
+    .sections-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .sec-card {
+      background: #111a2e;
+      border: 1px solid #1e293b;
+      border-radius: 16px;
+      padding: 14px 10px;
+      text-align: center;
+      cursor: pointer;
+      text-decoration: none;
+      display: block;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .sec-card:active { transform: scale(0.97); }
+    .card-thumb {
+      height: 105px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .card-thumb i { font-size: 2rem; }
+    .card-thumb span { font-size: 0.75rem; font-weight: bold; }
+    .sec-card h3 { font-size: 0.85rem; color: #e2e8f0; font-weight: 700; }
+
+    .thumb-social { background: linear-gradient(135deg, #4f46e5, #ec4899); color: white; }
+    .thumb-numbers { background: linear-gradient(135deg, #064e3b, #059669); color: white; }
+    .thumb-games { background: linear-gradient(135deg, #1e1b4b, #2563eb); color: #38bdf8; }
+    .thumb-chat { background: linear-gradient(135deg, #831843, #db2777); color: #fbcfe8; }
+
+    /* Sidebar Drawer */
+    .sidebar-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: none;
+      z-index: 99;
+    }
+    .sidebar {
+      position: fixed;
+      top: 0;
+      right: -100%;
+      width: 295px;
+      height: 100%;
+      background: #ffffff;
+      color: #1e293b;
+      z-index: 100;
+      transition: right 0.3s ease;
+      overflow-y: auto;
+      padding: 20px 16px;
+    }
+    .sidebar.active { right: 0; }
+    .sidebar-overlay.active { display: block; }
+
+    .close-btn {
+      position: absolute;
+      left: 16px;
+      top: 16px;
+      background: #eef2f6;
+      border: none;
+      border-radius: 8px;
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+      color: #0077b6;
+      font-size: 1rem;
+    }
+    .user-profile { text-align: center; margin-top: 15px; }
+    .avatar-wrapper {
+      position: relative;
+      width: 88px;
+      height: 88px;
+      margin: auto;
+      border-radius: 50%;
+      padding: 3px;
+      background: linear-gradient(135deg, #ffd700, #ff8c00);
+    }
+    .avatar-wrapper img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+    .badge {
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ff9f1c;
+      color: white;
+      font-size: 0.75rem;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-weight: bold;
+    }
+    .user-name {
+      margin-top: 10px;
+      font-weight: bold;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .balance-display { font-size: 1.15rem; font-weight: 800; color: #475569; margin: 6px 0 16px; }
+
+    .quick-actions { display: flex; justify-content: center; gap: 14px; margin-bottom: 20px; }
+    .action-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #f1f5f9;
+      color: #0284c7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 1.1rem;
+      border: none;
+    }
+    .action-btn.logout { color: #ef4444; }
+
+    .menu-links { list-style: none; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+    .menu-links li button {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 12px;
+      text-decoration: none;
+      color: #334155;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 10px;
+      width: 100%;
+      background: none;
+      border: none;
+      text-align: right;
+      cursor: pointer;
+    }
+    .menu-links li button:hover { background: #f8fafc; }
+    .menu-links i { font-size: 1.15rem; width: 24px; text-align: center; }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 110;
+      padding: 16px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+      background: #0f172a;
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 450px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 20px;
+      color: #fff;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+    }
+    .modal-header h2 { font-size: 1.1rem; color: #00f0ff; }
+    .admin-card {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .admin-card h4 { font-size: 0.9rem; margin-bottom: 8px; color: #38bdf8; display: flex; align-items: center; gap: 8px; }
+    .admin-input {
+      width: 100%;
+      background: #0b111e;
+      border: 1px solid #334155;
+      padding: 10px 12px;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.85rem;
+      margin-bottom: 10px;
+      outline: none;
+    }
+    .admin-input:focus { border-color: #00f0ff; }
+    .admin-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #00f0ff, #0072ff);
+      color: #0b111e;
+      border: none;
+      padding: 11px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    /* Order Item Card */
+    .order-card {
+      background: #111a2e;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+      font-size: 0.85rem;
+    }
+    .order-card-header {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 6px;
+      margin-bottom: 6px;
+      font-weight: bold;
+      color: #38bdf8;
+    }
+    .order-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .btn-approve {
+      flex: 1;
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 8px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn-reject {
+      flex: 1;
+      background: #ef4444;
+      color: white;
+      border: none;
+      padding: 8px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* Floating WhatsApp */
+    .whatsapp-float {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: #25d366;
+      color: white;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.7rem;
+      box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
+      text-decoration: none;
+      z-index: 30;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Drawer & Overlay -->
+  <div class="sidebar-overlay" id="overlay" onclick="toggleMenu()"></div>
+  <div class="sidebar" id="sidebar">
+    <button class="close-btn" onclick="toggleMenu()"><i class="fa-solid fa-xmark"></i></button>
+
+    <div class="user-profile">
+      <div class="avatar-wrapper">
+        <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80" alt="Avatar">
+        <span class="badge">وكيل</span>
+      </div>
+      <div class="user-name"><span>#1</span> مهند للتكنولوجيا 🇸🇾</div>
+      <div class="balance-display" id="userBalanceText">$ 936.07</div>
+
+      <div class="quick-actions">
+        <button class="action-btn" onclick="openDepositModal()"><i class="fa-solid fa-dollar-sign"></i></button>
+        <button class="action-btn" onclick="openAdminSecurityCheck()"><i class="fa-regular fa-user"></i></button>
+        <button class="action-btn logout" onclick="alert('تم تسجيل الخروج بنجاح')"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+      </div>
+    </div>
+
+    <ul class="menu-links">
+      <li><button onclick="toggleMenu()"><i class="fa-solid fa-house" style="color: #10b981;"></i><span>الرئيسية</span></button></li>
+      <li><button onclick="openAdminSecurityCheck()"><i class="fa-solid fa-lock" style="color: #f97316;"></i><span>لوحة التحكم (خاص بالمسؤول)</span></button></li>
+      <!-- زر الطلبات الجديد المضاف -->
+      <li><button onclick="openOrdersModal()"><i class="fa-solid fa-list-check" style="color: #38bdf8;"></i><span>إدارة الطلبات والعمليات</span></button></li>
+      <li><button onclick="openGamesModal()"><i class="fa-solid fa-gamepad" style="color: #00f0ff;"></i><span>شحن الألعاب</span></button></li>
+      <li><button onclick="alert('مستواك الحالي: VIP 3 (وكيل معتمد)')"><i class="fa-solid fa-crown" style="color: #eab308;"></i><span>المستويات</span></button></li>
+      <li><button onclick="openDepositModal()"><i class="fa-solid fa-circle-plus" style="color: #10b981;"></i><span>إضافة رصيد (شام كاش)</span></button></li>
+    </ul>
+  </div>
+
+  <!-- Header -->
+  <header>
+    <div class="header-right">
+      <button class="menu-btn" onclick="toggleMenu()" aria-label="القائمة">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <div class="brand-title">
+        <h1>مركز مهند للتكنولوجيا</h1>
+        <span>متجرك الموثوق لشحن الألعاب</span>
+      </div>
+      <div class="brand-logo">M</div>
+    </div>
+    <div class="wallet-badge" onclick="openDepositModal()">
+      <i class="fa-solid fa-wallet"></i>
+      <span id="topBalance">936.07 $</span>
+    </div>
+  </header>
+
+  <!-- Container -->
+  <div class="container">
+    <div class="search-bar">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" placeholder="ابحث عن لعبة، بطاقة، أو خدمة رقمية...">
+    </div>
+
+    <div class="sections-grid">
+      <div class="sec-card" onclick="alert('قسم السوشل ميديا: متابعين، لايكات، ومشاهدات')">
+        <div class="card-thumb thumb-social">
+          <div><i class="fa-brands fa-tiktok"></i> <i class="fa-brands fa-facebook"></i> <i class="fa-brands fa-instagram"></i></div>
+          <span>خدمات الميديا</span>
+        </div>
+        <h3>خدمات السوشل ميديا</h3>
+      </div>
+
+      <div class="sec-card" onclick="alert('قسم الأرقام: تفعيل واتساب وتليجرام')">
+        <div class="card-thumb thumb-numbers">
+          <i class="fa-brands fa-whatsapp"></i>
+          <span>تفعيل الأرقام</span>
+        </div>
+        <h3>قسم الارقام</h3>
+      </div>
+
+      <div class="sec-card" onclick="openGamesModal()">
+        <div class="card-thumb thumb-games">
+          <i class="fa-solid fa-gamepad"></i>
+          <span>ببجي وفري فاير</span>
+        </div>
+        <h3>شحن الألعاب</h3>
+      </div>
+
+      <div class="sec-card" onclick="alert('قسم الشات: شحن يلا لودو، لايكي، وأهلن شات')">
+        <div class="card-thumb thumb-chat">
+          <i class="fa-solid fa-comments"></i>
+          <span>يلا لودو ولايكي</span>
+        </div>
+        <h3>تطبيقات الشات</h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة الطلبات الواردة (للموافقة والرفض) -->
+  <div class="modal-overlay" id="ordersModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-list-check"></i> الطلبات الواردة للموافقة</h2>
+        <button onclick="closeModals()" style="background:none; border:none; color:#94a3b8; font-size:1.2rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div id="ordersContainer">
+        <!-- ستظهر الطلبات ديناميكياً هنا -->
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة تسجيل دخول الأدمن المقفل -->
+  <div class="modal-overlay" id="adminLoginModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-user-shield"></i> تسجيل دخول المسؤول</h2>
+        <button onclick="closeModals()" style="background:none; border:none; color:#94a3b8; font-size:1.2rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="admin-card">
+        <p style="font-size:0.8rem; color:#94a3b8; margin-bottom:12px;">هذه اللوحة خاصة بالمسؤول مهند فقط.</p>
+        
+        <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">البريد الإلكتروني للادمن:</label>
+        <input type="email" id="adminEmailInput" class="admin-input" placeholder="fhdsd686@gmail.com" value="fhdsd686@gmail.com">
+
+        <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">كلمة المرور السرية:</label>
+        <div style="position:relative; margin-bottom:10px;">
+          <input type="password" id="adminPassInput" class="admin-input" placeholder="0957 455 972" style="margin-bottom:0; padding-left:40px;">
+          <i class="fa-solid fa-eye" id="eyeIcon" onclick="togglePassVisibility()" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#64748b; cursor:pointer;"></i>
+        </div>
+
+        <button class="admin-btn" onclick="verifyAdminLogin()">تحقق وتأكيد الدخول</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Games Modal (نافذة شحن الألعاب) -->
+  <div class="modal-overlay" id="gamesModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-gamepad"></i> شحن الألعاب السريع</h2>
+        <button onclick="closeModals()" style="background:none; border:none; color:#94a3b8; font-size:1.2rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="admin-card">
+        <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">اختر اللعبة:</label>
+        <select id="gameSelect" class="admin-input" style="color:#fff;" onchange="updatePackages()">
+          <option value="pubg">ببجي موبايل (PUBG Mobile - UC)</option>
+          <option value="freefire">فري فاير (Free Fire - جواهر)</option>
+        </select>
+
+        <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">اختر الباقة:</label>
+        <select id="packageSelect" class="admin-input" style="color:#fff;" onchange="calculateGamePrice()"></select>
+
+        <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">معرف اللاعب (Player ID):</label>
+        <input type="text" id="playerIdInput" class="admin-input" placeholder="أدخل ID الحساب هنا...">
+
+        <div style="background:#0b111e; padding:10px; border-radius:8px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:0.8rem; color:#94a3b8;">السعر الإجمالي:</span>
+          <span style="font-size:1.1rem; font-weight:bold; color:#00f0ff;" id="gamePriceDisplay">$ 0.00</span>
+        </div>
+
+        <button class="admin-btn" onclick="confirmGamePurchase()">تأكيد وإرسال الطلب</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Modal (لوحة التحكم الكاملة للمسؤول فقط) -->
+  <div class="modal-overlay" id="adminModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-sliders"></i> لوحة إدارة مركز مهند</h2>
+        <button onclick="closeModals()" style="background:none; border:none; color:#94a3b8; font-size:1.2rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div style="font-size:0.75rem; color:#10b981; margin-bottom:12px; background:#064e3b; padding:6px 10px; border-radius:8px;">
+        <i class="fa-solid fa-circle-check"></i> متصل كمسؤول رئيسي: fhdsd686@gmail.com
+      </div>
+
+      <div class="admin-card">
+        <h4><i class="fa-solid fa-wallet"></i> تعديل رصيد المحفظة</h4>
+        <input type="number" id="newBalanceInput" class="admin-input" placeholder="أدخل الرصيد الجديد بالدولار...">
+        <button class="admin-btn" onclick="updateBalance()">تحديث الرصيد فوراً</button>
+      </div>
+
+      <div class="admin-card">
+        <h4><i class="fa-solid fa-tag"></i> تعديل أسعار الباقات</h4>
+        <select id="editGameTarget" class="admin-input" style="color:#fff;">
+          <option value="pubg_60">ببجي - 60 شدة</option>
+          <option value="pubg_325">ببجي - 325 شدة</option>
+          <option value="freefire_110">فري فاير - 110 جوهرة</option>
+        </select>
+        <input type="number" step="0.01" id="newPriceInput" class="admin-input" placeholder="السعر الجديد بالدولار ($)...">
+        <button class="admin-btn" onclick="alert('تم تحديث سعر الباقة في المتجر بنجاح!')">حفظ السعر الجديد</button>
+      </div>
+
+      <button style="width:100%; background:#ef4444; color:#fff; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;" onclick="logoutAdmin()">
+        <i class="fa-solid fa-power-off"></i> قفل لوحة الأدمن وتسجيل الخروج
+      </button>
+    </div>
+  </div>
+
+  <!-- Deposit Modal (شحن الرصيد شام كاش) -->
+  <div class="modal-overlay" id="depositModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-money-bill-transfer"></i> شحن الرصيد (شام كاش)</h2>
+        <button onclick="closeModals()" style="background:none; border:none; color:#94a3b8; font-size:1.2rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="admin-card" style="background:#131d31; text-align:center;">
+        <span style="font-size:0.8rem; color:#94a3b8; display:block; margin-bottom:6px;">امسح رمز QR أو انسخ معرّف المحفظة:</span>
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=b7a6624b69166fb60e741400cee2b8bd" alt="QR Code" style="margin:auto; border-radius:12px; margin-bottom:10px; border:2px solid #00f0ff;">
+        
+        <div style="font-size:0.72rem; font-family:monospace; word-break:break-all; background:#0b111e; padding:8px; border-radius:8px; color:#00f0ff; margin-bottom:6px; cursor:pointer;" onclick="copyWalletId()" title="اضغط للنسخ">
+          b7a6624b69166fb60e741400cee2b8bd <i class="fa-regular fa-copy" style="margin-right:4px;"></i>
+        </div>
+        
+        <div style="font-size:0.85rem; color:#f1f5f9; margin-top:4px;">
+          اسم المستلم: <strong style="color:#38bdf8;">مهند خضر البطي</strong>
+        </div>
+      </div>
+
+      <div class="admin-card">
+        <h4><i class="fa-solid fa-receipt"></i> تفاصيل الحوالة</h4>
+        
+        <label style="font-size:0.75rem; color:#94a3b8; display:block; margin-bottom:4px;">عملة التحويل:</label>
+        <select id="depositCurrency" class="admin-input" style="color:#fff;" onchange="updateCurrencyPlaceholder()">
+          <option value="USD">دولار أمريكي (USD $)</option>
+          <option value="SYP">ليرة سورية (SYP)</option>
+        </select>
+
+        <input type="number" id="depositAmount" class="admin-input" placeholder="المبلغ المحول بالدولار ($)...">
+        <input type="text" id="depositTxId" class="admin-input" placeholder="رقم عملية التحويل (ID / الإشعار)...">
+
+        <button class="admin-btn" onclick="submitDeposit()">تأكيد وإرسال إشعار التحويل</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating WhatsApp -->
+  <a href="https://wa.me/963957455972" class="whatsapp-float" target="_blank" aria-label="واتساب">
+    <i class="fa-brands fa-whatsapp"></i>
+  </a>
+
+  <script>
+    let currentBalance = 936.07;
+    let isAdminAuthenticated = false;
+
+    // قائمة تخزين الطلبات مؤقتاً
+    let ordersList = [
+      { id: 101, type: "إيداع شام كاش", details: "مبلغ: $50 | رقم العملية: TX8839210", status: "معلق" },
+      { id: 102, type: "شحن ببجي", details: "660 شدة | ID: 512398472", status: "معلق" }
+    ];
+
+    function cleanInput(str) {
+      if (!str) return "";
+      const arDigits = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+      let res = str.toString()
+        .replace(/[\u200B-\u200F\uFEFF\u202A-\u202E]/g, '')
+        .replace(/\s+/g, '')
+        .trim();
+      return res.replace(/[٠-٩]/g, d => arDigits.indexOf(d));
+    }
+
+    function togglePassVisibility() {
+      const input = document.getElementById('adminPassInput');
+      const icon = document.getElementById('eyeIcon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.replace('fa-eye', 'fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.replace('fa-eye-slash', 'fa-eye');
+      }
+    }
+
+    function toggleMenu() {
+      document.getElementById('sidebar').classList.toggle('active');
+      document.getElementById('overlay').classList.toggle('active');
+    }
+
+    function openAdminSecurityCheck() {
+      if (document.getElementById('sidebar').classList.contains('active')) toggleMenu();
+      if (isAdminAuthenticated) {
+        document.getElementById('adminModal').classList.add('active');
+      } else {
+        document.getElementById('adminLoginModal').classList.add('active');
+      }
+    }
+
+    function verifyAdminLogin() {
+      const email = cleanInput(document.getElementById('adminEmailInput').value).toLowerCase();
+      const pass = cleanInput(document.getElementById('adminPassInput').value);
+      const validPasses = ["0957455972", "963957455972", "+963957455972"];
+
+      if (email === "fhdsd686@gmail.com" && validPasses.includes(pass)) {
+        isAdminAuthenticated = true;
+        document.getElementById('adminLoginModal').classList.remove('active');
+        document.getElementById('adminModal').classList.add('active');
+        alert('مرحباً بك يا مهند! تم تسجيل الدخول بنجاح كمسؤول.');
+      } else {
+        alert('خطأ! تأكد من إدخال كلمة المرور الصحيحة: 0957 455 972');
+      }
+    }
+
+    function logoutAdmin() {
+      isAdminAuthenticated = false;
+      closeModals();
+      alert('تم قفل لوحة الأدمن وتسجيل الخروج بنجاح.');
+    }
+
+    // إدارة الطلبات (عرض - موافقة - رفض)
+    function openOrdersModal() {
+      if (document.getElementById('sidebar').classList.contains('active')) toggleMenu();
+      renderOrders();
+      document.getElementById('ordersModal').classList.add('active');
+    }
+
+    function renderOrders() {
+      const container = document.getElementById('ordersContainer');
+      if (ordersList.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#94a3b8; padding:20px;">لا توجد طلبات جديدة حالياً.</p>';
+        return;
+      }
+
+      container.innerHTML = ordersList.map((ord, idx) => `
+        <div class="order-card" id="order-${ord.id}">
+          <div class="order-card-header">
+            <span>#${ord.id} - ${ord.type}</span>
+            <span style="color:#fbbf24;">${ord.status}</span>
+          </div>
+          <div style="color:#cbd5e1; margin-bottom:6px;">${ord.details}</div>
+          <div class="order-actions">
+            <button class="btn-approve" onclick="approveOrder(${idx})"><i class="fa-solid fa-check"></i> موافقة وتنفيذ</button>
+            <button class="btn-reject" onclick="rejectOrder(${idx})"><i class="fa-solid fa-xmark"></i> رفض</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function approveOrder(index) {
+      const ord = ordersList[index];
+      alert(`تمت الموافقة على الطلب رقم #${ord.id} بنجاح!`);
+      ordersList.splice(index, 1);
+      renderOrders();
+    }
+
+    function rejectOrder(index) {
+      const ord = ordersList[index];
+      alert(`تم رفض الطلب رقم #${ord.id}.`);
+      ordersList.splice(index, 1);
+      renderOrders();
+    }
+
+    const gamePackages = {
+      pubg: [
+        { name: "60 شدة (UC)", price: 0.95 },
+        { name: "325 شدة (UC)", price: 4.80 },
+        { name: "660 شدة (UC)", price: 9.50 },
+        { name: "1800 شدة (UC)", price: 24.00 }
+      ],
+      freefire: [
+        { name: "100 + 10 جوهرة", price: 0.90 },
+        { name: "310 + 31 جوهرة", price: 2.80 },
+        { name: "520 + 52 جوهرة", price: 4.60 },
+        { name: "1060 + 106 جوهرة", price: 9.20 }
+      ]
+    };
+
+    function openDepositModal() {
+      if (document.getElementById('sidebar').classList.contains('active')) toggleMenu();
+      document.getElementById('depositModal').classList.add('active');
+    }
+
+    function openGamesModal() {
+      if (document.getElementById('sidebar').classList.contains('active')) toggleMenu();
+      updatePackages();
+      document.getElementById('gamesModal').classList.add('active');
+    }
+
+    function closeModals() {
+      document.getElementById('adminModal').classList.remove('active');
+      document.getElementById('adminLoginModal').classList.remove('active');
+      document.getElementById('depositModal').classList.remove.apply(document.getElementById('depositModal').classList, ['active']);
+      document.getElementById('gamesModal').classList.remove('active');
+      document.getElementById('ordersModal').classList.remove('active');
+    }
+
+    function updatePackages() {
+      const game = document.getElementById('gameSelect').value;
+      const packageSelect = document.getElementById('packageSelect');
+      packageSelect.innerHTML = '';
+      
+      gamePackages[game].forEach((pkg) => {
+        const option = document.createElement('option');
+        option.value = pkg.price;
+        option.innerText = `${pkg.name} - $${pkg.price.toFixed(2)}`;
+        packageSelect.appendChild(option);
+      });
+      calculateGamePrice();
+    }
+
+    function calculateGamePrice() {
+      const price = parseFloat(document.getElementById('packageSelect').value) || 0;
+      document.getElementById('gamePriceDisplay').innerText = `$ ${price.toFixed(2)}`;
+    }
+
+    function confirmGamePurchase() {
+      const playerId = document.getElementById('playerIdInput').value.trim();
+      const price = parseFloat(document.getElementById('packageSelect').value) || 0;
+      const game = document.getElementById('gameSelect').value === 'pubg' ? 'ببجي' : 'فري فاير';
+
+      if (!playerId) {
+        alert('يرجى إدخال معرّف اللاعب (Player ID) أولاً.');
+        return;
+      }
+
+      // إضافة الطلب لقائمة الطلبات
+      ordersList.unshift({
+        id: Math.floor(100 + Math.random() * 900),
+        type: `شحن ${game}`,
+        details: `ID: ${playerId} | السعر: $${price.toFixed(2)}`,
+        status: "قيد المراجعة"
+      });
+
+      alert(`تم إرسال طلب الشحن بنجاح!\nمعرف اللاعب: ${playerId}\nبانتظار موافقة الإدارة.`);
+      document.getElementById('playerIdInput').value = '';
+      closeModals();
+    }
+
+    function copyWalletId() {
+      navigator.clipboard.writeText("b7a6624b69166fb60e741400cee2b8bd");
+      alert("تم نسخ معرّف المحفظة بنجاح!");
+    }
+
+    function updateCurrencyPlaceholder() {
+      const currency = document.getElementById('depositCurrency').value;
+      const amountInput = document.getElementById('depositAmount');
+      amountInput.placeholder = currency === 'USD' ? "المبلغ المحول بالدولار ($)..." : "المبلغ المحول بالليرة السورية (SYP)...";
+    }
+
+    function updateBalance() {
+      const val = document.getElementById('newBalanceInput').value;
+      if (val) {
+        currentBalance = parseFloat(val);
+        document.getElementById('userBalanceText').innerText = '$ ' + currentBalance.toFixed(2);
+        document.getElementById('topBalance').innerText = currentBalance.toFixed(2) + ' $';
+        alert('تم تحديث الرصيد بنجاح إلى: $' + val);
+        closeModals();
+      }
+    }
+
+    function submitDeposit() {
+      const amount = document.getElementById('depositAmount').value;
+      const txId = document.getElementById('depositTxId').value;
+      const currency = document.getElementById('depositCurrency').value;
+
+      if (!amount || !txId) {
+        alert('يرجى إدخال المبلغ ورقم عملية التحويل أولاً.');
+        return;
+      }
+
+      // إضافة إشعار الإيداع للطلبات
+      ordersList.unshift({
+        id: Math.floor(100 + Math.random() * 900),
+        type: "إيداع شام كاش",
+        details: `المبلغ: ${amount} ${currency} | رقم العملية: ${txId}`,
+        status: "بانتظار التأكيد"
+      });
+
+      alert(`تم إرسال إشعار التحويل بنجاح!\nسيتم التحقق منه في قائمة الطلبات.`);
+      closeModals();
+    }
+  </script>
+</body>
+</html>
