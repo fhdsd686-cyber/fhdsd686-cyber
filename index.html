@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>مركز مهند للتكنولوجيا | شحن الألعاب والخدمات الرقمية</title>
+  
+  <!-- المكتبات والخطوط الخارجية الرسمية -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --text: #f8fafc;
+      --subtext: #94a3b8;
+      --primary: #0284c7;
+      --primary-hover: #0369a1;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --gold: #fbbf24;
+      --sidebar-w: 295px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Cairo', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding-bottom: 95px;
+      overflow-x: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    /* الشريط العلوي الثابت مع تصميم حديث وتأثير ضبابي */
+    .top-header {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #fff;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 18px rgba(2, 132, 199, 0.28);
+    }
+
+    .header-right, .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .menu-btn {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 1.25rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    .menu-btn:active {
+      transform: scale(0.92);
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .balance-badge {
+      background: rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 5px 12px;
+      border-radius: 25px;
+      font-size: 0.8rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .balance-badge:active {
+      background: rgba(255, 255, 255, 0.28);
+    }
+
+    /* البانر الترويجي المميز */
+    .banner-container {
+      padding: 14px 16px 4px;
+    }
+
+    .banner-box {
+      width: 100%;
+      height: 180px;
+      border-radius: 18px;
+      background-size: cover;
+      background-position: center;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-end;
+      padding: 16px;
+      color: #fff;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    }
+
+    .banner-box::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(11, 15, 25, 0.95) 0%, rgba(11, 15, 25, 0.3) 60%, transparent 100%);
+    }
+
+    .banner-content {
+      position: relative;
+      z-index: 2;
+    }
+
+    /* شريط الأخبار المتحرك والتنبيهات */
+    .ticker-bar {
+      margin: 10px 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.8rem;
+      color: var(--warning);
+      font-weight: 800;
+      overflow: hidden;
+    }
+
+    .ticker-bar marquee {
+      color: var(--text);
+      font-weight: 700;
+    }
+    .search-box {
+      margin: 0 16px 14px;
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 12px 42px 12px 16px;
+      font-size: 0.88rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+    }
+
+    .search-icon {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--subtext);
+    }
+
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      padding: 0 16px 20px;
+    }
+
+    .service-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      overflow: hidden;
+      cursor: pointer;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .service-card:active {
+      transform: scale(0.97);
+    }
+
+    .service-card:hover {
+      border-color: var(--primary);
+    }
+
+    .service-card img {
+      width: 100%;
+      height: 110px;
+      object-fit: cover;
+      background: #1e293b;
+      display: block;
+    }
+
+    .service-title {
+      padding: 10px 8px;
+      font-size: 0.84rem;
+      font-weight: 800;
+    }
+
+    .maintenance-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 5000;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .maintenance-overlay.active {
+      display: flex;
+    }
+
+    .maintenance-icon {
+      font-size: 4rem;
+      color: var(--warning);
+      margin-bottom: 16px;
+    }
+    .sidebar-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: 0.3s ease;
+    }
+
+    .sidebar-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .side-drawer {
+      position: fixed;
+      top: 0;
+      right: calc(-1 * var(--sidebar-w));
+      width: var(--sidebar-w);
+      height: 100%;
+      background: var(--card-bg);
+      z-index: 1001;
+      transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .side-drawer.active {
+      right: 0;
+    }
+
+    .drawer-close {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: #1e293b;
+      color: var(--text);
+      border: none;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+
+    .profile-section {
+      text-align: center;
+      padding: 24px 16px 16px;
+      background: radial-gradient(circle at center, rgba(2, 132, 199, 0.15) 0%, transparent 70%);
+    }
+
+    .avatar-wrapper {
+      position: relative;
+      width: 85px;
+      height: 85px;
+      margin: 0 auto 10px;
+      border-radius: 50%;
+      padding: 3px;
+      background: linear-gradient(135deg, var(--primary), #38bdf8);
+    }
+
+    .avatar-wrapper img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .role-badge {
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--primary);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 800;
+      padding: 2px 12px;
+      border-radius: 12px;
+    }
+
+    .drawer-menu {
+      padding: 10px 14px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .menu-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 12px;
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .menu-row:active {
+      background: #1e293b;
+    }
+
+    .menu-row-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .admin-screen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 3000;
+      overflow-y: auto;
+      padding-bottom: 50px;
+    }
+
+    .admin-screen.show {
+      display: block;
+    }
+
+    .admin-header {
+      background: #0f172a;
+      color: #fff;
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .admin-close-btn {
+      background: var(--danger);
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .admin-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 16px;
+      margin: 14px 16px;
+    }
+
+    .app-config-box {
+      border: 1px solid #1e293b;
+      border-radius: 16px;
+      padding: 14px;
+      margin-top: 10px;
+      background: #0b1120;
+    }
+
+    .app-icon-action-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 14px 0;
+    }
+
+    .app-icon-preview {
+      width: 70px;
+      height: 70px;
+      border-radius: 16px;
+      object-fit: cover;
+      border: 2px solid var(--primary);
+    }
+
+    .pricing-tier-card {
+      border: 1px solid #1e293b;
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 12px;
+      background: #0f172a;
+    }
+
+    .pricing-tier-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 800;
+      font-size: 0.88rem;
+      margin-bottom: 8px;
+    }
+
+    .app-input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--card-border);
+      background: #1e293b;
+      color: var(--text);
+      border-radius: 10px;
+      margin-top: 4px;
+      margin-bottom: 10px;
+      outline: none;
+      font-size: 0.85rem;
+    }
+
+    .submit-btn {
+      width: 100%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .modal-bg {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      z-index: 2100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-bg.show {
+      display: flex;
+    }
+
+    .modal-card {
+      background: var(--card-bg);
+      width: 100%;
+      max-width: 400px;
+      border-radius: 20px;
+      padding: 20px;
+      border: 1px solid var(--card-border);
+    }
+
+    .modal-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.25rem;
+      cursor: pointer;
+      color: var(--subtext);
+    }
+  </style>
+</head>
+<body>
+  <!-- شاشة الصيانة وتحديث الأسعار التلقائي -->
+  <div class="maintenance-overlay" id="maintenanceScreen">
+    <i class="fa-solid fa-screwdriver-wrench maintenance-icon"></i>
+    <h2 style="font-weight:800; margin-bottom:8px;">الموقع قيد الصيانة وتحديث الأسعار</h2>
+    <p style="color:var(--subtext); font-size:0.9rem; margin-bottom:16px;">
+      نعمل على مواءمة الأسعار وتحديث الأنظمة الأوتوماتيكية، يرجى العودة قريباً.
+    </p>
+    <a href="https://wa.me/963957455972" target="_blank" style="background:#25d366; color:#fff; text-decoration:none; padding:10px 20px; border-radius:12px; font-weight:700; font-size:0.85rem; display:inline-flex; align-items:center; gap:8px;">
+      <i class="fa-brands fa-whatsapp"></i> تواصل مع الإدارة عبر واتساب
+    </a>
+  </div>
+
+  <!-- الشريط العلوي مع الرصيد والاسم المعتمد وفتح لوحة الأدمن السرية بالنقر 5 مرات -->
+  <header class="top-header">
+    <div class="header-right">
+      <button class="menu-btn" onclick="openSidebar()"><i class="fa-solid fa-bars"></i></button>
+      <div class="balance-badge" onclick="openDepositModal()">
+        <span style="background:var(--gold); color:#000; font-size:0.65rem; padding:2px 7px; border-radius:10px;">VIP1</span>
+        <span id="topBarBalance">$ 932.72</span>
+        <i class="fa-solid fa-circle-plus"></i>
+      </div>
+    </div>
+    <div class="header-left">
+      <!-- النقر هنا 5 مرات يفتح شاشة الأدمن السرية -->
+      <div style="text-align:left; cursor:pointer;" onclick="handleSecretAdminClick()">
+        <div style="font-weight:800; font-size:0.95rem;" id="headerBrandTitle">مركز مهند للتكنولوجيا</div>
+        <div style="font-size:0.65rem; opacity:0.85;">للشحن والخدمات الرقمية</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- البانر الترويجي التفاعلي المعتمد -->
+  <div class="banner-container">
+    <div class="banner-box" style="background-image: url('1000926232.png'), url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800');">
+      <div class="banner-content">
+        <div style="font-size:1.15rem; font-weight:800;">مركز مهند للتكنولوجيا ⚡</div>
+        <div style="font-size:0.8rem; opacity:0.95;">شحن الألعاب والبرامج الصوتية بالدولار والليرة السورية</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- شريط التنبيهات المباشر وسعر الصرف -->
+  <div class="ticker-bar">
+    <i class="fa-solid fa-bolt"></i>
+    <marquee behavior="scroll" direction="right" id="tickerText">
+      أهلاً بكم في مركز مهند للتكنولوجيا ⚡ الأسعار مربوطة بالدولار ($) وبالليرة السورية (ل.س) تلقائياً ⚡ شحن مباشر وسريع لكافة التطبيقات والألعاب ⚡
+    </marquee>
+  </div>
+
+  <!-- شريط البحث المباشر للخدمات -->
+  <div class="search-box">
+    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+    <input type="text" class="search-input" id="serviceSearchInput" onkeyup="filterServicesGrid()" placeholder="ابحث عن لعبة أو تطبيق أو خدمة رقمية...">
+  </div>
+  <!-- شبكة الخدمات الرئيسية المعروضة للزبائن -->
+  <main class="services-grid" id="mainServicesContainer">
+    <!-- تطبيق Party Star الصوتي -->
+    <div class="service-card" data-key="partystar" onclick="openGameModal('partystar')">
+      <img src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500" id="cardImg_partystar" alt="Party Star">
+      <div class="service-title" id="cardTitle_partystar">Party Star (ألعاب صوتية)</div>
+    </div>
+
+    <!-- تطبيق SuperLive الصوتي -->
+    <div class="service-card" data-key="superlive" onclick="openGameModal('superlive')">
+      <img src="https://play-lh.googleusercontent.com/vHqLqLfZz2XgN1K_6nL8g6Q7U0K7mZ-J2h0VvL1r4f4L2f4f4f4f4f4f4f4f4f4f=s256" id="cardImg_superlive" alt="SuperLive">
+      <div class="service-title" id="cardTitle_superlive">SuperLive (بثوث صوتية)</div>
+    </div>
+
+    <!-- برنامج وتطبيق يا هلا -->
+    <div class="service-card" data-key="yahala" onclick="openGameModal('yahala')">
+      <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=500" id="cardImg_yahala" alt="يا هلا">
+      <div class="service-title" id="cardTitle_yahala">برنامج يا هلا (Yahala)</div>
+    </div>
+
+    <!-- سيريتل كاش ورصيد -->
+    <div class="service-card" data-key="syriatel" onclick="openGameModal('syriatel')">
+      <img src="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=500" id="cardImg_syriatel" alt="سيريتل كاش">
+      <div class="service-title" id="cardTitle_syriatel">سيريتل كاش ورصيد سوري</div>
+    </div>
+
+    <!-- MTN كاش ورصيد سوري -->
+    <div class="service-card" data-key="mtn" onclick="openGameModal('mtn')">
+      <img src="https://images.unsplash.com/photo-1563986768609-322da13575f3?w=500" id="cardImg_mtn" alt="MTN كاش">
+      <div class="service-title" id="cardTitle_mtn">MTN كاش ورصيد سوري</div>
+    </div>
+    <!-- لعبة PUBG Mobile -->
+    <div class="service-card" data-key="pubg" onclick="openGameModal('pubg')">
+      <img src="1000925048.png" id="cardImg_pubg" onerror="this.src='https://images.unsplash.com/photo-1542751371-adc38448a05e?w=500'" alt="ببجي">
+      <div class="service-title" id="cardTitle_pubg">شدات ببجي موبايل (UC)</div>
+    </div>
+
+    <!-- لعبة فري فاير -->
+    <div class="service-card" data-key="freefire" onclick="openGameModal('freefire')">
+      <img src="1000925049.png" id="cardImg_freefire" onerror="this.src='https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=500'" alt="فري فاير">
+      <div class="service-title" id="cardTitle_freefire">جواهر فري فاير (Free Fire)</div>
+    </div>
+
+    <!-- كول أوف ديوتي موبايل -->
+    <div class="service-card" data-key="cod" onclick="openGameModal('cod')">
+      <img src="1000925050.png" id="cardImg_cod" onerror="this.src='https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=500'" alt="كول أوف ديوتي">
+      <div class="service-title" id="cardTitle_cod">كول أوف ديوتي (CP)</div>
+    </div>
+
+    <!-- روبلوكس Robux -->
+    <div class="service-card" data-key="roblox" onclick="openGameModal('roblox')">
+      <img src="1000925051.png" id="cardImg_roblox" onerror="this.src='https://images.unsplash.com/photo-1551103782-8ab07afd45c1?w=500'" alt="روبلوكس">
+      <div class="service-title" id="cardTitle_roblox">رصيد روبلوكس (Robux)</div>
+    </div>
+
+    <!-- يلا لودو -->
+    <div class="service-card" data-key="yalla" onclick="openGameModal('yalla')">
+      <img src="1000925052.png" id="cardImg_yalla" onerror="this.src='https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?w=500'" alt="يلا لودو">
+      <div class="service-title" id="cardTitle_yalla">يلا لودو (ماسات وذهب)</div>
+    </div>
+
+    <!-- بطاقات Razer Gold -->
+    <div class="service-card" data-key="razer" onclick="openGameModal('razer')">
+      <img src="1000925053.png" id="cardImg_razer" onerror="this.src='https://images.unsplash.com/photo-1556742049-0a67e5572293?w=500'" alt="Razer Gold">
+      <div class="service-title" id="cardTitle_razer">بطاقات Razer Gold</div>
+    </div>
+
+    <!-- تيك توك عملات -->
+    <div class="service-card" data-key="tiktok" onclick="openGameModal('tiktok')">
+      <img src="1000925059.png" id="cardImg_tiktok" onerror="this.src='https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=500'" alt="تيك توك">
+      <div class="service-title" id="cardTitle_tiktok">شحن عملات تيك توك</div>
+    </div>
+
+    <!-- الاشتراكات الرقمية -->
+    <div class="service-card" data-key="subscriptions" onclick="openGameModal('subscriptions')">
+      <img src="https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=500" id="cardImg_subscriptions" alt="اشتراكات رقمية">
+      <div class="service-title" id="cardTitle_subscriptions">اشتراكات وبرامج مدفوعة</div>
+    </div>
+
+    <!-- خدمات السوشيال ميديا -->
+    <div class="service-card" data-key="social" onclick="openGameModal('social')">
+      <img src="https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=500" id="cardImg_social" alt="سوشيال ميديا">
+      <div class="service-title" id="cardTitle_social">خدمات التواصل الاجتماعي</div>
+    </div>
+  </main>
+  <!-- طبقة التعتيم الخلفية للقائمة الجانبية -->
+  <div class="sidebar-overlay" id="sideOverlay" onclick="closeSidebar()"></div>
+
+  <!-- القائمة الجانبية المنسدلة (Sidebar Drawer) -->
+  <aside class="side-drawer" id="sideDrawer">
+    <button class="drawer-close" onclick="closeSidebar()"><i class="fa-solid fa-xmark"></i></button>
+
+    <!-- الملف التعريفي للمركز (بدون إظهار أي مؤشر للإدارة) -->
+    <div class="profile-section">
+      <div class="avatar-wrapper">
+        <img src="1000926232.png" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400'" alt="مركز مهند للتكنولوجيا">
+        <span class="role-badge">VIP 1</span>
+      </div>
+      <div style="font-weight:800; font-size:1.05rem; margin-top:4px;">مركز مهند للتكنولوجيا</div>
+      <div style="font-size:0.75rem; color:var(--subtext); direction:ltr;">+963 957 455 972</div>
+    </div>
+
+    <!-- بطاقة الرصيد الإجمالي داخل القائمة -->
+    <div style="padding:0 14px 10px;">
+      <div style="background:#0b1120; border:1px solid var(--card-border); border-radius:14px; padding:12px; text-align:center;">
+        <div style="font-size:0.75rem; color:var(--subtext); margin-bottom:4px;">الرصيد المتاح الحالي:</div>
+        <div style="font-size:1.25rem; font-weight:800; color:var(--primary);" id="sideBalance">$ 932.72</div>
+        <div style="font-size:0.8rem; font-weight:700; color:var(--gold); margin-top:2px;" id="sideBalanceSYP">13,990,800 ل.س</div>
+      </div>
+    </div>
+
+    <!-- روابط وخيارات القائمة للعملاء (تمت إزالة زر الإدارة تماماً لجعلها سرية 100%) -->
+    <div class="drawer-menu">
+      <div class="menu-row" onclick="openDepositModal()">
+        <div class="menu-row-right">
+          <i class="fa-solid fa-wallet" style="color:var(--primary); font-size:1.1rem;"></i>
+          <span>شحن الرصيد (شام كاش)</span>
+        </div>
+        <i class="fa-solid fa-chevron-left" style="color:var(--subtext); font-size:0.75rem;"></i>
+      </div>
+
+      <div class="menu-row" onclick="toggleCurrencyView()">
+        <div class="menu-row-right">
+          <i class="fa-solid fa-coins" style="color:var(--gold); font-size:1.1rem;"></i>
+          <span>تبديل عرض العملة ($ / ل.س)</span>
+        </div>
+        <i class="fa-solid fa-chevron-left" style="color:var(--subtext); font-size:0.75rem;"></i>
+      </div>
+
+      <a href="https://wa.me/963957455972" target="_blank" class="menu-row" style="text-decoration:none;">
+        <div class="menu-row-right">
+          <i class="fa-brands fa-whatsapp" style="color:var(--success); font-size:1.2rem;"></i>
+          <span>الدعم الفني المباشر</span>
+        </div>
+        <i class="fa-solid fa-arrow-up-right-from-square" style="color:var(--subtext); font-size:0.75rem;"></i>
+      </a>
+    </div>
+  </aside>
+  <!-- شاشة لوحة الإدارة السرية الكاملة (تفتح فقط بعد 5 نقرات متتالية وإدخال الرمز) -->
+  <div class="admin-screen" id="adminScreen">
+    <div class="admin-header">
+      <div style="font-weight:800; font-size:1.05rem;">
+        <i class="fa-solid fa-user-shield" style="color:var(--primary);"></i> لوحة الإدارة السرية (مركز مهند)
+      </div>
+      <button class="admin-close-btn" onclick="closeAdminScreen()"><i class="fa-solid fa-xmark"></i> خروج</button>
+    </div>
+
+    <!-- بطاقة التحكم بالنظام ووضع الصيانة -->
+    <div class="admin-card">
+      <h3 style="font-size:0.95rem; margin-bottom:10px;"><i class="fa-solid fa-power-off"></i> حالة الموقع والصيانة</h3>
+      <button class="submit-btn" id="toggleMaintenanceBtn" style="background:var(--danger);" onclick="toggleSiteMaintenance()">
+        إيقاف الموقع وتفعيل شاشة الصيانة
+      </button>
+    </div>
+
+    <!-- بطاقة سعر الصرف والرصيد العام للمركز -->
+    <div class="admin-card">
+      <h3 style="font-size:0.95rem; margin-bottom:10px;"><i class="fa-solid fa-coins"></i> إدارة سعر الصرف والرصيد</h3>
+      
+      <label style="font-size:0.75rem; color:var(--subtext);">سعر صرف 1 دولار بالليرة السورية (ل.س):</label>
+      <input type="number" id="adminExchangeRateInput" class="app-input" value="15000">
+
+      <label style="font-size:0.75rem; color:var(--subtext);">الرصيد الكلي المعروض في الموقع ($):</label>
+      <input type="number" step="0.01" id="adminInputBalance" class="app-input" value="932.72">
+
+      <button class="submit-btn" onclick="saveAdminCurrencyAndBalance()">
+        <i class="fa-solid fa-floppy-disk"></i> حفظ سعر الصرف والرصيد
+      </button>
+    </div>
+
+    <!-- بطاقة هامش الربح التلقائي المضاف على الباقات -->
+    <div class="admin-card">
+      <h3 style="font-size:0.95rem; margin-bottom:10px;"><i class="fa-solid fa-chart-line"></i> هامش الربح التلقائي العام</h3>
+      <label style="font-size:0.75rem; color:var(--subtext);">نسبة الربح المضافة على كل الباقات (%):</label>
+      <input type="number" id="adminProfitInput" class="app-input" value="15">
+      
+      <button class="submit-btn" style="background:var(--warning); color:#000;" onclick="saveAdminProfit()">
+        <i class="fa-solid fa-arrows-rotate"></i> تحديث نسبة الربح
+      </button>
+    </div>
+    <!-- بطاقة التحكم بالتطبيق وتسعير الوكيل والمضيف -->
+    <div class="admin-card" style="border: 2px solid var(--primary);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <h3 style="font-size:0.95rem; color:var(--primary);"><i class="fa-solid fa-sliders"></i> إدارة تسعير التطبيقات (الوكيل والمضيف)</h3>
+        <span style="font-size:0.85rem; font-weight:800; color:var(--text);" id="adminTopCardBalance">$ 932.72</span>
+      </div>
+
+      <div class="app-config-box">
+        <label style="font-size:0.75rem; color:var(--subtext);">اسم التطبيق (اكتب SuperLive أو Party Star أو غيره):</label>
+        <input type="text" id="cfgAppName" class="app-input" value="SuperLive" oninput="autoDetectAppIcon()">
+
+        <label style="font-size:0.75rem; color:var(--subtext);">تصنيف التطبيق:</label>
+        <input type="text" id="cfgAppCategory" class="app-input" value="ألعاب وبثوث صوتية">
+
+        <label style="font-size:0.75rem; color:var(--subtext);">الوصف (يظهر تحت زر الشراء):</label>
+        <textarea id="cfgAppDesc" class="app-input" style="height:60px; resize:none;">شحن كوينز وماسات فوري ومباشر لحسابك</textarea>
+
+        <div style="display:flex; gap:8px;">
+          <div style="flex:1;">
+            <label style="font-size:0.75rem; color:var(--subtext);">كود الربط:</label>
+            <input type="text" id="cfgAppCode" class="app-input" value="46">
+          </div>
+          <div style="width:90px;">
+            <label style="font-size:0.75rem; color:var(--subtext);">الحالة:</label>
+            <input type="text" class="app-input" value="1 مربوط ✅" readonly style="text-align:center;">
+          </div>
+        </div>
+
+        <div class="app-icon-action-wrap">
+          <div style="display:flex; gap:8px;">
+            <button class="submit-btn" style="width:auto; padding:8px 14px; background:#1e293b; border:1px solid var(--card-border);" onclick="triggerChangeAppIcon()">
+              <i class="fa-solid fa-image"></i> تغيير تلقائي
+            </button>
+            <button class="submit-btn" style="width:auto; padding:8px 14px; background:var(--danger);" onclick="resetAppPricingForm()">
+              <i class="fa-solid fa-trash"></i> تصفير
+            </button>
+          </div>
+          <img src="https://play-lh.googleusercontent.com/vHqLqLfZz2XgN1K_6nL8g6Q7U0K7mZ-J2h0VvL1r4f4L2f4f4f4f4f4f4f4f4f4f=s256" id="cfgAppIconPreview" class="app-icon-preview" alt="Icon">
+        </div>
+
+        <!-- قسم سعر الوكيل -->
+        <div class="pricing-tier-card">
+          <div class="pricing-tier-header" style="color:var(--gold);">
+            <i class="fa-solid fa-crown"></i> سعر الوكيل (سعر الجملة / التكلفة)
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <div style="flex:1;">
+              <label style="font-size:0.72rem; color:var(--subtext);">كمية الألماس / العملة:</label>
+              <input type="number" id="agentDiamonds" class="app-input" value="1000" oninput="calculateUnitPrices()">
+            </div>
+            <div style="flex:1;">
+              <label style="font-size:0.72rem; color:var(--subtext);">السعر ($):</label>
+              <input type="number" step="0.01" id="agentPriceUSD" class="app-input" value="16.00" oninput="calculateUnitPrices()">
+            </div>
+          </div>
+          <div style="font-size:0.75rem; color:var(--subtext); text-align:center; margin-top:2px;" id="agentUnitPriceText">
+            سعر الوحدة: 0.01600$ / وحدة (240 ل.س)
+          </div>
+        </div>
+
+        <!-- قسم سعر المضيف / الزبون -->
+        <div class="pricing-tier-card">
+          <div class="pricing-tier-header" style="color:var(--primary);">
+            <i class="fa-solid fa-user-tag"></i> سعر المضيف (سعر البيع للزبون)
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <div style="flex:1;">
+              <label style="font-size:0.72rem; color:var(--subtext);">كمية الألماس / العملة:</label>
+              <input type="number" id="hostDiamonds" class="app-input" value="1000" oninput="calculateUnitPrices()">
+            </div>
+            <div style="flex:1;">
+              <label style="font-size:0.72rem; color:var(--subtext);">السعر ($):</label>
+              <input type="number" step="0.01" id="hostPriceUSD" class="app-input" value="18.50" oninput="calculateUnitPrices()">
+            </div>
+          </div>
+          <div style="font-size:0.75rem; color:var(--subtext); text-align:center; margin-top:2px;" id="hostUnitPriceText">
+            سعر الوحدة: 0.01850$ / وحدة (277.5 ل.س)
+          </div>
+        </div>
+
+        <button class="submit-btn" style="background:var(--success);" onclick="saveAppPricingConfiguration()">
+          <i class="fa-solid fa-floppy-disk"></i> حفظ وضبط التطبيق بكافة الأسعار فوراً
+        </button>
+      </div>
+    </div>
+    <!-- بطاقة تعديل أسعار كافة المنتجات والباقات يدويًا -->
+    <div class="admin-card">
+      <h3 style="font-size:0.95rem; margin-bottom:10px;"><i class="fa-solid fa-tags"></i> تعديل أسعار المنتجات والباقات يدويًا</h3>
+      <p style="font-size:0.78rem; color:var(--subtext); margin-bottom:10px;">اختر الخدمة والباقة وعدل سعرها الأساسي بالدولار مباشرة:</p>
+
+      <label style="font-size:0.75rem; color:var(--subtext);">اختر الخدمة أو اللعبة:</label>
+      <select id="adminPriceServiceSelect" class="app-input" onchange="loadAdminPackagesForPrice()"></select>
+
+      <label style="font-size:0.75rem; color:var(--subtext);">اختر الباقة المراد تعديل سعرها:</label>
+      <select id="adminPricePkgSelect" class="app-input" onchange="showCurrentSelectedBasePrice()"></select>
+
+      <label style="font-size:0.75rem; color:var(--subtext);">السعر الأساسي الجديد ($):</label>
+      <input type="number" step="0.01" id="adminNewBasePriceInput" class="app-input" placeholder="أدخل السعر الأساسي...">
+
+      <button class="submit-btn" style="background:var(--success);" onclick="saveCustomPackagePrice()">
+        <i class="fa-solid fa-floppy-disk"></i> حفظ السعر الجديد للباقة
+      </button>
+    </div>
+
+    <!-- بطاقة سجل الطلبات الواردة مع الموافقة والرفض المباشر -->
+    <div class="admin-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="font-size:0.95rem;"><i class="fa-solid fa-receipt"></i> سجل الطلبات الواردة</h3>
+        <button onclick="clearAdminOrders()" style="background:none; border:none; color:var(--danger); font-size:0.8rem; font-weight:700; cursor:pointer;">مسح السجل</button>
+      </div>
+      <div id="adminOrdersList">
+        <p style="text-align:center; color:var(--subtext); font-size:0.8rem; padding:12px;">لا توجد طلبات واردة حالياً</p>
+      </div>
+    </div>
+  </div>
+    <!-- بطاقة تعديل أسعار كافة المنتجات والباقات يدويًا -->
+    <div class="admin-card">
+      <h3 style="font-size:0.95rem; margin-bottom:10px;"><i class="fa-solid fa-tags"></i> تعديل أسعار المنتجات والباقات يدويًا</h3>
+      <p style="font-size:0.78rem; color:var(--subtext); margin-bottom:10px;">اختر الخدمة والباقة وعدل سعرها الأساسي بالدولار مباشرة:</p>
+
+      <label style="font-size:0.75rem; color:var(--subtext);">اختر الخدمة أو اللعبة:</label>
+      <select id="adminPriceServiceSelect" class="app-input" onchange="loadAdminPackagesForPrice()"></select>
+
+      <label style="font-size:0.75rem; color:var(--subtext);">اختر الباقة المراد تعديل سعرها:</label>
+      <select id="adminPricePkgSelect" class="app-input" onchange="showCurrentSelectedBasePrice()"></select>
+
+      <label style="font-size:0.75rem; color:var(--subtext);">السعر الأساسي الجديد ($):</label>
+      <input type="number" step="0.01" id="adminNewBasePriceInput" class="app-input" placeholder="أدخل السعر الأساسي...">
+
+      <button class="submit-btn" style="background:var(--success);" onclick="saveCustomPackagePrice()">
+        <i class="fa-solid fa-floppy-disk"></i> حفظ السعر الجديد للباقة
+      </button>
+    </div>
+
+    <!-- بطاقة سجل الطلبات الواردة مع الموافقة والرفض المباشر -->
+    <div class="admin-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="font-size:0.95rem;"><i class="fa-solid fa-receipt"></i> سجل الطلبات الواردة</h3>
+        <button onclick="clearAdminOrders()" style="background:none; border:none; color:var(--danger); font-size:0.8rem; font-weight:700; cursor:pointer;">مسح السجل</button>
+      </div>
+      <div id="adminOrdersList">
+        <p style="text-align:center; color:var(--subtext); font-size:0.8rem; padding:12px;">لا توجد طلبات واردة حالياً</p>
+      </div>
+    </div>
+  </div>
+    let exchangeRateUSD_SYP = 15000;
+    let currentBalanceVal = 932.72;
+    let globalProfit = 15;
+    let currentCurrencyMode = "USD";
+    let isSiteUnderMaintenance = false;
+    let isAdminLoggedIn = false;
+    let currentServiceKey = "";
+    let ordersList = JSON.parse(localStorage.getItem('adminOrdersList')) || [];
+
+    // منطق فتح لوحة الأدمن السرية بالنقر 5 مرات متتالية
+    let secretClickCount = 0;
+    let secretClickTimer = null;
+
+    function handleSecretAdminClick() {
+      secretClickCount++;
+      clearTimeout(secretClickTimer);
+
+      if (secretClickCount >= 5) {
+        secretClickCount = 0;
+        document.getElementById("adminLoginModal").classList.add("show");
+      } else {
+        secretClickTimer = setTimeout(function() {
+          secretClickCount = 0;
+        }, 1500);
+      }
+    }
+
+    const globalAppIcons = {
+      "superlive": "https://play-lh.googleusercontent.com/vHqLqLfZz2XgN1K_6nL8g6Q7U0K7mZ-J2h0VvL1r4f4L2f4f4f4f4f4f4f4f4f4f=s256",
+      "partystar": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500",
+      "yahala": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=500",
+      "pubg": "1000925048.png",
+      "freefire": "1000925049.png",
+      "cod": "1000925050.png",
+      "roblox": "1000925051.png",
+      "yalla": "1000925052.png",
+      "razer": "1000925053.png",
+      "tiktok": "1000925059.png"
+    };
+    const serviceCatalog = {
+      partystar: {
+        title: "Party Star (ألعاب صوتية)",
+        label: "معرّف الحساب (ID):",
+        placeholder: "أدخل ID الحساب هنا...",
+        packages: [
+          { name: "1000 ماسة", base: 16.00 },
+          { name: "5000 ماسة", base: 80.00 },
+          { name: "10000 ماسة", base: 160.00 }
+        ]
+      },
+      superlive: {
+        title: "SuperLive (بثوث صوتية)",
+        label: "معرّف الحساب (ID):",
+        placeholder: "أدخل ID الحساب هنا...",
+        packages: [
+          { name: "1000 ماسة (وكيل)", base: 16.00 },
+          { name: "1000 ماسة (مضيف)", base: 18.50 },
+          { name: "5000 ماسة", base: 92.50 }
+        ]
+      },
+      yahala: {
+        title: "برنامج يا هلا (Yahala)",
+        label: "معرّف الحساب أو الهاتف:",
+        placeholder: "أدخل رقم الحساب...",
+        packages: [
+          { name: "باقة 500 كوينز", base: 7.50 },
+          { name: "باقة 1000 كوينز", base: 15.00 }
+        ]
+      },
+      syriatel: {
+        title: "سيريتل كاش ورصيد",
+        label: "رقم سيريتل المطلوب شحنه:",
+        placeholder: "09xxxxxxxx",
+        packages: [
+          { name: "رصيد 10,000 ل.س", base: 0.70 },
+          { name: "رصيد 50,000 ل.س", base: 3.50 },
+          { name: "رصيد 100,000 ل.س", base: 7.00 }
+        ]
+      },
+      mtn: {
+        title: "MTN كاش ورصيد",
+        label: "رقم MTN المطلوب شحنه:",
+        placeholder: "09xxxxxxxx",
+        packages: [
+          { name: "رصيد 10,000 ل.س", base: 0.70 },
+          { name: "رصيد 50,000 ل.س", base: 3.50 },
+          { name: "رصيد 100,000 ل.س", base: 7.00 }
+        ]
+      },
+      pubg: {
+        title: "شدات ببجي موبايل (UC)",
+        label: "معرّف اللاعب (Player ID):",
+        placeholder: "أدخل ID اللاعب...",
+        packages: [
+          { name: "60 UC", base: 0.99 },
+          { name: "325 UC", base: 4.99 },
+          { name: "660 UC", base: 9.99 },
+          { name: "1800 UC", base: 24.99 }
+        ]
+      },
+      freefire: {
+        title: "جواهر فري فاير",
+        label: "معرّف اللاعب (Player ID):",
+        placeholder: "أدخل ID اللاعب...",
+        packages: [
+          { name: "100 + 10 جوهرة", base: 1.10 },
+          { name: "310 + 31 جوهرة", base: 3.20 },
+          { name: "520 + 52 جوهرة", base: 5.30 }
+        ]
+      },
+      cod: {
+        title: "كول أوف ديوتي (CP)",
+        label: "معرّف اللاعب (Player ID):",
+        placeholder: "أدخل ID الحساب...",
+        packages: [
+          { name: "80 CP", base: 1.15 },
+          { name: "420 CP", base: 5.50 }
+        ]
+      },
+      roblox: {
+        title: "رصيد روبلوكس (Robux)",
+        label: "اسم المستخدم (Username):",
+        placeholder: "أدخل اسم المستخدم...",
+        packages: [
+          { name: "80 Robux", base: 1.20 },
+          { name: "400 Robux", base: 5.90 }
+        ]
+      },
+      yalla: {
+        title: "يلا لودو (ماسات وذهب)",
+        label: "معرّف الحساب (ID):",
+        placeholder: "أدخل ID الحساب...",
+        packages: [
+          { name: "ماسات وذهب باقة 1", base: 2.00 },
+          { name: "ماسات وذهب باقة 2", base: 5.00 }
+        ]
+      },
+      razer: {
+        title: "بطاقات Razer Gold",
+        label: "رقم هاتف المستلم (واتساب):",
+        placeholder: "09xxxxxxxx",
+        packages: [
+          { name: "بطاقة 5$ Razer Gold", base: 5.50 },
+          { name: "بطاقة 10$ Razer Gold", base: 10.80 }
+        ]
+      },
+      tiktok: {
+        title: "شحن عملات تيك توك",
+        label: "اسم المستخدم (Username):",
+        placeholder: "@username",
+        packages: [
+          { name: "70 عملة", base: 1.10 },
+          { name: "350 عملة", base: 5.40 },
+          { name: "700 عملة", base: 10.60 }
+        ]
+      },
+      subscriptions: {
+        title: "اشتراكات وبرامج مدفوعة",
+        label: "البريد الإلكتروني للتفعيل:",
+        placeholder: "example@mail.com",
+        packages: [
+          { name: "شاهد VIP (شهر)", base: 4.50 },
+          { name: "نتفليكس شهر", base: 6.00 }
+        ]
+      },
+      social: {
+        title: "خدمات التواصل الاجتماعي",
+        label: "رابط الحساب أو المنشور:",
+        placeholder: "https://...",
+        packages: [
+          { name: "1000 متابع انستغرام", base: 2.00 },
+          { name: "1000 متابع تيك توك", base: 3.00 }
+        ]
+      }
+    };
+    function autoDetectAppIcon() {
+      const appName = document.getElementById("cfgAppName").value.trim().toLowerCase();
+      if (globalAppIcons[appName]) {
+        document.getElementById("cfgAppIconPreview").src = globalAppIcons[appName];
+      }
+    }
+
+    function triggerChangeAppIcon() {
+      const appName = document.getElementById("cfgAppName").value.trim().toLowerCase();
+      if (globalAppIcons[appName]) {
+        document.getElementById("cfgAppIconPreview").src = globalAppIcons[appName];
+        alert("تم تحديث أيقونة تطبيق (" + appName + ") تلقائياً بنجاح!");
+      } else {
+        const manualUrl = prompt("لم يتم العثور على أيقونة مطابقة تلقائياً، أدخل رابط الصورة المباشر:", document.getElementById("cfgAppIconPreview").src);
+        if (manualUrl && manualUrl.trim() !== "") {
+          document.getElementById("cfgAppIconPreview").src = manualUrl.trim();
+        }
+      }
+    }
+
+    function calculateUnitPrices() {
+      const aDia = parseFloat(document.getElementById("agentDiamonds").value) || 0;
+      const aPrice = parseFloat(document.getElementById("agentPriceUSD").value) || 0;
+      const hDia = parseFloat(document.getElementById("hostDiamonds").value) || 0;
+      const hPrice = parseFloat(document.getElementById("hostPriceUSD").value) || 0;
+
+      if (aDia > 0 && aPrice > 0) {
+        const unitAgentUSD = (aPrice / aDia);
+        const unitAgentSYP = Math.round(unitAgentUSD * exchangeRateUSD_SYP);
+        document.getElementById("agentUnitPriceText").innerText = 
+          "سعر الوحدة للوكيل: " + unitAgentUSD.toFixed(5) + "$ / وحدة (" + unitAgentSYP.toLocaleString('ar-SY') + " ل.س)";
+      } else {
+        document.getElementById("agentUnitPriceText").innerText = "سعر الوحدة للوكيل: غير محدد";
+      }
+
+      if (hDia > 0 && hPrice > 0) {
+        const unitHostUSD = (hPrice / hDia);
+        const unitHostSYP = Math.round(unitHostUSD * exchangeRateUSD_SYP);
+        document.getElementById("hostUnitPriceText").innerText = 
+          "سعر الوحدة للمضيف: " + unitHostUSD.toFixed(5) + "$ / وحدة (" + unitHostSYP.toLocaleString('ar-SY') + " ل.س)";
+      } else {
+        document.getElementById("hostUnitPriceText").innerText = "سعر الوحدة للمضيف: مساوٍ لسعر الوكيل افتراضياً";
+      }
+    }
+
+    function resetAppPricingForm() {
+      if (confirm("هل أنت متأكد من رغبتك في تصفير جميع حقول تسعير هذا التطبيق؟")) {
+        document.getElementById("cfgAppName").value = "";
+        document.getElementById("cfgAppCategory").value = "";
+        document.getElementById("cfgAppDesc").value = "";
+        document.getElementById("cfgAppCode").value = "";
+        document.getElementById("agentDiamonds").value = "";
+        document.getElementById("agentPriceUSD").value = "";
+        document.getElementById("hostDiamonds").value = "";
+        document.getElementById("hostPriceUSD").value = "";
+        calculateUnitPrices();
+      }
+    }
+
+    function openSidebar() {
+      document.getElementById("sideDrawer").classList.add("active");
+      document.getElementById("sideOverlay").classList.add("active");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeSidebar() {
+      document.getElementById("sideDrawer").classList.remove("active");
+      document.getElementById("sideOverlay").classList.remove("active");
+      document.body.style.overflow = "auto";
+    }
+
+    function closeAllModals() {
+      const modals = document.querySelectorAll(".modal-bg");
+      modals.forEach(function(modalElement) {
+        modalElement.classList.remove("show");
+      });
+      document.body.style.overflow = "auto";
+    }
+
+    function copyWallet() {
+      const walletText = document.getElementById("shamCashWalletText").innerText;
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(walletText).then(function() {
+          alert("تم نسخ معرّف محفظة شام كاش إلى الحافظة بنجاح!");
+        }).catch(function() {
+          prompt("انسخ معرّف المحفظة يدوياً من الحقل التالي:", walletText);
+        });
+      } else {
+        prompt("انسخ معرّف المحفظة يدوياً من الحقل التالي:", walletText);
+      }
+    }
+
+    function filterServicesGrid() {
+      const query = document.getElementById("serviceSearchInput").value.toLowerCase().trim();
+      const cards = document.querySelectorAll("#mainServicesContainer .service-card");
+      cards.forEach(function(card) {
+        const titleText = card.innerText.toLowerCase();
+        const dataKey = (card.getAttribute("data-key") || "").toLowerCase();
+        if (titleText.includes(query) || dataKey.includes(query)) {
+          card.style.display = "block";
+        } else {
+          card.style.display = "none";
+        }
+      });
+    }
+    function openGameModal(key) {
+      if (isSiteUnderMaintenance && !isAdminLoggedIn) {
+        alert("الموقع قيد الصيانة حالياً لتحديث الأسعار وتطوير الخوادم، يرجى المحاولة لاحقاً.");
+        return;
+      }
+
+      currentServiceKey = key;
+      const service = serviceCatalog[key];
+      if (!service) return;
+
+      document.getElementById("modalServiceTitle").innerText = service.title;
+      document.getElementById("modalInputLabel").innerText = service.label;
+      document.getElementById("modalTargetInput").placeholder = service.placeholder;
+      document.getElementById("modalTargetInput").value = "";
+
+      const pkgSelect = document.getElementById("modalPackageSelect");
+      pkgSelect.innerHTML = "";
+
+      service.packages.forEach(function(pkg, idx) {
+        const opt = document.createElement("option");
+        opt.value = idx;
+        opt.text = pkg.name;
+        pkgSelect.appendChild(opt);
+      });
+
+      updateDynamicPrice();
+      document.getElementById("serviceModal").classList.add("show");
+      document.body.style.overflow = "hidden";
+    }
+
+    function updateDynamicPrice() {
+      const service = serviceCatalog[currentServiceKey];
+      if (!service) return;
+
+      const pkgIdx = document.getElementById("modalPackageSelect").value;
+      const pkg = service.packages[pkgIdx];
+      if (!pkg) return;
+
+      const finalUSD = pkg.base * (1 + globalProfit / 100);
+      const finalSYP = Math.round(finalUSD * exchangeRateUSD_SYP);
+
+      document.getElementById("modalPriceTagUSD").innerText = "$ " + finalUSD.toFixed(2);
+      document.getElementById("modalPriceTagSYP").innerText = finalSYP.toLocaleString('ar-SY') + " ل.س";
+    }
+
+    function openDepositModal() {
+      closeSidebar();
+      document.getElementById("depositModal").classList.add("show");
+      document.body.style.overflow = "hidden";
+    }
+
+    function sendDepositNotification() {
+      const amount = document.getElementById("depAmount").value.trim();
+      const txid = document.getElementById("depTxId").value.trim();
+
+      if (!amount || !txid) {
+        alert("يرجى ملء جميع الحقول المطلوبة (المبلغ ورقم العملية).");
+        return;
+      }
+
+      const msg = "⚡ *إشعار إيداع جديد - شام كاش* ⚡\n" +
+                  "🏢 المركز: مركز مهند للتكنولوجيا\n" +
+                  "💰 المبلغ المحول: " + amount + "\n" +
+                  "🧾 رقم العملية (TXID): " + txid + "\n" +
+                  "📅 التاريخ والوقت: " + new Date().toLocaleString('ar-SY');
+
+      window.open("https://wa.me/963957455972?text=" + encodeURIComponent(msg), "_blank");
+      closeAllModals();
+    }
+
+    function submitUniversalOrder() {
+      const service = serviceCatalog[currentServiceKey];
+      const targetVal = document.getElementById("modalTargetInput").value.trim();
+      const pkgIdx = document.getElementById("modalPackageSelect").value;
+      const pkg = service.packages[pkgIdx];
+
+      if (!targetVal) {
+        alert("يرجى إدخال البيانات المطلوبة بدقة (الآيدي، الرقم، أو الرابط).");
+        return;
+      }
+
+      const finalUSD = (pkg.base * (1 + globalProfit / 100)).toFixed(2);
+      const finalSYP = Math.round(finalUSD * exchangeRateUSD_SYP).toLocaleString('ar-SY');
+
+      const newOrder = {
+        id: Date.now(),
+        service: service.title,
+        target: targetVal,
+        package: pkg.name,
+        usd: finalUSD,
+        syp: finalSYP,
+        status: "قيد المراجعة"
+      };
+
+      ordersList.unshift(newOrder);
+      localStorage.setItem('adminOrdersList', JSON.stringify(ordersList));
+      renderAdminOrders();
+
+      const msg = "⚡ *طلب شحن جديد - مركز مهند للتكنولوجيا* ⚡\n" +
+                  "🎮 الخدمة: " + service.title + "\n" +
+                  "📦 الباقة: " + pkg.name + "\n" +
+                  "🎯 المعرف / الحساب: " + targetVal + "\n" +
+                  "💵 السعر الإجمالي: $" + finalUSD + " (" + finalSYP + " ل.س)\n" +
+                  "🚀 بانتظار تأكيد العملية والتنفيذ.";
+
+      window.open("https://wa.me/963957455972?text=" + encodeURIComponent(msg), "_blank");
+      closeAllModals();
+    }
+
+    function toggleCurrencyView() {
+      if (currentCurrencyMode === "USD") {
+        currentCurrencyMode = "SYP";
+        const sypTotal = Math.round(currentBalanceVal * exchangeRateUSD_SYP);
+        document.getElementById("topBarBalance").innerText = sypTotal.toLocaleString('ar-SY') + " ل.س";
+      } else {
+        currentCurrencyMode = "USD";
+        document.getElementById("topBarBalance").innerText = "$ " + currentBalanceVal.toFixed(2);
+      }
+      closeSidebar();
+    }
+    function checkAdminAuth() {
+      const email = document.getElementById("adminEmail").value.trim();
+      const pass = document.getElementById("adminPass").value.trim();
+
+      if (email === "fhdsd686@gmail.com" && pass === "20061986Mm@") {
+        isAdminLoggedIn = true;
+        closeAllModals();
+        openAdminScreen();
+      } else {
+        alert("بيانات التحقق غير صحيحة، يرجى التأكد من البريد الإلكتروني وكلمة المرور.");
+      }
+    }
+
+    function openAdminScreen() {
+      document.getElementById("adminExchangeRateInput").value = exchangeRateUSD_SYP;
+      document.getElementById("adminInputBalance").value = currentBalanceVal;
+      document.getElementById("adminProfitInput").value = globalProfit;
+      document.getElementById("adminTopCardBalance").innerText = "$ " + currentBalanceVal.toFixed(2);
+
+      populateAdminServiceSelect();
+      renderAdminOrders();
+      calculateUnitPrices();
+
+      document.getElementById("adminScreen").classList.add("show");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeAdminScreen() {
+      document.getElementById("adminScreen").classList.remove("show");
+      document.body.style.overflow = "auto";
+    }
+
+    function toggleSiteMaintenance() {
+      isSiteUnderMaintenance = !isSiteUnderMaintenance;
+      const btn = document.getElementById("toggleMaintenanceBtn");
+      const screen = document.getElementById("maintenanceScreen");
+
+      if (isSiteUnderMaintenance) {
+        btn.innerText = "إلغاء وضع الصيانة وتشغيل الموقع";
+        btn.style.background = "var(--success)";
+        screen.classList.add("active");
+        alert("تم تشغيل وضع الصيانة وتأمين المنصة للعملاء.");
+      } else {
+        btn.innerText = "إيقاف الموقع وتفعيل شاشة الصيانة";
+        btn.style.background = "var(--danger)";
+        screen.classList.remove("active");
+        alert("تم إيقاف وضع الصيانة، الموقع يعمل الآن بشكل طبيعي ومتاح للجميع.");
+      }
+    }
+
+    function saveAdminCurrencyAndBalance() {
+      const rate = parseFloat(document.getElementById("adminExchangeRateInput").value) || 15000;
+      const bal = parseFloat(document.getElementById("adminInputBalance").value) || 0;
+
+      exchangeRateUSD_SYP = rate;
+      currentBalanceVal = bal;
+
+      const sypTotal = Math.round(bal * rate);
+      document.getElementById("topBarBalance").innerText = "$ " + bal.toFixed(2);
+      document.getElementById("sideBalance").innerText = "$ " + bal.toFixed(2);
+      document.getElementById("sideBalanceSYP").innerText = sypTotal.toLocaleString('ar-SY') + " ل.س";
+      document.getElementById("adminTopCardBalance").innerText = "$ " + bal.toFixed(2);
+
+      calculateUnitPrices();
+      alert("تم تحديث وحفظ سعر الصرف والرصيد بنجاح!");
+    }
+
+    function saveAdminProfit() {
+      const p = parseFloat(document.getElementById("adminProfitInput").value) || 0;
+      globalProfit = p;
+      alert("تم ضبط نسبة الربح الإضافية العامة إلى " + p + "% بنجاح!");
+    }
+    function saveAppPricingConfiguration() {
+      const appName = document.getElementById("cfgAppName").value.trim();
+      const appCat = document.getElementById("cfgAppCategory").value.trim();
+      const appDesc = document.getElementById("cfgAppDesc").value.trim();
+      const appCode = document.getElementById("cfgAppCode").value.trim();
+      const aPrice = parseFloat(document.getElementById("agentPriceUSD").value) || 0;
+      const hPrice = parseFloat(document.getElementById("hostPriceUSD").value) || 0;
+
+      if (!appName) {
+        alert("يرجى إدخال اسم التطبيق أولاً.");
+        return;
+      }
+
+      alert("تم حفظ وضبط أسعار (" + appName + ") بنجاح!\nسعر الوكيل: $" + aPrice + "\nسعر المضيف: $" + hPrice);
+    }
+
+    function populateAdminServiceSelect() {
+      const sSelect = document.getElementById("adminPriceServiceSelect");
+      sSelect.innerHTML = "";
+
+      for (let key in serviceCatalog) {
+        const opt = document.createElement("option");
+        opt.value = key;
+        opt.text = serviceCatalog[key].title;
+        sSelect.appendChild(opt);
+      }
+      loadAdminPackagesForPrice();
+    }
+
+    function loadAdminPackagesForPrice() {
+      const key = document.getElementById("adminPriceServiceSelect").value;
+      const pSelect = document.getElementById("adminPricePkgSelect");
+      pSelect.innerHTML = "";
+
+      const service = serviceCatalog[key];
+      if (service && service.packages) {
+        service.packages.forEach(function(pkg, idx) {
+          const opt = document.createElement("option");
+          opt.value = idx;
+          opt.text = pkg.name + " (السعر الحالي: $" + pkg.base + ")";
+          pSelect.appendChild(opt);
+        });
+      }
+      showCurrentSelectedBasePrice();
+    }
+
+    function showCurrentSelectedBasePrice() {
+      const key = document.getElementById("adminPriceServiceSelect").value;
+      const idx = document.getElementById("adminPricePkgSelect").value;
+      const service = serviceCatalog[key];
+      if (service && service.packages[idx]) {
+        document.getElementById("adminNewBasePriceInput").value = service.packages[idx].base;
+      }
+    }
+
+    function saveCustomPackagePrice() {
+      const key = document.getElementById("adminPriceServiceSelect").value;
+      const idx = document.getElementById("adminPricePkgSelect").value;
+      const newPrice = parseFloat(document.getElementById("adminNewBasePriceInput").value);
+
+      if (isNaN(newPrice) || newPrice <= 0) {
+        alert("يرجى إدخال سعر رقمي صحيح أكبر من الصفر.");
+        return;
+      }
+
+      serviceCatalog[key].packages[idx].base = newPrice;
+      loadAdminPackagesForPrice();
+      alert("تم تحديث السعر الأساسي للباقة بنجاح!");
+    }
+
+    function renderAdminOrders() {
+      const container = document.getElementById("adminOrdersList");
+      if (!ordersList || ordersList.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:var(--subtext); font-size:0.8rem; padding:12px;">لا توجد طلبات واردة حالياً</p>';
+        return;
+      }
+
+      let html = "";
+      ordersList.forEach(function(order) {
+        html += `
+          <div style="background:#0b1120; border:1px solid var(--card-border); border-radius:12px; padding:12px; margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="font-weight:800; font-size:0.85rem; color:var(--primary);">${order.service}</span>
+              <span style="font-size:0.7rem; background:#1e293b; padding:2px 8px; border-radius:6px; color:${order.status === 'تم التنفيذ' ? 'var(--success)' : 'var(--warning)'}; font-weight:700;">${order.status}</span>
+            </div>
+            <div style="font-size:0.78rem; color:var(--text); margin-bottom:2px;">الباقة: <b>${order.package}</b></div>
+            <div style="font-size:0.75rem; color:var(--subtext); margin-bottom:2px;">الهدف: <span style="direction:ltr; display:inline-block;">${order.target}</span></div>
+            <div style="font-size:0.75rem; color:var(--gold); margin-bottom:8px;">القيمة: $${order.usd} (${order.syp} ل.س)</div>
+            <div style="display:flex; gap:6px;">
+              <button onclick="updateOrderStatus(${order.id}, 'تم التنفيذ')" style="flex:1; background:var(--success); color:#fff; border:none; padding:6px; border-radius:6px; font-size:0.75rem; font-weight:700; cursor:pointer;">تأكيد وتنفيذ</button>
+              <button onclick="updateOrderStatus(${order.id}, 'ملغي')" style="flex:1; background:var(--danger); color:#fff; border:none; padding:6px; border-radius:6px; font-size:0.75rem; font-weight:700; cursor:pointer;">إلغاء الطلب</button>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    function updateOrderStatus(orderId, status) {
+      const targetOrder = ordersList.find(function(o) { return o.id === orderId; });
+      if (targetOrder) {
+        targetOrder.status = status;
+        localStorage.setItem('adminOrdersList', JSON.stringify(ordersList));
+        renderAdminOrders();
+      }
+    }
+
+    function clearAdminOrders() {
+      if (confirm("هل أنت متأكد من رغبتك في مسح سجل جميع الطلبات بالكامل؟")) {
+        ordersList = [];
+        localStorage.removeItem('adminOrdersList');
+        renderAdminOrders();
+      }
+    }
+    // تشغيل الإعدادات وتهيئة البيانات عند فتح الصفحة
+    window.addEventListener("DOMContentLoaded", function() {
+      // مزامنة الأسعار والرصيد
+      const sypTotal = Math.round(currentBalanceVal * exchangeRateUSD_SYP);
+      document.getElementById("topBarBalance").innerText = "$ " + currentBalanceVal.toFixed(2);
+      document.getElementById("sideBalance").innerText = "$ " + currentBalanceVal.toFixed(2);
+      document.getElementById("sideBalanceSYP").innerText = sypTotal.toLocaleString('ar-SY') + " ل.س";
+
+      // التأكد من استدعاء حساب أسعار التطبيق
+      calculateUnitPrices();
+    });
+  </script>
+</body>
+</html>
