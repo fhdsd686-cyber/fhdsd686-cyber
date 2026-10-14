@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>مركز مهند للتكنولوجيا | شحن الألعاب والخدمات الرقمية</title>
+
+  <!-- الخطوط العربية والأيقونات الرسمية -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    /* المتغيرات الأساسية للألوان والسمات */
+    :root {
+      --bg: #090d16;
+      --card-bg: #111827;
+      --card-border: #1e293b;
+      --card-hover: #1e293b;
+      --text: #f8fafc;
+      --subtext: #94a3b8;
+      --primary: #0284c7;
+      --primary-hover: #0369a1;
+      --accent: #38bdf8;
+      --gold: #f59e0b;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --sidebar-w: 320px;
+      --header-h: 64px;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --transition: all 0.25s ease-in-out;
+    }
+
+    /* نمط الوضع الفاتح */
+    body.light-mode {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --card-hover: #f1f5f9;
+      --text: #0f172a;
+      --subtext: #64748b;
+      --primary: #0284c7;
+      --primary-hover: #0369a1;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Cairo', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      direction: rtl;
+      text-align: right;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      padding-bottom: 85px;
+    }
+    /* شريط التنقل العلوي الرئيسي */
+    .top-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(17, 24, 39, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--card-border);
+      height: var(--header-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+    }
+
+    .header-left, .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-title {
+      font-weight: 800;
+      font-size: 1rem;
+      color: var(--text);
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-logo-img {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      object-fit: cover;
+      border: 1px solid var(--card-border);
+    }
+
+    .header-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.1rem;
+      transition: var(--transition);
+    }
+
+    .header-btn:hover {
+      background: var(--card-hover);
+      border-color: var(--primary);
+    }
+
+    .balance-chip {
+      background: #0b1120;
+      border: 1px solid var(--card-border);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* شريط البحث السريع */
+    .search-wrapper {
+      padding: 14px 16px 6px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .search-box {
+      width: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      color: var(--text);
+      font-size: 0.88rem;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .search-box:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2);
+    }
+
+    /* شبكة عرض الخدمات والمنتجات */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+      padding: 12px 16px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    @media (min-width: 640px) {
+      .services-grid {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 16px;
+      }
+    }
+
+    .service-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      cursor: pointer;
+      text-align: center;
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-bottom: 10px;
+    }
+
+    .service-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--primary);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .service-card img {
+      width: 100%;
+      aspect-ratio: 1/1;
+      object-fit: cover;
+      background: #020617;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .service-title {
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 10px 8px 4px;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    /* طبقة التعتيم الخلفية للقائمة الجانبية */
+    .sidebar-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      z-index: 99;
+      opacity: 0;
+      visibility: hidden;
+      transition: var(--transition);
+    }
+
+    .sidebar-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* القائمة الجانبية Drawer */
+    .side-drawer {
+      position: fixed;
+      top: 0;
+      right: calc(-1 * var(--sidebar-w));
+      width: var(--sidebar-w);
+      height: 100%;
+      background: var(--card-bg);
+      border-left: 1px solid var(--card-border);
+      z-index: 100;
+      transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .side-drawer.active {
+      right: 0;
+    }
+
+    .drawer-close {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      background: #1e293b;
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: var(--transition);
+    }
+
+    .drawer-close:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    /* قسم الملف التعريفي في القائمة الجانبية */
+    .profile-section {
+      padding: 24px 16px 14px;
+      text-align: center;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .avatar-wrapper {
+      position: relative;
+      width: 68px;
+      height: 68px;
+      margin-bottom: 4px;
+    }
+
+    .avatar-wrapper img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--primary);
+    }
+
+    .role-badge {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      background: var(--gold);
+      color: #000;
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 10px;
+      border: 2px solid var(--card-bg);
+    }
+
+    /* بنود وروابط القائمة الجانبية */
+    .drawer-menu {
+      padding: 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .menu-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      color: var(--text);
+      font-size: 0.88rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: var(--transition);
+    }
+
+    .menu-row:hover {
+      background: var(--card-hover);
+      color: var(--primary);
+    }
+
+    .menu-row-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .menu-row-right i {
+      font-size: 1.05rem;
+      width: 22px;
+      text-align: center;
+    }
+
+    .menu-badge {
+      background: var(--primary);
+      color: #fff;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 12px;
+    }
+
+    .menu-divider {
+      height: 1px;
+      background: var(--card-border);
+      margin: 6px 10px;
+    }
+
+    .drawer-footer {
+      padding: 14px;
+      border-top: 1px solid var(--card-border);
+      font-size: 0.72rem;
+      color: var(--subtext);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    /* النوافذ المنبثقة العامة (Modals) */
+    .modal-bg {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(5px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      opacity: 0;
+      visibility: hidden;
+      transition: var(--transition);
+    }
+
+    .modal-bg.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 440px;
+      padding: 20px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: scale(0.95);
+      transition: var(--transition);
+    }
+
+    .modal-bg.show .modal-card {
+      transform: scale(1);
+    }
+
+    .modal-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .modal-close {
+      background: #1e293b;
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: var(--transition);
+    }
+
+    .modal-close:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    /* حقول الإدخال والأزرار المشتركة */
+    .app-input {
+      width: 100%;
+      background: #0b1120;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 0.88rem;
+      margin-top: 4px;
+      margin-bottom: 12px;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .app-input:focus {
+      border-color: var(--primary);
+    }
+
+    .submit-btn {
+      width: 100%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: var(--transition);
+    }
+
+    .submit-btn:hover {
+      background: var(--primary-hover);
+    }
+
+    /* شاشة وضع الصيانة الشاملة */
+    .maintenance-overlay {
+      position: fixed;
+      inset: 0;
+      background: #090d16;
+      z-index: 999;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .maintenance-overlay.active {
+      display: flex;
+    }
+
+    .maintenance-icon {
+      font-size: 4rem;
+      color: var(--warning);
+      margin-bottom: 20px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    /* شاشة المنتجات الكاملة المستقلة مع أدوات الإدارة */
+    .full-page-view {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 150;
+      overflow-y: auto;
+      display: none;
+      flex-direction: column;
+      padding: 16px;
+    }
+
+    .full-page-view.active {
+      display: flex;
+    }
+
+    .page-nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 14px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .admin-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 250;
+      overflow-y: auto;
+      display: none;
+      padding: 16px;
+    }
+
+    .admin-screen.show {
+      display: block;
+    }
+
+    .admin-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-bottom: 16px;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .switch-btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .status-badge {
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+
+    .status-badge.active {
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--success);
+    }
+
+    .status-badge.inactive {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--danger);
+    }
+  </style>
+</head>
+<body>
+  <!-- شاشة وضع الصيانة العامة وإيقاف الموقع -->
+  <div class="maintenance-overlay" id="maintenanceScreen">
+    <i class="fa-solid fa-screwdriver-wrench maintenance-icon"></i>
+    <h2 style="font-size:1.4rem; margin-bottom:10px; color:var(--text);">الموقع قيد الصيانة والتطوير</h2>
+    <p style="font-size:0.88rem; color:var(--subtext); max-width:380px; line-height:1.6; margin-bottom:20px;">
+      نعمل حالياً على تحديث أنظمة الدفع والخوادم لتوفير أفضل تجربة لكم في مركز مهند للتكنولوجيا. سنعود للعمل قريباً جداً!
+    </p>
+    <a href="https://wa.me/963957455972" target="_blank" class="submit-btn" style="width:auto; padding:10px 24px; text-decoration:none; background:#25d366;">
+      <i class="fa-brands fa-whatsapp"></i> التواصل المباشر مع الدعم الفني
+    </a>
+  </div>
+
+  <!-- الشريط العلوي للتنقل والحساب -->
+  <header class="top-header">
+    <div class="header-right">
+      <button class="header-btn" onclick="openSidebar()" title="القائمة الجانبية">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <div class="brand-title" onclick="handleSecretAdminClick()" title="مركز مهند للتكنولوجيا">
+        <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100" alt="Logo" class="brand-logo-img">
+        <span>مركز مهند للتكنولوجيا</span>
+      </div>
+    </div>
+
+    <div class="header-left">
+      <div class="balance-chip" onclick="toggleCurrencyView()" style="cursor:pointer;" title="اضغط لتبديل العملة بين $ ول.س">
+        <i class="fa-solid fa-wallet"></i>
+        <span id="topBarBalance">$ 932.72</span>
+      </div>
+      <button class="header-btn" onclick="toggleThemeMode()" title="تبديل الوضع المظلم / الفاتح">
+        <i class="fa-solid fa-moon" id="themeToggleIcon"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- طبقة التعتيم للقائمة الجانبية -->
+  <div class="sidebar-overlay" id="sideOverlay" onclick="closeSidebar()"></div>
+  <!-- القائمة الجانبية الكاملة -->
+  <aside class="side-drawer" id="sideDrawer">
+    <button class="drawer-close" onclick="closeSidebar()"><i class="fa-solid fa-xmark"></i></button>
+
+    <div class="profile-section">
+      <div class="avatar-wrapper">
+        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150" alt="المستخدم">
+        <span class="role-badge" id="userRoleBadge">مستخدم</span>
+      </div>
+      <h3 style="font-size:0.95rem; font-weight:800; color:var(--text);" id="userNameDisplay">مركز مهند للتكنولوجيا</h3>
+      <div style="font-size:0.75rem; color:var(--accent); font-weight:700;" id="sideBalanceDisplay">$ 932.72</div>
+      <div style="font-size:0.7rem; color:var(--warning);" id="sideBalanceSYPDisplay">13,990,800 ل.س</div>
+    </div>
+
+    <div class="drawer-menu">
+      <div class="menu-row" onclick="closeSidebar()">
+        <div class="menu-row-right"><i class="fa-solid fa-house" style="color:var(--primary);"></i><span>الرئيسية</span></div>
+      </div>
+
+      <div class="menu-row" onclick="openProductsView()">
+        <div class="menu-row-right"><i class="fa-solid fa-box-open" style="color:var(--accent);"></i><span>المنتجات</span></div>
+        <span class="menu-badge">الكل</span>
+      </div>
+
+      <div class="menu-row" onclick="openDepositModal()">
+        <div class="menu-row-right"><i class="fa-solid fa-circle-plus" style="color:var(--success);"></i><span>إضافة رصيد</span></div>
+      </div>
+
+      <div class="menu-row" onclick="showSectionAlert('طلباتي')">
+        <div class="menu-row-right"><i class="fa-solid fa-clock-rotate-left" style="color:var(--warning);"></i><span>طلباتي</span></div>
+      </div>
+
+      <div class="menu-row" onclick="showSectionAlert('دفعاتي')">
+        <div class="menu-row-right"><i class="fa-solid fa-receipt" style="color:#a855f7;"></i><span>دفعاتي</span></div>
+      </div>
+
+      <div class="menu-divider"></div>
+
+      <div class="menu-row" onclick="showSectionAlert('المستويات')">
+        <div class="menu-row-right"><i class="fa-solid fa-layer-group" style="color:#ec4899;"></i><span>المستويات</span></div>
+      </div>
+
+      <div class="menu-row" onclick="showSectionAlert('مفضلتي')">
+        <div class="menu-row-right"><i class="fa-solid fa-heart" style="color:var(--danger);"></i><span>مفضلتي</span></div>
+      </div>
+
+      <div class="menu-row" onclick="showSectionAlert('الإشعارات')">
+        <div class="menu-row-right"><i class="fa-solid fa-bell" style="color:var(--gold);"></i><span>الإشعارات</span></div>
+        <span class="menu-badge" style="background:var(--danger);">3</span>
+      </div>
+
+      <div class="menu-divider"></div>
+
+      <div class="menu-row" onclick="showSectionAlert('الحماية')">
+        <div class="menu-row-right"><i class="fa-solid fa-shield-halved" style="color:var(--success);"></i><span>الحماية</span></div>
+      </div>
+
+      <div class="menu-row" onclick="showSectionAlert('حمايتك')">
+        <div class="menu-row-right"><i class="fa-solid fa-user-shield" style="color:var(--accent);"></i><span>حمايتك</span></div>
+      </div>
+
+      <div class="menu-row" onclick="showSectionAlert('الجلسات')">
+        <div class="menu-row-right"><i class="fa-solid fa-laptop-code" style="color:#6366f1;"></i><span>الجلسات</span></div>
+      </div>
+
+      <div class="menu-divider"></div>
+
+      <div class="menu-row" onclick="showSectionAlert('واجهة برمجة التطبيقات')">
+        <div class="menu-row-right"><i class="fa-solid fa-code" style="color:#14b8a6;"></i><span>واجهة برمجة التطبيقات</span></div>
+      </div>
+
+      <div class="menu-row" onclick="showSectionAlert('المحامين')">
+        <div class="menu-row-right"><i class="fa-solid fa-scale-balanced" style="color:#8b5cf6;"></i><span>المحامين</span></div>
+      </div>
+
+      <div class="menu-row" onclick="showSectionAlert('من نحن؟')">
+        <div class="menu-row-right"><i class="fa-solid fa-circle-info" style="color:var(--primary);"></i><span>من نحن؟</span></div>
+      </div>
+
+      <div class="menu-row" onclick="toggleThemeMode()">
+        <div class="menu-row-right"><i class="fa-solid fa-circle-half-stroke" style="color:var(--subtext);"></i><span>الوضع المظلم</span></div>
+      </div>
+    </div>
+
+    <div class="drawer-footer">
+      <div>شاي ☕ | مركز مهند للتكنولوجيا</div>
+      <div>جميع الحقوق محفوظة © 2026</div>
+    </div>
+  </aside>
+  <!-- واجهة العرض الرئيسية للخدمات والشحن السريع -->
+  <main id="mainHomeView">
+    <div class="search-wrapper">
+      <input type="text" id="serviceSearchInput" class="search-box" placeholder="ابحث عن لعبة، تطبيق، أو خدمة رقمية..." oninput="filterServicesGrid()">
+    </div>
+
+    <div class="services-grid" id="mainServicesContainer">
+      <!-- بطاقات الخدمات الأساسية المعروضة على الواجهة -->
+      <div class="service-card" data-key="partystar" onclick="openGameModal('partystar')">
+        <img src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500" alt="Party Star">
+        <div class="service-title">Party Star</div>
+      </div>
+
+      <div class="service-card" data-key="superlive" onclick="openGameModal('superlive')">
+        <img src="https://play-lh.googleusercontent.com/vHqLqLfZz2XgN1K_6nL8g6Q7U0K7mZ-J2h0VvL1r4f4L2f4f4f4f4f4f4f4f4f4f=s256" alt="SuperLive">
+        <div class="service-title">SuperLive</div>
+      </div>
+
+      <div class="service-card" data-key="yahala" onclick="openGameModal('yahala')">
+        <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=500" alt="Yahala">
+        <div class="service-title">برنامج يا هلا</div>
+      </div>
+
+      <div class="service-card" data-key="pubg" onclick="openGameModal('pubg')">
+        <img src="1000925048.png" alt="PUBG Mobile">
+        <div class="service-title">ببجي موبايل (UC)</div>
+      </div>
+
+      <div class="service-card" data-key="freefire" onclick="openGameModal('freefire')">
+        <img src="1000925049.png" alt="Free Fire">
+        <div class="service-title">فاي فري (جواهر)</div>
+      </div>
+
+      <div class="service-card" data-key="cod" onclick="openGameModal('cod')">
+        <img src="1000925050.png" alt="Call of Duty">
+        <div class="service-title">كول أوف ديوتي</div>
+      </div>
+
+      <div class="service-card" data-key="roblox" onclick="openGameModal('roblox')">
+        <img src="1000925051.png" alt="Roblox">
+        <div class="service-title">روبلوكس (Robux)</div>
+      </div>
+
+      <div class="service-card" data-key="yalla" onclick="openGameModal('yalla')">
+        <img src="1000925052.png" alt="Yalla Ludo">
+        <div class="service-title">يلا لودو</div>
+      </div>
+
+      <div class="service-card" data-key="razer" onclick="openGameModal('razer')">
+        <img src="1000925053.png" alt="Razer Gold">
+        <div class="service-title">بطاقات Razer Gold</div>
+      </div>
+
+      <div class="service-card" data-key="tiktok" onclick="openGameModal('tiktok')">
+        <img src="1000925059.png" alt="TikTok">
+        <div class="service-title">عملات تيك توك</div>
+      </div>
+
+      <div class="service-card" data-key="syriatel" onclick="openGameModal('syriatel')">
+        <img src="https://images.unsplash.com/photo-1563986768609-322da13575f3?w=500" alt="Syriatel">
+        <div class="service-title">سيريتل كاش ورصيد</div>
+      </div>
+
+      <div class="service-card" data-key="mtn" onclick="openGameModal('mtn')">
+        <img src="https://images.unsplash.com/photo-1556742049-0a67c5574f73?w=500" alt="MTN">
+        <div class="service-title">MTN كاش ورصيد</div>
+      </div>
+    </div>
+  </main>
+  <!-- صفحة المنتجات الكاملة المستقلة -->
+  <section class="full-page-view" id="productsPageView">
+    <div class="page-nav-bar">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <button class="header-btn" onclick="closeProductsView()"><i class="fa-solid fa-arrow-right"></i></button>
+        <h2 style="font-size:1.1rem; font-weight:800; color:var(--text);">كافة المنتجات والخدمات</h2>
+      </div>
+      <span class="status-badge active" id="totalProductsCountBadge">14 منتج متوفر</span>
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <input type="text" id="productSearchFilter" class="app-input" placeholder="فلترة وبحث في المنتجات المتاحة..." oninput="filterProductsPageList()">
+    </div>
+
+    <!-- قائمة عرض وإدارة بطاقات المنتجات كاملة -->
+    <div id="fullProductsListGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:14px;">
+      <!-- سيتم توليد وتحديث كروت المنتجات التفاعلية ديناميكياً مع كامل خيارات التحكم -->
+    </div>
+  </section>
+  <!-- نافذة إتمام الطلب واختيار الباقات -->
+  <div class="modal-bg" id="serviceModal">
+    <div class="modal-card">
+      <div class="modal-top">
+        <h3 id="modalServiceTitle" style="font-size:1rem; font-weight:800; color:var(--text);">طلب شحن</h3>
+        <button class="modal-close" onclick="closeAllModals()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label id="modalInputLabel" style="font-size:0.8rem; font-weight:700; color:var(--subtext);">المعرف أو الرقم المطلوبة تعبئته:</label>
+        <input type="text" id="modalTargetInput" class="app-input" placeholder="أدخل البيانات بدقة...">
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label style="font-size:0.8rem; font-weight:700; color:var(--subtext);">اختر الباقة المناسبة:</label>
+        <select id="modalPackageSelect" class="app-input" onchange="updateDynamicPrice()"></select>
+      </div>
+
+      <div style="background:#0b1120; border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:12px; margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size:0.8rem; color:var(--subtext);">السعر الإجمالي ($):</span>
+          <span id="modalPriceTagUSD" style="font-size:0.95rem; font-weight:800; color:var(--accent);">$ 0.00</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:0.8rem; color:var(--subtext);">المعادل بالليرة السورية:</span>
+          <span id="modalPriceTagSYP" style="font-size:0.95rem; font-weight:800; color:var(--warning);">0 ل.س</span>
+        </div>
+      </div>
+
+      <button class="submit-btn" onclick="submitUniversalOrder()">
+        <i class="fa-brands fa-whatsapp"></i> إرسال الطلب والتأكيد عبر واتساب
+      </button>
+    </div>
+  </div>
+  <!-- نافذة شحن الرصيد المباشر عبر محفظة شام كاش الرقمية -->
+  <div class="modal-bg" id="depositModal">
+    <div class="modal-card">
+      <div class="modal-top">
+        <h3 style="font-size:1rem; font-weight:800; color:var(--text);"><i class="fa-solid fa-wallet" style="color:var(--primary); margin-left:6px;"></i> شحن الرصيد عبر شام كاش</h3>
+        <button class="modal-close" onclick="closeAllModals()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div style="background:#0b1120; border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:14px; margin-bottom:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:0.75rem; color:var(--subtext);">المستلم المعتمد:</span>
+          <span style="font-size:0.85rem; font-weight:800; color:var(--text);">مركز مهند للتكنولوجيا</span>
+        </div>
+        <div style="font-size:0.75rem; color:var(--subtext); margin-bottom:6px;">معرف محفظة شام كاش المباشر:</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#1e293b; padding:8px 12px; border-radius:var(--radius-sm); border:1px dashed var(--card-border);">
+          <span style="font-size:0.72rem; font-family:monospace; direction:ltr; color:var(--accent);" id="shamCashWalletText">b7a6624b69166fb60e741400cee2b8bd</span>
+          <button onclick="copyWallet()" style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:0.85rem; padding:4px 8px; font-weight:700;"><i class="fa-regular fa-copy"></i> نسخ</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label style="font-size:0.8rem; font-weight:700; color:var(--subtext);">المبلغ المحول بدقة:</label>
+        <input type="text" id="depAmount" class="app-input" placeholder="مثال: 50,000 ل.س أو 5$">
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label style="font-size:0.8rem; font-weight:700; color:var(--subtext);">رقم العملية المرجعي (TXID):</label>
+        <input type="text" id="depTxId" class="app-input" placeholder="أدخل رقم عملية التحويل الصادر من التطبيق...">
+      </div>
+
+      <button class="submit-btn" style="background:#25d366;" onclick="sendDepositNotification()">
+        <i class="fa-brands fa-whatsapp"></i> إرسال إشعار الدفع عبر واتساب
+      </button>
+    </div>
+  </div>
+
+  <!-- نافذة تسجيل الدخول السرية الخاصة بلوحة الإدارة -->
+  <div class="modal-bg" id="adminLoginModal">
+    <div class="modal-card">
+      <div class="modal-top">
+        <h3 style="font-size:1rem; font-weight:800; color:var(--text);"><i class="fa-solid fa-lock" style="color:var(--danger); margin-left:6px;"></i> الدخول السري للوحة الإدارة</h3>
+        <button class="modal-close" onclick="closeAllModals()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <p style="font-size:0.8rem; color:var(--subtext); line-height:1.5; margin-bottom:14px;">
+        هذه اللوحة محمية وتتيح التحكم الكامل في أسعار المنتجات، نسب الأرباح التلقائية، ووضع الصيانة.
+      </p>
+
+      <div style="margin-bottom:12px;">
+        <label style="font-size:0.8rem; font-weight:700; color:var(--subtext);">البريد الإلكتروني المعتمد:</label>
+        <input type="email" id="adminEmail" class="app-input" placeholder="fhdsd686@gmail.com">
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label style="font-size:0.8rem; font-weight:700; color:var(--subtext);">كلمة المرور المشفرة:</label>
+        <input type="password" id="adminPass" class="app-input" placeholder="••••••••">
+      </div>
+
+      <button class="submit-btn" onclick="checkAdminAuth()">
+        <i class="fa-solid fa-right-to-bracket"></i> التحقق وفتح لوحة الإدارة
+      </button>
+    </div>
+  </div>
+  <!-- شاشة لوحة الإدارة الموسعة والشاملة -->
+  <section class="admin-screen" id="adminScreen">
+    <div class="admin-card">
+      <div class="admin-header">
+        <h2 style="font-size:1.1rem; font-weight:800; color:var(--primary);"><i class="fa-solid fa-gears" style="margin-left:6px;"></i> لوحة التحكم والإدارة</h2>
+        <button class="header-btn" onclick="closeAdminScreen()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- قسم التحكم بحالة الموقع ووضع الصيانة -->
+      <div style="background:#0b1120; border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:14px; margin-bottom:14px;">
+        <h4 style="font-size:0.85rem; margin-bottom:8px; color:var(--warning);"><i class="fa-solid fa-power-off" style="margin-left:6px;"></i> تشغيل وإيقاف الموقع (وضع الصيانة)</h4>
+        <p style="font-size:0.75rem; color:var(--subtext); margin-bottom:10px;">عند تفعيل الصيانة، تظهر شاشة التوقف للعملاء ويمنع إرسال أي طلبات جديدة فوراً.</p>
+        <button class="submit-btn" id="toggleMaintenanceBtn" style="background:var(--danger);" onclick="toggleSiteMaintenance()">
+          <i class="fa-solid fa-ban"></i> إيقاف الموقع وتفعيل شاشة الصيانة
+        </button>
+      </div>
+
+      <!-- قسم ترقية العميل إلى رتبة وكيل -->
+      <div style="background:#0b1120; border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:14px; margin-bottom:14px;">
+        <h4 style="font-size:0.85rem; margin-bottom:8px; color:var(--gold);"><i class="fa-solid fa-user-shield" style="margin-left:6px;"></i> تعيين وترقية الحساب إلى رتبة (وكيل)</h4>
+        <p style="font-size:0.75rem; color:var(--subtext); margin-bottom:10px;">تبديل دور الحساب الحالي بين مستخدم عادي أو وكيل للاستفادة من أسعار الجملة.</p>
+        <div style="display:flex; gap:10px;">
+          <button class="submit-btn" style="flex:1; background:var(--gold); color:#000; font-weight:800;" onclick="setUserRole('وكيل')">
+            <i class="fa-solid fa-crown"></i> تعيين كـ وكيل
+          </button>
+          <button class="submit-btn" style="flex:1; background:#1e293b; color:var(--text);" onclick="setUserRole('مستخدم')">
+            <i class="fa-solid fa-user"></i> تعيين كـ مستخدم عادي
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- بطاقة التحكم بالأرباح التلقائية وسعر الصرف -->
+    <div class="admin-card">
+      <h3 style="font-size:0.95rem; margin-bottom:12px; color:var(--text);">
+        <i class="fa-solid fa-chart-line" style="color:var(--success); margin-left:6px;"></i> نظام أرباح المنتجات التلقائية وسعر الصرف
+      </h3>
+
+      <!-- ميزة أرباح المنتجات التلقائية -->
+      <div style="background:#0b1120; border:1px solid var(--card-border); border-radius:var(--radius-sm); padding:12px; margin-bottom:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <label style="font-size:0.8rem; font-weight:700; color:var(--accent);">تفعيل أرباح المنتجات التلقائية:</label>
+          <input type="checkbox" id="autoProfitToggle" checked onchange="toggleAutoProfitState()" style="width:18px; height:18px; accent-color:var(--primary); cursor:pointer;">
+        </div>
+        <p style="font-size:0.75rem; color:var(--subtext); margin-bottom:10px;">
+          عند التفعيل، يتم احتساب ورفع أسعار جميع الباقات والمنتجات تلقائياً بالنسبة المحددة أدناه.
+        </p>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <input type="number" id="adminProfitInput" class="app-input" value="15" style="margin-bottom:0;" placeholder="نسبة الربح %">
+          <button class="submit-btn" style="width:auto; padding:10px 16px; background:var(--primary);" onclick="saveAdminProfit()">
+            حفظ النسبة
+          </button>
+        </div>
+      </div>
+
+      <!-- إعدادات سعر الصرف والرصيد العام -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+        <div>
+          <label style="font-size:0.75rem; color:var(--subtext); font-weight:700;">سعر صرف الدولار (ل.س):</label>
+          <input type="number" id="adminExchangeRateInput" class="app-input" value="15000">
+        </div>
+        <div>
+          <label style="font-size:0.75rem; color:var(--subtext); font-weight:700;">الرصيد العام في المنصة ($):</label>
+          <input type="number" step="0.01" id="adminInputBalance" class="app-input" value="932.72">
+        </div>
+      </div>
+
+      <button class="submit-btn" style="background:var(--success);" onclick="saveAdminCurrencyAndBalance()">
+        <i class="fa-solid fa-floppy-disk"></i> حفظ الرصيد وسعر الصرف
+      </button>
+    </div>
+    <!-- بطاقة التحكم الشامل بالمنتجات والأسعار يدوياً -->
+    <div class="admin-card">
+      <h3 style="font-size:0.95rem; margin-bottom:10px; color:var(--text);">
+        <i class="fa-solid fa-tags" style="color:var(--primary); margin-left:6px;"></i> التحكم بأسعار المنتجات والباقات يدوياً
+      </h3>
+      <p style="font-size:0.75rem; color:var(--subtext); margin-bottom:12px;">اختر الخدمة لتعديل السعر الأساسي أو تفعيل/تعطيل ظهورها:</p>
+
+      <div style="margin-bottom:10px;">
+        <label style="font-size:0.75rem; color:var(--subtext); font-weight:700;">اختر المنتج أو الخدمة:</label>
+        <select id="adminServiceSelect" class="app-input" onchange="loadAdminPackages()"></select>
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <label style="font-size:0.75rem; color:var(--subtext); font-weight:700;">اختر الباقة:</label>
+        <select id="adminPackageSelect" class="app-input" onchange="showPackageDetails()"></select>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label style="font-size:0.75rem; color:var(--subtext); font-weight:700;">السعر الأساسي الجديد ($):</label>
+        <input type="number" step="0.01" id="adminPackagePriceInput" class="app-input" placeholder="أدخل السعر الأساسي...">
+      </div>
+
+      <button class="submit-btn" style="background:var(--primary); margin-bottom:8px;" onclick="savePackageCustomPrice()">
+        <i class="fa-solid fa-check"></i> حفظ السعر الجديد للباقة
+      </button>
+    </div>
+
+    <!-- بطاقة إدارة الطلبات ومتابعتها -->
+    <div class="admin-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="font-size:0.95rem; color:var(--text);"><i class="fa-solid fa-list-check" style="color:var(--accent); margin-left:6px;"></i> سجل وإدارة الطلبات</h3>
+        <button onclick="clearAllOrders()" style="background:none; border:none; color:var(--danger); font-size:0.75rem; font-weight:700; cursor:pointer;">
+          <i class="fa-solid fa-trash-can"></i> مسح السجل
+        </button>
+      </div>
+      <div id="adminOrdersContainer">
+        <p style="text-align:center; color:var(--subtext); font-size:0.8rem; padding:12px;">لا توجد طلبات واردة حالياً</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- بداية كود الجافاسكربت -->
+  <script>
+    // المتغيرات العامة وإعدادات النظام
+    let exchangeRateUSD_SYP = 15000;
+    let currentBalanceVal = 932.72;
+    let globalProfit = 15;
+    let isAutoProfitEnabled = true;
+    let currentCurrencyMode = "USD";
+    let isSiteUnderMaintenance = false;
+    let isAdminLoggedIn = false;
+    let currentServiceKey = "";
+    let currentUserRole = "مستخدم";
+    let ordersList = JSON.parse(localStorage.getItem('adminOrdersList')) || [];
+
+    // نظام فتح لوحة الإدارة السرية بالنقر 5 مرات متتالية
+    let secretClickCount = 0;
+    let secretClickTimer = null;
+
+    function handleSecretAdminClick() {
+      secretClickCount++;
+      clearTimeout(secretClickTimer);
+
+      if (secretClickCount >= 5) {
+        secretClickCount = 0;
+        document.getElementById("adminLoginModal").classList.add("show");
+      } else {
+        secretClickTimer = setTimeout(function() {
+          secretClickCount = 0;
+        }, 1500);
+      }
+    }
+
+    // دوال القائمة الجانبية وإغلاق النوافذ
+    function openSidebar() {
+      document.getElementById("sideDrawer").classList.add("active");
+      document.getElementById("sideOverlay").classList.add("active");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeSidebar() {
+      document.getElementById("sideDrawer").classList.remove("active");
+      document.getElementById("sideOverlay").classList.remove("active");
+      document.body.style.overflow = "auto";
+    }
+
+    function closeAllModals() {
+      const modals = document.querySelectorAll(".modal-bg");
+      modals.forEach(function(modal) {
+        modal.classList.remove("show");
+      });
+      document.body.style.overflow = "auto";
+    }
+
+    function showSectionAlert(sectionName) {
+      closeSidebar();
+      alert("قسم (" + sectionName + ") يعمل بشكل ممتاز ومتاح بالكامل ضمن خطة التحديثات.");
+    }
+    // قاعدة بيانات الخدمات والباقات الأساسية
+    const defaultServicesData = {
+      partystar: {
+        title: "Party Star",
+        inputLabel: "أدخل الآيدي (Party Star ID):",
+        packages: [
+          { name: "1,000 كوينز", price: 0.99 },
+          { name: "5,000 كوينز", price: 4.90 },
+          { name: "10,000 كوينز", price: 9.80 },
+          { name: "50,000 كوينز", price: 48.00 }
+        ]
+      },
+      superlive: {
+        title: "SuperLive",
+        inputLabel: "أدخل المعرف (SuperLive ID):",
+        packages: [
+          { name: "1,000 ماسة", price: 1.10 },
+          { name: "5,000 ماسة", price: 5.40 },
+          { name: "10,000 ماسة", price: 10.50 }
+        ]
+      },
+      yahala: {
+        title: "برنامج يا هلا",
+        inputLabel: "أدخل معرف الحساب (Yahala ID):",
+        packages: [
+          { name: "500 كوينز", price: 0.95 },
+          { name: "2,500 كوينز", price: 4.70 },
+          { name: "5,000 كوينز", price: 9.20 }
+        ]
+      },
+      pubg: {
+        title: "ببجي موبايل (UC)",
+        inputLabel: "أدخل معرف اللاعب (Player ID):",
+        packages: [
+          { name: "60 شدة (UC)", price: 0.95 },
+          { name: "325 شدة (UC)", price: 4.60 },
+          { name: "660 شدة (UC)", price: 9.20 },
+          { name: "1800 شدة (UC)", price: 23.50 }
+        ]
+      },
+      freefire: {
+        title: "فاي فري (جواهر)",
+        inputLabel: "أدخل معرف اللاعب (Player ID):",
+        packages: [
+          { name: "100 جوهرة + 10 بونص", price: 0.95 },
+          { name: "310 جواهر", price: 2.85 },
+          { name: "520 جواهر", price: 4.60 },
+          { name: "1060 جوهرة", price: 9.10 }
+        ]
+      },
+      cod: {
+        title: "كول أوف ديوتي (CP)",
+        inputLabel: "أدخل معرف اللاعب (Player ID):",
+        packages: [
+          { name: "80 نقطة (CP)", price: 0.99 },
+          { name: "420 نقطة (CP)", price: 4.80 },
+          { name: "880 نقطة (CP)", price: 9.50 }
+        ]
+      },
+      roblox: {
+        title: "روبلوكس (Robux)",
+        inputLabel: "أدخل اسم المستخدم (Username):",
+        packages: [
+          { name: "80 روبوكس", price: 1.15 },
+          { name: "400 روبوكس", price: 5.20 },
+          { name: "800 روبوكس", price: 10.00 }
+        ]
+      },
+      yalla: {
+        title: "يلا لودو (دايموند وكوينز)",
+        inputLabel: "أدخل الآيدي (User ID):",
+        packages: [
+          { name: "500 ماسة", price: 1.20 },
+          { name: "2600 ماسة", price: 5.80 },
+          { name: "5400 ماسة", price: 11.50 }
+        ]
+      },
+      razer: {
+        title: "بطاقات Razer Gold",
+        inputLabel: "أدخل رقم الهاتف أو البريد:",
+        packages: [
+          { name: "بطاقة 5$ عالمي", price: 5.25 },
+          { name: "بطاقة 10$ عالمي", price: 10.50 },
+          { name: "بطاقة 20$ عالمي", price: 21.00 }
+        ]
+      },
+      tiktok: {
+        title: "عملات تيك توك",
+        inputLabel: "أدخل يوزر التيك توك (@username):",
+        packages: [
+          { name: "70 عملة", price: 1.05 },
+          { name: "350 عملة", price: 4.95 },
+          { name: "700 عملة", price: 9.80 },
+          { name: "1400 عملة", price: 19.50 }
+        ]
+      },
+      syriatel: {
+        title: "سيريتل كاش ورصيد",
+        inputLabel: "أدخل رقم سيريتل (09xxxxxxx):",
+        packages: [
+          { name: "10,000 ل.س رصيد", price: 0.75 },
+          { name: "25,000 ل.س رصيد", price: 1.85 },
+          { name: "50,000 ل.س رصيد", price: 3.65 },
+          { name: "100,000 ل.س كاش", price: 7.20 }
+        ]
+      },
+      mtn: {
+        title: "MTN كاش ورصيد",
+        inputLabel: "أدخل رقم MTN (09xxxxxxx):",
+        packages: [
+          { name: "10,000 ل.س رصيد", price: 0.75 },
+          { name: "25,000 ل.س رصيد", price: 1.85 },
+          { name: "50,000 ل.س رصيد", price: 3.65 },
+          { name: "100,000 ل.س كاش", price: 7.20 }
+        ]
+      }
+    };
+
+    let servicesData = JSON.parse(localStorage.getItem('adminServicesData')) || defaultServicesData;
+    // حساب السعر النهائي للباقة بناءً على نسبة الأرباح التلقائية
+    function calculateProductFinalPrice(basePrice) {
+      let finalPrice = parseFloat(basePrice);
+      if (isAutoProfitEnabled) {
+        finalPrice = finalPrice * (1 + (globalProfit / 100));
+      }
+      // خصم خاص إذا كان المستخدم برتبة وكيل
+      if (currentUserRole === "وكيل") {
+        finalPrice = finalPrice * 0.95; // خصم 5% إضافي للوكيل
+      }
+      return finalPrice;
+    }
+
+    // تحديث عرض الرصيد في الشريط العلوي والقائمة الجانبية
+    function renderBalanceDisplay() {
+      const topBal = document.getElementById("topBarBalance");
+      const sideBal = document.getElementById("sideBalanceDisplay");
+      const sideBalSYP = document.getElementById("sideBalanceSYPDisplay");
+      const sypEquivalent = Math.round(currentBalanceVal * exchangeRateUSD_SYP);
+
+      if (currentCurrencyMode === "USD") {
+        if (topBal) topBal.innerText = "$ " + currentBalanceVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      } else {
+        if (topBal) topBal.innerText = sypEquivalent.toLocaleString() + " ل.س";
+      }
+
+      if (sideBal) sideBal.innerText = "$ " + currentBalanceVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      if (sideBalSYP) sideBalSYP.innerText = sypEquivalent.toLocaleString() + " ل.س";
+    }
+
+    // تبديل العملة المعروضة بين الدولار والليرة السورية
+    function toggleCurrencyView() {
+      currentCurrencyMode = currentCurrencyMode === "USD" ? "SYP" : "USD";
+      renderBalanceDisplay();
+    }
+
+    // تبديل النمط المظلم / الفاتح
+    function toggleThemeMode() {
+      document.body.classList.toggle("light-mode");
+      const icon = document.getElementById("themeToggleIcon");
+      if (document.body.classList.contains("light-mode")) {
+        if (icon) icon.className = "fa-solid fa-sun";
+      } else {
+        if (icon) icon.className = "fa-solid fa-moon";
+      }
+    }
+
+    // تصفية وبحث بطاقات الخدمات في الواجهة الرئيسية
+    function filterServicesGrid() {
+      const query = document.getElementById("serviceSearchInput").value.toLowerCase().trim();
+      const cards = document.querySelectorAll("#mainServicesContainer .service-card");
+      cards.forEach(card => {
+        const title = card.querySelector(".service-title").innerText.toLowerCase();
+        if (title.includes(query)) {
+          card.style.display = "flex";
+        } else {
+          card.style.display = "none";
+        }
+      });
+    }
+    // فتح وإغلاق صفحة المنتجات الكاملة المستقلة
+    function openProductsView() {
+      closeSidebar();
+      renderFullProductsPage();
+      const prodView = document.getElementById("productsPageView");
+      if (prodView) prodView.classList.add("active");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeProductsView() {
+      const prodView = document.getElementById("productsPageView");
+      if (prodView) prodView.classList.remove("active");
+      document.body.style.overflow = "auto";
+    }
+
+    // توليد وعرض بطاقات كافة المنتجات مع أزرار التحكم والشراء
+    function renderFullProductsPage() {
+      const container = document.getElementById("fullProductsListGrid");
+      if (!container) return;
+      container.innerHTML = "";
+
+      const keys = Object.keys(servicesData);
+      const countBadge = document.getElementById("totalProductsCountBadge");
+      if (countBadge) countBadge.innerText = keys.length + " منتج متوفر";
+
+      keys.forEach(key => {
+        const item = servicesData[key];
+        const minPrice = item.packages.length > 0 
+          ? calculateProductFinalPrice(item.packages[0].price).toFixed(2) 
+          : "0.00";
+
+        const card = document.createElement("div");
+        card.className = "admin-card";
+        card.style.margin = "0";
+        card.style.display = "flex";
+        card.style.flexDirection = "column";
+        card.style.justifyContent = "space-between";
+
+        card.innerHTML = `
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <h4 style="font-size:0.95rem; font-weight:800; color:var(--text);">${item.title}</h4>
+              <span class="status-badge active">${item.packages.length} باقات</span>
+            </div>
+            <p style="font-size:0.75rem; color:var(--subtext); margin-bottom:10px;">${item.inputLabel}</p>
+            <div style="font-size:0.82rem; font-weight:700; color:var(--accent); margin-bottom:12px;">
+              يبدأ من: $ ${minPrice}
+            </div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="submit-btn" style="flex:1; padding:8px; font-size:0.8rem;" onclick="closeProductsView(); openGameModal('${key}')">
+              <i class="fa-solid fa-cart-shopping"></i> طلب شحن
+            </button>
+            <button class="submit-btn" style="width:auto; padding:8px 12px; font-size:0.8rem; background:#1e293b;" onclick="openAdminEditProduct('${key}')" title="تعديل في لوحة التحكم">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // تصفية المنتجات في صفحة المنتجات الكاملة
+    function filterProductsPageList() {
+      const query = document.getElementById("productSearchFilter").value.toLowerCase().trim();
+      const container = document.getElementById("fullProductsListGrid");
+      const cards = container.children;
+
+      for (let i = 0; i < cards.length; i++) {
+        const title = cards[i].querySelector("h4").innerText.toLowerCase();
+        if (title.includes(query)) {
+          cards[i].style.display = "flex";
+        } else {
+          cards[i].style.display = "none";
+        }
+      }
+    }
+
+    // فتح نافذة التعديل السريع للمنتج من صفحة المنتجات
+    function openAdminEditProduct(key) {
+      if (!isAdminLoggedIn) {
+        alert("يرجى تسجيل الدخول إلى لوحة الإدارة أولاً لتعديل هذا المنتج.");
+        document.getElementById("adminLoginModal").classList.add("show");
+        return;
+      }
+      closeProductsView();
+      document.getElementById("adminScreen").classList.add("show");
+      const sel = document.getElementById("adminServiceSelect");
+      if (sel) {
+        sel.value = key;
+        loadAdminPackages();
+      }
+    }
+    // فتح نافذة طلب الشحن وتجهيز الباقات
+    function openGameModal(serviceKey) {
+      if (isSiteUnderMaintenance && !isAdminLoggedIn) {
+        alert("الموقع حالياً قيد الصيانة والتطوير، يرجى المحاولة لاحقاً أو التواصل معنا مباشرة.");
+        return;
+      }
+
+      currentServiceKey = serviceKey;
+      const service = servicesData[serviceKey];
+      if (!service) return;
+
+      document.getElementById("modalServiceTitle").innerText = "طلب شحن: " + service.title;
+      document.getElementById("modalInputLabel").innerText = service.inputLabel;
+      document.getElementById("modalTargetInput").value = "";
+
+      const select = document.getElementById("modalPackageSelect");
+      select.innerHTML = "";
+
+      service.packages.forEach((pkg, index) => {
+        const finalPriceUSD = calculateProductFinalPrice(pkg.price);
+        const opt = document.createElement("option");
+        opt.value = index;
+        opt.text = `${pkg.name} - ($${finalPriceUSD.toFixed(2)})`;
+        select.appendChild(opt);
+      });
+
+      updateDynamicPrice();
+      document.getElementById("serviceModal").classList.add("show");
+    }
+
+    // تحديث السعر المعروض تلقائياً عند تغيير الباقة المحددة
+    function updateDynamicPrice() {
+      const service = servicesData[currentServiceKey];
+      if (!service) return;
+
+      const select = document.getElementById("modalPackageSelect");
+      const selectedIndex = select.value;
+      const pkg = service.packages[selectedIndex];
+
+      if (pkg) {
+        const finalUSD = calculateProductFinalPrice(pkg.price);
+        const finalSYP = Math.round(finalUSD * exchangeRateUSD_SYP);
+
+        document.getElementById("modalPriceTagUSD").innerText = "$ " + finalUSD.toFixed(2);
+        document.getElementById("modalPriceTagSYP").innerText = finalSYP.toLocaleString() + " ل.س";
+      }
+    }
+
+    // إرسال الطلب والتأكيد عبر واتساب مع حفظه في سجل الطلبات
+    function submitUniversalOrder() {
+      if (isSiteUnderMaintenance && !isAdminLoggedIn) {
+        alert("عذراً، الموقع متوقف حالياً لإجراء الصيانة.");
+        return;
+      }
+
+      const targetVal = document.getElementById("modalTargetInput").value.trim();
+      if (!targetVal) {
+        alert("يرجى ملء الحقل المطلوب بدقة لإتمام العملية.");
+        return;
+      }
+
+      const service = servicesData[currentServiceKey];
+      const select = document.getElementById("modalPackageSelect");
+      const pkg = service.packages[select.value];
+      const finalUSD = calculateProductFinalPrice(pkg.price);
+      const finalSYP = Math.round(finalUSD * exchangeRateUSD_SYP);
+
+      const orderData = {
+        id: Date.now(),
+        service: service.title,
+        package: pkg.name,
+        target: targetVal,
+        priceUSD: finalUSD.toFixed(2),
+        priceSYP: finalSYP,
+        date: new Date().toLocaleString("ar-SY"),
+        status: "قيد المعالجة"
+      };
+
+      ordersList.unshift(orderData);
+      localStorage.setItem("adminOrdersList", JSON.stringify(ordersList));
+
+      const msg = `*طلب شحن جديد - مركز مهند للتكنولوجيا*%0A` +
+        `------------------------%0A` +
+        `*الخدمة:* ${service.title}%0A` +
+        `*الباقة:* ${pkg.name}%0A` +
+        `*البيانات/الآيدي:* ${targetVal}%0A` +
+        `*السعر بالدولار:* $${finalUSD.toFixed(2)}%0A` +
+        `*السعر بالليرة:* ${finalSYP.toLocaleString()} ل.س%0A` +
+        `*حالة العميل:* ${currentUserRole}%0A` +
+        `------------------------%0A` +
+        `يرجى تأكيد تنفيذ الطلب وشكراً.`;
+
+      closeAllModals();
+      window.open(`https://wa.me/963957455972?text=${msg}`, "_blank");
+    }
+    // فتح نافذة تعبئة الرصيد
+    function openDepositModal() {
+      closeSidebar();
+      document.getElementById("depositModal").classList.add("show");
+    }
+
+    // نسخ عنوان المحفظة بضغطة زر
+    function copyWallet() {
+      const walletText = document.getElementById("shamCashWalletText").innerText;
+      navigator.clipboard.writeText(walletText).then(() => {
+        alert("تم نسخ معرف المحفظة بنجاح: " + walletText);
+      }).catch(() => {
+        alert("تم نسخ المحفظة: " + walletText);
+      });
+    }
+
+    // إرسال إشعار تحويل الرصيد عبر واتساب
+    function sendDepositNotification() {
+      const amount = document.getElementById("depAmount").value.trim();
+      const txid = document.getElementById("depTxId").value.trim();
+
+      if (!amount) {
+        alert("يرجى إدخال المبلغ المحول بدقة.");
+        return;
+      }
+
+      const msg = `*إشعار شحن رصيد جديد - شام كاش*%0A` +
+        `------------------------%0A` +
+        `*المنصة:* مركز مهند للتكنولوجيا%0A` +
+        `*المبلغ المحول:* ${amount}%0A` +
+        `*رقم العملية المرجعي:* ${txid ? txid : "غير محدد"}%0A` +
+        `*المحفظة المستلمة:* b7a6624b69166fb60e741400cee2b8bd%0A` +
+        `------------------------%0A` +
+        `يرجى التأكد من وصول الحوالة وتغذية الرصيد.`;
+
+      closeAllModals();
+      window.open(`https://wa.me/963957455972?text=${msg}`, "_blank");
+    }
+    // التحقق من بيانات الدخول السرية الخاصة بالأدمن
+    function checkAdminAuth() {
+      const email = document.getElementById("adminEmail").value.trim();
+      const pass = document.getElementById("adminPass").value.trim();
+
+      if (email === "fhdsd686@gmail.com" && pass === "11223344") {
+        isAdminLoggedIn = true;
+        closeAllModals();
+        openAdminScreen();
+      } else {
+        alert("بيانات الدخول غير صحيحة، يرجى التأكد والمحاولة مجدداً.");
+      }
+    }
+
+    // فتح شاشة لوحة الإدارة وتعبئة الحقول بالبيانات المحفوظة
+    function openAdminScreen() {
+      const screen = document.getElementById("adminScreen");
+      if (screen) screen.classList.add("show");
+      document.body.style.overflow = "hidden";
+
+      // مزامنة قيم الإعدادات داخل الحقول
+      const autoProfitCheck = document.getElementById("autoProfitToggle");
+      if (autoProfitCheck) autoProfitCheck.checked = isAutoProfitEnabled;
+
+      const profitInput = document.getElementById("adminProfitInput");
+      if (profitInput) profitInput.value = globalProfit;
+
+      const rateInput = document.getElementById("adminExchangeRateInput");
+      if (rateInput) rateInput.value = exchangeRateUSD_SYP;
+
+      const balInput = document.getElementById("adminInputBalance");
+      if (balInput) balInput.value = currentBalanceVal;
+
+      populateAdminServiceSelect();
+      renderAdminOrders();
+    }
+
+    // إغلاق شاشة لوحة الإدارة
+    function closeAdminScreen() {
+      const screen = document.getElementById("adminScreen");
+      if (screen) screen.classList.remove("show");
+      document.body.style.overflow = "auto";
+    }
+    // تفعيل أو تعطيل وضع الصيانة وإيقاف الموقع فوراً
+    function toggleSiteMaintenance() {
+      isSiteUnderMaintenance = !isSiteUnderMaintenance;
+      const overlay = document.getElementById("maintenanceScreen");
+      const toggleBtn = document.getElementById("toggleMaintenanceBtn");
+
+      if (isSiteUnderMaintenance) {
+        overlay.classList.add("active");
+        if (toggleBtn) {
+          toggleBtn.style.background = "var(--success)";
+          toggleBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i> إلغاء الصيانة وتشغيل الموقع';
+        }
+        alert("تم إيقاف الموقع وتفعيل شاشة الصيانة لجميع الزوار بنجاح.");
+      } else {
+        overlay.classList.remove("active");
+        if (toggleBtn) {
+          toggleBtn.style.background = "var(--danger)";
+          toggleBtn.innerHTML = '<i class="fa-solid fa-ban"></i> إيقاف الموقع وتفعيل شاشة الصيانة';
+        }
+        alert("تم إلغاء الصيانة وإعادة تشغيل الموقع لجميع الزوار بنجاح.");
+      }
+    }
+
+    // ترقية أو تغيير رتبة المستخدم إلى (وكيل) أو (مستخدم عادي)
+    function setUserRole(newRole) {
+      currentUserRole = newRole;
+      const roleBadge = document.getElementById("userRoleBadge");
+      if (roleBadge) {
+        roleBadge.innerText = currentUserRole;
+        if (currentUserRole === "وكيل") {
+          roleBadge.style.background = "var(--gold)";
+          roleBadge.style.color = "#000";
+        } else {
+          roleBadge.style.background = "var(--primary)";
+          roleBadge.style.color = "#fff";
+        }
+      }
+      alert("تم تحديث رتبة الحساب إلى: (" + currentUserRole + ") بنجاح.");
+    }
+
+    // تشغيل أو إيقاف ميزة أرباح المنتجات التلقائية
+    function toggleAutoProfitState() {
+      const toggle = document.getElementById("autoProfitToggle");
+      isAutoProfitEnabled = toggle ? toggle.checked : true;
+      const statusText = isAutoProfitEnabled ? "مفعلة" : "معطلة";
+      alert("ميزة أرباح المنتجات التلقائية أصبحت الآن: " + statusText);
+    }
+    // حفظ نسبة الأرباح التلقائية
+    function saveAdminProfit() {
+      const val = parseFloat(document.getElementById("adminProfitInput").value);
+      if (!isNaN(val) && val >= 0) {
+        globalProfit = val;
+        alert("تم حفظ نسبة الأرباح التلقائية بنجاح: " + globalProfit + "%");
+      } else {
+        alert("يرجى إدخال نسبة مئوية صحيحة.");
+      }
+    }
+
+    // حفظ سعر الصرف والرصيد العام
+    function saveAdminCurrencyAndBalance() {
+      const rateVal = parseFloat(document.getElementById("adminExchangeRateInput").value);
+      const balVal = parseFloat(document.getElementById("adminInputBalance").value);
+
+      if (!isNaN(rateVal) && rateVal > 0) {
+        exchangeRateUSD_SYP = rateVal;
+      }
+      if (!isNaN(balVal) && balVal >= 0) {
+        currentBalanceVal = balVal;
+      }
+
+      renderBalanceDisplay();
+      alert("تم تحديث وحفظ الرصيد وسعر الصرف بنجاح.");
+    }
+
+    // تعبئة قائمة المنتجات في لوحة التحكم
+    function populateAdminServiceSelect() {
+      const sel = document.getElementById("adminServiceSelect");
+      if (!sel) return;
+      sel.innerHTML = "";
+
+      Object.keys(servicesData).forEach(key => {
+        const opt = document.createElement("option");
+        opt.value = key;
+        opt.text = servicesData[key].title;
+        sel.appendChild(opt);
+      });
+
+      loadAdminPackages();
+    }
+
+    // تحميل باقات الخدمة المختارة في لوحة التحكم
+    function loadAdminPackages() {
+      const servKey = document.getElementById("adminServiceSelect").value;
+      const pkgSelect = document.getElementById("adminPackageSelect");
+      if (!pkgSelect || !servicesData[servKey]) return;
+
+      pkgSelect.innerHTML = "";
+      servicesData[servKey].packages.forEach((pkg, idx) => {
+        const opt = document.createElement("option");
+        opt.value = idx;
+        opt.text = pkg.name;
+        pkgSelect.appendChild(opt);
+      });
+
+      showPackageDetails();
+    }
+
+    // إظهار السعر الحالي للباقة المختارة في حقل التعديل
+    function showPackageDetails() {
+      const servKey = document.getElementById("adminServiceSelect").value;
+      const pkgIdx = document.getElementById("adminPackageSelect").value;
+      const priceInput = document.getElementById("adminPackagePriceInput");
+
+      if (servicesData[servKey] && servicesData[servKey].packages[pkgIdx]) {
+        priceInput.value = servicesData[servKey].packages[pkgIdx].price;
+      }
+    }
+
+    // حفظ السعر الأساسي الجديد للباقة
+    function savePackageCustomPrice() {
+      const servKey = document.getElementById("adminServiceSelect").value;
+      const pkgIdx = document.getElementById("adminPackageSelect").value;
+      const newPrice = parseFloat(document.getElementById("adminPackagePriceInput").value);
+
+      if (isNaN(newPrice) || newPrice <= 0) {
+        alert("يرجى إدخال سعر صحيح أكبر من الصفر.");
+        return;
+      }
+
+      servicesData[servKey].packages[pkgIdx].price = newPrice;
+      localStorage.setItem("adminServicesData", JSON.stringify(servicesData));
+      alert("تم تحديث السعر الأساسي للباقة بنجاح.");
+    }
+    // عرض قائمة الطلبات في لوحة الإدارة
+    function renderAdminOrders() {
+      const container = document.getElementById("adminOrdersContainer");
+      if (!container) return;
+
+      if (!ordersList || ordersList.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:var(--subtext); font-size:0.8rem; padding:12px;">لا توجد طلبات واردة حالياً</p>';
+        return;
+      }
+
+      container.innerHTML = "";
+      ordersList.forEach((ord, index) => {
+        const orderDiv = document.createElement("div");
+        orderDiv.style.background = "#0b1120";
+        orderDiv.style.border = "1px solid var(--card-border)";
+        orderDiv.style.borderRadius = "var(--radius-sm)";
+        orderDiv.style.padding = "10px";
+        orderDiv.style.marginBottom = "8px";
+        orderDiv.style.fontSize = "0.78rem";
+
+        orderDiv.innerHTML = `
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <strong style="color:var(--text);">${ord.service} - ${ord.package}</strong>
+            <span style="color:var(--accent); font-weight:700;">$${ord.priceUSD} (${ord.priceSYP} ل.س)</span>
+          </div>
+          <div style="color:var(--subtext); margin-bottom:4px;">المعرف/الهدف: <span style="color:var(--text);">${ord.target}</span></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; color:var(--subtext); font-size:0.7rem;">
+            <span>${ord.date}</span>
+            <button onclick="removeSingleOrder(${index})" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:0.75rem;">
+              <i class="fa-solid fa-trash"></i> حذف
+            </button>
+          </div>
+        `;
+        container.appendChild(orderDiv);
+      });
+    }
+
+    // حذف طلب محدد من السجل
+    function removeSingleOrder(index) {
+      ordersList.splice(index, 1);
+      localStorage.setItem("adminOrdersList", JSON.stringify(ordersList));
+      renderAdminOrders();
+    }
+
+    // مسح كافة الطلبات من السجل
+    function clearAllOrders() {
+      if (confirm("هل أنت متأكد من مسح جميع الطلبات المسجلة؟")) {
+        ordersList = [];
+        localStorage.removeItem("adminOrdersList");
+        renderAdminOrders();
+      }
+    }
+
+    // تهيئة التطبيق عند اكتمال تحميل الصفحة
+    window.addEventListener("DOMContentLoaded", () => {
+      renderBalanceDisplay();
+    });
+    // إغلاق النوافذ المنبثقة عند النقر خارج المحتوى الداخلي
+    window.addEventListener("click", function(event) {
+      const modals = document.querySelectorAll(".modal-bg");
+      modals.forEach(function(modal) {
+        if (event.target === modal) {
+          modal.classList.remove("show");
+          document.body.style.overflow = "auto";
+        }
+      });
+    });
+
+    // مراقبة ضغط زر الهروب Escape لإغلاق كافة النوافذ المفتوحة
+    window.addEventListener("keydown", function(event) {
+      if (event.key === "Escape") {
+        closeAllModals();
+        closeSidebar();
+        closeProductsView();
+        closeAdminScreen();
+      }
+    });
+
+    // استعادة حالة الوضع المظلم وسعر الصرف المخزن في ذاكرة المتصفح
+    (function initializePlatformSettings() {
+      const savedProfit = localStorage.getItem("globalAutoProfit");
+      if (savedProfit !== null) {
+        globalProfit = parseFloat(savedProfit);
+      }
+      const savedRate = localStorage.getItem("exchangeRateUSD_SYP");
+      if (savedRate !== null) {
+        exchangeRateUSD_SYP = parseFloat(savedRate);
+      }
+      renderBalanceDisplay();
+    })();
+  </script>
+</body>
+</html>
