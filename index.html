@@ -1546,16 +1546,67 @@
       }
     }
 
-    // فتح وإغلاق القائمة الجانبية للوحة الإدارة
-    function toggleAdminDrawer() {
-      const drawer = document.getElementById("adminDrawer");
-      if (drawer) {
-        drawer.classList.toggle("open");
-      }
-    }
+    // فتح وإغلاق القائمة الجانبية للوحة الإدارة برمز سري //
+const ADMIN_SECRET_PIN = "0957455972";
 
-    // عرض الرصيد المحسوب بالليرة والدولار في أعلى الصفحة
-    function renderBalanceDisplay() {
+function toggleAdminDrawer() {
+  const drawer = document.getElementById("adminDrawer");
+  if (!drawer) return;
+
+  if (drawer.classList.contains("open")) {
+    drawer.classList.remove("open");
+    return;
+  }
+
+  const isAuthenticated = sessionStorage.getItem("admin_logged_in") === "true";
+
+  if (isAuthenticated) {
+    drawer.classList.add("open");
+  } else {
+    const inputPin = prompt("لوحة التحكم مقفلة!\nالرجاء إدخال رمز الأمان:");
+    if (inputPin === ADMIN_SECRET_PIN) {
+      sessionStorage.setItem("admin_logged_in", "true");
+      showToast("تم التحقق بنجاح، مرحباً بك في لوحة الإدارة", "success");
+      drawer.classList.add("open");
+    } else if (inputPin !== null) {
+      showToast("رمز الأمان غير صحيح! تم رفض الوصول.", "error");
+    }
+  }
+}
+
+// ميزة الضغط 5 مرات على اسم المتجر لفتح اللوحة
+let brandClickCount = 0;
+let brandClickTimer = null;
+
+document.addEventListener("DOMContentLoaded", () => {
+  const brandTitle = document.querySelector(".brand-title");
+  if (brandTitle) {
+    brandTitle.style.cursor = "pointer";
+    brandTitle.addEventListener("click", () => {
+      brandClickCount++;
+      clearTimeout(brandClickTimer);
+      
+      brandClickTimer = setTimeout(() => {
+        brandClickCount = 0;
+      }, 1500);
+
+      if (brandClickCount === 5) {
+        brandClickCount = 0;
+        toggleAdminDrawer();
+      }
+    });
+  }
+});
+
+// عرض الرصيد المحسوب بالليرة والدولار في أعلى الصفحة //
+function renderBalanceDisplay() {
+  const textElem = document.getElementById("userBalanceDisplay");
+  if (textElem) {
+    const sypVal = Math.round(userBalanceUSD * exchangeRateUSD_SYP);
+    textElem.innerText = `$${userBalanceUSD.toFixed(2)} (~${sypVal.toLocaleString()} ل.س)`;
+  }
+}
+
       const textElem = document.getElementById("currentBalanceText");
       if (textElem) {
         const sypVal = Math.round(userBalanceUSD * exchangeRateUSD_SYP);
