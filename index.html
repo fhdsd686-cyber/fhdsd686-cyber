@@ -752,3 +752,350 @@
       </div>
     </div>
   </header>
+  <!-- منطقة البحث المباشر -->
+  <section class="hero-search">
+    <div class="search-box">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" id="searchInput" class="search-input" placeholder="ابحث عن لعبة، بطاقة، أو خدمة...">
+    </div>
+  </section>
+
+  <!-- شريط تصنيفات الأقسام الفورية -->
+  <nav class="categories-bar" id="categoriesBar">
+    <button class="cat-pill active" data-cat="all">
+      <i class="fa-solid fa-border-all"></i>
+      <span>الكل</span>
+    </button>
+    <!-- ستتم تعبئة الأقسام ديناميكياً من قاعدة البيانات -->
+  </nav>
+
+  <!-- شبكة عرض المنتجات والخدمات -->
+  <main>
+    <div class="services-container" id="servicesGrid">
+      <!-- ستتم تعبئة بطاقات المنتجات ديناميكياً من قاعدة البيانات -->
+    </div>
+  </main>
+  <!-- نافذة تسجيل الدخول وإنشاء حساب -->
+  <div class="modal-overlay" id="authModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="authModalTitle"><i class="fa-solid fa-right-to-bracket"></i> تسجيل الدخول</h3>
+        <button class="close-modal-btn" onclick="closeModal('authModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <form id="authForm" onsubmit="handleAuthSubmit(event)">
+        <div class="form-group" id="fullNameGroup" style="display: none;">
+          <label>الاسم الكامل</label>
+          <input type="text" id="authFullName" class="form-input" placeholder="أدخل اسمك الكامل">
+        </div>
+        <div class="form-group">
+          <label>البريد الإلكتروني</label>
+          <input type="email" id="authEmail" class="form-input" placeholder="name@example.com" required>
+        </div>
+        <div class="form-group">
+          <label>كلمة المرور</label>
+          <input type="password" id="authPassword" class="form-input" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="modal-submit-btn" id="authSubmitBtn">دخول</button>
+        <div style="margin-top: 1rem; text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+          <span id="authSwitchText">ليس لديك حساب؟</span>
+          <a href="javascript:void(0)" onclick="toggleAuthMode()" id="authSwitchLink" style="color: var(--primary); font-weight: 700; text-decoration: none;">إنشاء حساب جديد</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- نافذة تفاصيل الخدمة وإتمام الشراء -->
+  <div class="modal-overlay" id="orderModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="orderModalTitle"><i class="fa-solid fa-cart-shopping"></i> طلب الخدمة</h3>
+        <button class="close-modal-btn" onclick="closeModal('orderModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <form id="orderForm" onsubmit="handleOrderSubmit(event)">
+        <input type="hidden" id="orderProductId">
+        <div class="form-group">
+          <label>الباقة المطلوبة</label>
+          <select id="orderPackageSelect" class="form-select" onchange="updateOrderPricePreview()" required>
+            <option value="">اختر الباقة...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label id="orderTargetLabel">معرف الحساب / رقم اللاعب (ID)</label>
+          <input type="text" id="orderTargetAccount" class="form-input" placeholder="أدخل ID الحساب هنا" required>
+        </div>
+        <div style="background: var(--bg-main); padding: 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 1rem;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.3rem;">
+            <span>السعر بالدولار:</span>
+            <strong id="orderPriceUSD" style="color: var(--text-main);">$0.00</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted);">
+            <span>السعر بالليرة السورية:</span>
+            <strong id="orderPriceSYP" style="color: var(--accent);">0 ل.س</strong>
+          </div>
+        </div>
+        <button type="submit" class="modal-submit-btn" id="confirmOrderBtn">تأكيد الشراء الفوري</button>
+      </form>
+    </div>
+  </div>
+  <!-- نافذة طلب إيداع رصيد جديد -->
+  <div class="modal-overlay" id="depositModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-money-bill-transfer"></i> شحن الرصيد</h3>
+        <button class="close-modal-btn" onclick="closeModal('depositModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <form id="depositForm" onsubmit="handleDepositSubmit(event)">
+        <div class="form-group">
+          <label>طريقة الدفع المتاحة</label>
+          <select id="depositMethodSelect" class="form-select" onchange="handleDepositMethodChange()" required>
+            <option value="">اختر طريقة الدفع...</option>
+          </select>
+        </div>
+
+        <!-- تفاصيل وسيلة الدفع وتعليمات التحويل والـ QR -->
+        <div id="methodDetailsBox" style="display: none; background: var(--bg-main); padding: 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 1rem;">
+          <div style="font-size: 0.85rem; margin-bottom: 0.4rem;">
+            <span style="color: var(--text-muted);">رقم الحساب / المحفظة:</span>
+            <strong id="methodAccountNumber" style="color: var(--primary); direction: ltr; display: inline-block;"></strong>
+          </div>
+          <div style="font-size: 0.85rem; margin-bottom: 0.4rem;">
+            <span style="color: var(--text-muted);">سعر الصرف المعتمد:</span>
+            <strong id="methodExchangeRate" style="color: var(--text-main);"></strong>
+          </div>
+          <p id="methodInstructions" style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; margin-top: 0.4rem;"></p>
+          <div id="methodQrContainer" style="margin-top: 0.5rem; text-align: center; display: none;">
+            <img id="methodQrImg" src="" alt="QR الدفع" style="max-width: 140px; border-radius: 8px; border: 1px solid var(--border-color);">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>المبلغ المحول بالعملة المحلية</label>
+          <input type="number" step="any" id="depositLocalAmount" class="form-input" placeholder="أدخل المبلغ المحول" oninput="calculateDepositUSD()" required>
+        </div>
+
+        <div class="form-group">
+          <label>المبلغ الصافي المقابل بالدولار ($)</label>
+          <input type="text" id="depositUsdAmount" class="form-input" placeholder="$0.00" readonly style="background: rgba(255,255,255,0.05);">
+        </div>
+
+        <div class="form-group">
+          <label>صورة إشعار التحويل (إيصال الدفع)</label>
+          <input type="file" id="depositReceiptFile" class="form-input" accept="image/*" required>
+        </div>
+
+        <button type="submit" class="modal-submit-btn" id="submitDepositBtn">إرسال طلب الإيداع</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- حاوية ظهور التنبيهات المنبثقة السريعة -->
+  <div id="toastContainer"></div>
+
+  <!-- بداية لوحة تحكم الإدارة الجانبية (Admin Drawer) -->
+  <aside class="admin-drawer" id="adminDrawer">
+    <div class="admin-drawer-header">
+      <div class="admin-header-title">
+        <div class="admin-logo-wrapper">
+          <img id="adminDrawerLogoImg" src="https://via.placeholder.com/60" alt="لوحة الإدارة">
+          <button class="change-logo-btn" onclick="triggerDrawerLogoUpload()" title="تغيير الصورة">
+            <i class="fa-solid fa-camera"></i>
+          </button>
+          <input type="file" id="drawerLogoFileInput" accept="image/*" style="display: none;" onchange="uploadAdminDrawerLogo(event)">
+        </div>
+        <div>
+          <h2 style="font-size: 1rem; font-weight: 800; color: var(--text-main);">لوحة التحكم الشاملة</h2>
+          <span style="font-size: 0.75rem; color: var(--success);"><i class="fa-solid fa-shield-halved"></i> صلاحيات المدير الكاملة</span>
+        </div>
+      </div>
+      <button class="close-drawer-btn" onclick="toggleAdminDrawer(false)">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <!-- شريط تبويبات التنقل للأقسام الـ 10 في لوحة الإدارة -->
+    <div class="admin-nav-tabs">
+      <button class="admin-tab-btn active" onclick="switchAdminTab('adminStats')">
+        <i class="fa-solid fa-chart-pie"></i> الإحصائيات
+      </button>
+      <button class="admin-tab-btn" onclick="switchAdminTab('adminCategories')">
+        <i class="fa-solid fa-layer-group"></i> الأقسام
+      </button>
+      <button class="admin-tab-btn" onclick="switchAdminTab('adminProducts')">
+        <i class="fa-solid fa-box-open"></i> المنتجات
+      </button>
+      <button class="admin-tab-btn" onclick="switchAdminTab('adminDepositMethods')">
+        <i class="fa-solid fa-credit-card"></i> طرق الإيداع
+      </button>
+      <button class="admin-tab-btn" onclick="switchAdminTab('adminDepositRequests')">
+        <i class="fa-solid fa-receipt"></i> طلبات الإيداع
+      </button>
+      <button class="admin-tab-btn" onclick="switchAdminTab('adminOrders')">
+        <i class="fa-solid fa-cart-shopping"></i> الطلبات والمشتريات
+      </button>
+      <button class="admin-tab-btn" onclick="switchAdminTab('adminUsers')">
+        <i class="fa-solid fa-users"></i> إدارة المستخدمين
+      </button>
+      <button class="admin-tab-btn" onclick="switchAdminTab('adminSiteSettings')">
+        <i class="fa-solid fa-sliders"></i> إعدادات الموقع
+      </button>
+      <button class="admin-tab-btn" onclick="switchAdminTab('adminExchangeRate')">
+        <i class="fa-solid fa-money-bill-trend-up"></i> أسعار الصرف
+      </button>
+      <button class="admin-tab-btn" onclick="switchAdminTab('adminLogs')">
+        <i class="fa-solid fa-clipboard-list"></i> السجلات والنشاط
+      </button>
+    </div>
+
+    <!-- محتوى لوحة الإدارة (Admin Drawer Body) -->
+    <div class="admin-drawer-body">
+
+      <!-- القسم 1: الإحصائيات العامة والمالية المتقدمة -->
+      <div class="admin-section active" id="adminStats">
+        <h4 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);">
+          <i class="fa-solid fa-chart-line"></i> نظرة عامة على الأداء المالي
+        </h4>
+        
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-card-title">إجمالي المبيعات المحققة</span>
+            <span class="stat-card-val" id="statTotalSales">$0.00</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-card-title">إجمالي الإيداعات المقبولة</span>
+            <span class="stat-card-val" id="statTotalDeposits" style="color: var(--success);">$0.00</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-card-title">طلبات الإيداع المعلقة</span>
+            <span class="stat-card-val" id="statPendingDeposits" style="color: var(--warning);">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-card-title">الطلبات قيد المعالجة</span>
+            <span class="stat-card-val" id="statPendingOrders" style="color: var(--primary);">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-card-title">إجمالي المستخدمين المسجلين</span>
+            <span class="stat-card-val" id="statTotalUsers">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-card-title">إجمالي المنتجات المتاحة</span>
+            <span class="stat-card-val" id="statTotalProducts">0</span>
+          </div>
+        </div>
+      </div>
+      <!-- القسم 2: إدارة الأقسام والتصنيفات -->
+      <div class="admin-section" id="adminCategories">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <h4 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);">
+            <i class="fa-solid fa-layer-group"></i> إدارة تصنيفات الخدمات
+          </h4>
+          <button class="action-btn" onclick="openAddCategoryModal()" title="إضافة قسم جديد" style="width: auto; padding: 0 0.75rem; gap: 0.4rem; font-size: 0.8rem; background: var(--primary); border: none; color: #fff;">
+            <i class="fa-solid fa-plus"></i> إضافة قسم
+          </button>
+        </div>
+
+        <!-- قائمة الأقسام الحالية -->
+        <div id="adminCategoriesList" style="display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.5rem;">
+          <!-- سيتم تحميل الأقسام ديناميكياً هنا -->
+        </div>
+      </div>
+      <!-- القسم 3: إدارة المنتجات والخدمات -->
+      <div class="admin-section" id="adminProducts">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <h4 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);">
+            <i class="fa-solid fa-box-open"></i> إدارة المنتجات والخدمات
+          </h4>
+          <button class="action-btn" onclick="openAddProductModal()" title="إضافة منتج جديد" style="width: auto; padding: 0 0.75rem; gap: 0.4rem; font-size: 0.8rem; background: var(--primary); border: none; color: #fff;">
+            <i class="fa-solid fa-plus"></i> إضافة منتج
+          </button>
+        </div>
+
+        <!-- قائمة المنتجات الحالية -->
+        <div id="adminProductsList" style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem;">
+          <!-- سيتم تحميل كروت المنتجات مع خيارات التعديل والحذف هنا -->
+        </div>
+      </div>
+      <!-- القسم 4: إدارة طرق الدفع والإيداع المخصصة -->
+      <div class="admin-section" id="adminDepositMethods">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <h4 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);">
+            <i class="fa-solid fa-credit-card"></i> قنوات الإيداع والدفع المتاحة
+          </h4>
+          <button class="action-btn" onclick="openAddPaymentMethodModal()" title="إضافة وسيلة دفع جديدة" style="width: auto; padding: 0 0.75rem; gap: 0.4rem; font-size: 0.8rem; background: var(--primary); border: none; color: #fff;">
+            <i class="fa-solid fa-plus"></i> إضافة وسيلة
+          </button>
+        </div>
+
+        <!-- قائمة طرق الدفع بالخانات الـ 7 المعرفة -->
+        <div id="adminPaymentMethodsList" style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem;">
+          <!-- سيتم تحميل قنوات الدفع مع خيارات التحكم وحالة التفعيل هنا -->
+        </div>
+      </div>
+      <!-- القسم 5: إدارة ومراجعة طلبات الإيداع -->
+      <div class="admin-section" id="adminDepositRequests">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <h4 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);">
+            <i class="fa-solid fa-receipt"></i> مراجعة طلبات شحن الرصيد
+          </h4>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">قبول فوري أو رفض</span>
+        </div>
+
+        <!-- فلترة سريعة لحالات الطلبات -->
+        <div style="display: flex; gap: 0.4rem; margin-top: 0.5rem;">
+          <button class="cat-pill active" onclick="filterDepositRequests('الكل')" style="font-size: 0.75rem; padding: 0.3rem 0.7rem;">الكل</button>
+          <button class="cat-pill" onclick="filterDepositRequests('الانتظار')" style="font-size: 0.75rem; padding: 0.3rem 0.7rem;">قيد الانتظار</button>
+          <button class="cat-pill" onclick="filterDepositRequests('مقبول')" style="font-size: 0.75rem; padding: 0.3rem 0.7rem;">مقبولة</button>
+          <button class="cat-pill" onclick="filterDepositRequests('مرفوض')" style="font-size: 0.75rem; padding: 0.3rem 0.7rem;">مرفوضة</button>
+        </div>
+
+        <!-- قائمة كروت طلبات الإيداع -->
+        <div id="adminDepositRequestsList" style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem;">
+          <!-- سيتم تحميل بطاقات طلبات الإيداع مع صور الإيصالات وزري القبول والرفض هنا -->
+        </div>
+      </div>
+      <!-- القسم 6: إدارة ومتابعة تنفيذ طلبات الشراء والمشتريات -->
+      <div class="admin-section" id="adminOrders">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <h4 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);">
+            <i class="fa-solid fa-cart-shopping"></i> إدارة ومتابعة الطلبات
+          </h4>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">تحديث حالة الشحن</span>
+        </div>
+
+        <!-- فلترة سريعة لحالات الطلبات -->
+        <div style="display: flex; gap: 0.4rem; margin-top: 0.5rem;">
+          <button class="cat-pill active" onclick="filterAdminOrders('الكل')" style="font-size: 0.75rem; padding: 0.3rem 0.7rem;">الكل</button>
+          <button class="cat-pill" onclick="filterAdminOrders('قيد المعالجة')" style="font-size: 0.75rem; padding: 0.3rem 0.7rem;">قيد المعالجة</button>
+          <button class="cat-pill" onclick="filterAdminOrders('مكتمل')" style="font-size: 0.75rem; padding: 0.3rem 0.7rem;">مكتمل</button>
+          <button class="cat-pill" onclick="filterAdminOrders('ملغي')" style="font-size: 0.75rem; padding: 0.3rem 0.7rem;">ملغي</button>
+        </div>
+
+        <!-- قائمة كروت الطلبات -->
+        <div id="adminOrdersList" style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem;">
+          <!-- سيتم تحميل الطلبات مع بيانات الحساب المستهدف وتغيير الحالة هنا -->
+        </div>
+      </div>
+      <!-- القسم 7: إدارة المستخدمين وتعديل الأرصدة والرتب -->
+      <div class="admin-section" id="adminUsers">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <h4 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);">
+            <i class="fa-solid fa-users"></i> إدارة المستخدمين والأعضاء
+          </h4>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">تعديل الرصيد والرتبة</span>
+        </div>
+
+        <!-- شريط البحث عن مستخدم معين بالبريد أو الاسم -->
+        <div class="search-box" style="margin-top: 0.5rem;">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="adminUserSearchInput" class="search-input" placeholder="ابحث بالبريد أو اسم المستخدم..." oninput="handleUserSearch()">
+        </div>
+
+        <!-- قائمة كروت المستخدمين -->
+        <div id="adminUsersList" style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem;">
+          <!-- سيتم تحميل بطاقات المستخدمين مع خيارات تعديل الرصيد وتغيير الرتبة هنا -->
+        </div>
+      </div>
