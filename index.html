@@ -1099,3 +1099,885 @@
           <!-- سيتم تحميل بطاقات المستخدمين مع خيارات تعديل الرصيد وتغيير الرتبة هنا -->
         </div>
       </div>
+      <!-- القسم 8: إعدادات الموقع العامة والشعار -->
+      <div class="admin-section" id="adminSiteSettings">
+        <h4 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);">
+          <i class="fa-solid fa-sliders"></i> إعدادات الهوية والمظهر
+        </h4>
+
+        <form id="siteSettingsForm" onsubmit="handleSiteSettingsSubmit(event)" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 0.5rem;">
+          <div class="form-group">
+            <label>اسم المتجر / المنصة</label>
+            <input type="text" id="settingSiteTitle" class="form-input" placeholder="مركز مهند للتكنولوجيا" required>
+          </div>
+
+          <div class="form-group">
+            <label>الوصف التعريفي المختصر</label>
+            <input type="text" id="settingSiteDesc" class="form-input" placeholder="خدمات الشحن الفوري والبطاقات الرقمية">
+          </div>
+
+          <div class="form-group">
+            <label>رابط الشعار المباشر (أو رفع صورة)</label>
+            <input type="url" id="settingLogoUrl" class="form-input" placeholder="https://example.com/logo.png">
+          </div>
+
+          <div class="form-group">
+            <label>رابط الدعم الفني / التيليجرام</label>
+            <input type="text" id="settingSupportLink" class="form-input" placeholder="https://t.me/your_account">
+          </div>
+
+          <button type="submit" class="modal-submit-btn">
+            <i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات
+          </button>
+        </form>
+      </div>
+      <!-- القسم 9: إدارة ومزامنة أسعار الصرف -->
+      <div class="admin-section" id="adminExchangeRate">
+        <h4 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);">
+          <i class="fa-solid fa-money-bill-trend-up"></i> تسعير العملات والتحويل
+        </h4>
+
+        <div style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.8rem;">
+          <div class="form-group">
+            <label>سعر صرف الدولار مقابل الليرة السورية المعتمد</label>
+            <input type="number" id="baseExchangeRateSYP" class="form-input" placeholder="15000" value="15000">
+          </div>
+          <button type="button" class="modal-submit-btn" onclick="updateBaseExchangeRate()" style="margin-top: 0;">
+            <i class="fa-solid fa-arrows-rotate"></i> تحديث وتعميم السعر
+          </button>
+        </div>
+      </div>
+
+      <!-- القسم 10: سجلات العمليات والنشاط العام -->
+      <div class="admin-section" id="adminLogs">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <h4 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main);">
+            <i class="fa-solid fa-clipboard-list"></i> سجل حركة العمليات
+          </h4>
+          <button class="action-btn" onclick="clearActivityLogs()" title="مسح السجلات" style="width: auto; padding: 0 0.6rem; font-size: 0.75rem; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
+            <i class="fa-solid fa-trash-can"></i> مسح
+          </button>
+        </div>
+
+        <div id="adminActivityLogsList" style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem; max-height: 350px; overflow-y: auto;">
+          <!-- ستظهر رسائل السجلات التلقائية هنا -->
+        </div>
+      </div>
+
+    </div> <!-- نهاية admin-drawer-body -->
+  </aside> <!-- نهاية adminDrawer -->
+  <!-- نافذة إضافة / تعديل قسم -->
+  <div class="modal-overlay" id="categoryModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="categoryModalTitle"><i class="fa-solid fa-folder-plus"></i> إدارة القسم</h3>
+        <button class="close-modal-btn" onclick="closeModal('categoryModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <form id="categoryForm" onsubmit="handleCategorySubmit(event)">
+        <input type="hidden" id="editCategoryId">
+        <div class="form-group">
+          <label>اسم القسم</label>
+          <input type="text" id="categoryNameInput" class="form-input" placeholder="مثال: شحن ألعاب، بطاقات رقمية" required>
+        </div>
+        <div class="form-group">
+          <label>القسم الأب (اختياري للأقسام الفرعية)</label>
+          <select id="categoryParentSelect" class="form-select">
+            <option value="">قسم رئيسي (بدون أب)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>رابط أيقونة أو صورة القسم</label>
+          <input type="url" id="categoryImageInput" class="form-input" placeholder="https://example.com/icon.png">
+        </div>
+        <div class="form-group">
+          <label>وصف توضيحي للقسم</label>
+          <input type="text" id="categoryDescInput" class="form-input" placeholder="وصف موجز لمحتوى القسم">
+        </div>
+        <button type="submit" class="modal-submit-btn" id="categorySubmitBtn">حفظ القسم</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- نافذة إضافة / تعديل منتج -->
+  <div class="modal-overlay" id="productModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="productModalTitle"><i class="fa-solid fa-box"></i> إدارة المنتج</h3>
+        <button class="close-modal-btn" onclick="closeModal('productModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <form id="productForm" onsubmit="handleProductSubmit(event)">
+        <input type="hidden" id="editProductId">
+        <div class="form-group">
+          <label>اسم المنتج أو اللعبة</label>
+          <input type="text" id="productNameInput" class="form-input" placeholder="مثال: شحن شدات ببجي" required>
+        </div>
+        <div class="form-group">
+          <label>القسم التابع له</label>
+          <select id="productCategorySelect" class="form-select" required>
+            <option value="">اختر القسم...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>رابط صورة المنتج</label>
+          <input type="url" id="productImageInput" class="form-input" placeholder="https://example.com/image.png" required>
+        </div>
+        <div class="form-group">
+          <label>وصف المنتج أو الخدمة</label>
+          <textarea id="productDescInput" class="form-textarea" placeholder="تفاصيل المنتج وشروط الشحن"></textarea>
+        </div>
+
+        <!-- حقل إدارة الباقات المتعددة بصيغة JSON أو سطور منظمة -->
+        <div class="form-group">
+          <label>الباقات المتاحة (الاسم والسعر بالدولار)</label>
+          <div id="packagesListInputs" style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <!-- حقول إضافة باقات المنتج تظهر هنا ديناميكياً -->
+          </div>
+          <button type="button" class="action-btn" onclick="addPackageInputRow()" style="width: 100%; margin-top: 0.5rem; font-size: 0.8rem; border-style: dashed;">
+            <i class="fa-solid fa-plus"></i> إضافة باقة إضافية
+          </button>
+        </div>
+
+        <button type="submit" class="modal-submit-btn" id="productSubmitBtn">حفظ المنتج</button>
+      </form>
+    </div>
+  </div>
+  <!-- نافذة إضافة / تعديل وسيلة دفع (الخانات الـ 7) -->
+  <div class="modal-overlay" id="paymentMethodModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="paymentMethodModalTitle"><i class="fa-solid fa-credit-card"></i> إعداد وسيلة الدفع</h3>
+        <button class="close-modal-btn" onclick="closeModal('paymentMethodModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <form id="paymentMethodForm" onsubmit="handlePaymentMethodSubmit(event)">
+        <input type="hidden" id="editPaymentMethodId">
+        
+        <!-- 1. اسم الطريقة -->
+        <div class="form-group">
+          <label>1. اسم الوسيلة / البنك / المحفظة</label>
+          <input type="text" id="methodNameInput" class="form-input" placeholder="مثال: سيريتل كاش، بيم بنك، USDT" required>
+        </div>
+
+        <!-- 2. رقم الحساب أو المحفظة -->
+        <div class="form-group">
+          <label>2. رقم الحساب / المحفظة المستلمة</label>
+          <input type="text" id="methodAccountInput" class="form-input" placeholder="رقم الحساب أو عنوان المحفظة" required>
+        </div>
+
+        <!-- 3. عملة التحويل -->
+        <div class="form-group">
+          <label>3. عملة وسيلة الدفع</label>
+          <input type="text" id="methodCurrencyInput" class="form-input" placeholder="مثال: SYP, USD, TRY" required>
+        </div>
+
+        <!-- 4. سعر الصرف -->
+        <div class="form-group">
+          <label>4. سعر الصرف المعتمد مقابل 1 دولار</label>
+          <input type="number" step="any" id="methodRateInput" class="form-input" placeholder="مثال: 15000" required>
+        </div>
+
+        <!-- 5. تعليمات التحويل والملاحظات -->
+        <div class="form-group">
+          <label>5. تعليمات التحويل الموجهة للمستخدم</label>
+          <textarea id="methodInstructionsInput" class="form-textarea" placeholder="اكتب رقم الهاتف المستلم أو الملاحظات الواجب إرفاقها بالإشعار"></textarea>
+        </div>
+
+        <!-- 6. رابط صورة الباركود QR -->
+        <div class="form-group">
+          <label>6. رابط صورة باركود الدفع (QR Code)</label>
+          <input type="url" id="methodQrInput" class="form-input" placeholder="https://example.com/qr.png">
+        </div>
+
+        <!-- 7. رابط شعار الوسيلة -->
+        <div class="form-group">
+          <label>7. رابط شعار وسيلة الدفع (Logo)</label>
+          <input type="url" id="methodLogoInput" class="form-input" placeholder="https://example.com/logo.png">
+        </div>
+
+        <button type="submit" class="modal-submit-btn" id="paymentMethodSubmitBtn">حفظ وسيلة الدفع</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- نافذة تعديل بيانات ورصيد ورتبة المستخدم -->
+  <div class="modal-overlay" id="editUserModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-pen"></i> تعديل بيانات العضو</h3>
+        <button class="close-modal-btn" onclick="closeModal('editUserModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <form id="editUserForm" onsubmit="handleUserEditSubmit(event)">
+        <input type="hidden" id="editUserId">
+        <div class="form-group">
+          <label>البريد الإلكتروني (للعرض فقط)</label>
+          <input type="text" id="editUserEmail" class="form-input" readonly style="background: rgba(255,255,255,0.05);">
+        </div>
+        <div class="form-group">
+          <label>رصيد المحفظة بالدولار ($)</label>
+          <input type="number" step="0.01" id="editUserBalance" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label>رتبة وصلاحية المستخدم</label>
+          <select id="editUserRole" class="form-select">
+            <option value="مضيف">مضيف (مستخدم عادي)</option>
+            <option value="وكيل">وكيل (أسعار وخصومات مخصصة)</option>
+            <option value="مدير">مدير (لوحة التحكم الكاملة)</option>
+          </select>
+        </div>
+        <button type="submit" class="modal-submit-btn">تحديث الحساب فوراً</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- بداية أكواد البرمجة التفاعلية ونظام الربط مع سحابة Supabase -->
+  <script>
+    // تهيئة المتغيرات العامة للمشروع
+    let currentUser = null;
+    let currentUserProfile = null;
+    let activeCategory = 'all';
+    let categoriesData = [];
+    let productsData = [];
+    let paymentMethodsData = [];
+    let depositRequestsData = [];
+    let ordersData = [];
+    let usersData = [];
+    let baseExchangeRate = 15000;
+    // 1. إعداد الاتصال بقاعدة بيانات Supabase
+    // استبدل الرابط والمفتاح بالبيانات المأخوذة من إعدادات مشروعك في Supabase (API Settings)
+    const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+
+    const db = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+    // 2. نظام التنبيهات المنبثقة (Toast System)
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+
+      let iconClass = 'fa-circle-info';
+      if (type === 'success') iconClass = 'fa-circle-check';
+      if (type === 'error') iconClass = 'fa-triangle-exclamation';
+
+      toast.innerHTML = `
+        <i class="fa-solid ${iconClass}"></i>
+        <span>${message}</span>
+      `;
+
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // 3. إدارة التبديل بين الوضع الليلي والوضع الفاتح
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    if (themeToggleBtn) {
+      themeToggleBtn.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const nextTheme = currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', nextTheme);
+        localStorage.setItem('site_theme', nextTheme);
+
+        const icon = themeToggleBtn.querySelector('i');
+        if (icon) {
+          icon.className = nextTheme === 'light' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        }
+      });
+
+      // استعادة الوضع المفضل المحفوظ
+      const savedTheme = localStorage.getItem('site_theme') || 'dark';
+      if (savedTheme === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+        const icon = themeToggleBtn.querySelector('i');
+        if (icon) icon.className = 'fa-solid fa-sun';
+      }
+    }
+
+    // 4. فتح وإغلاق النوافذ المنبثقة العامة
+    function openModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.add('active');
+    }
+
+    function closeModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.remove('active');
+    }
+    // 5. تبديل وضع النموذج بين تسجيل الدخول وإنشاء حساب
+    let isRegisterMode = false;
+    function toggleAuthMode() {
+      isRegisterMode = !isRegisterMode;
+      const title = document.getElementById('authModalTitle');
+      const nameGroup = document.getElementById('fullNameGroup');
+      const submitBtn = document.getElementById('authSubmitBtn');
+      const switchText = document.getElementById('authSwitchText');
+      const switchLink = document.getElementById('authSwitchLink');
+
+      if (isRegisterMode) {
+        title.innerHTML = '<i class="fa-solid fa-user-plus"></i> إنشاء حساب جديد';
+        nameGroup.style.display = 'block';
+        submitBtn.textContent = 'تسجيل الحساب';
+        switchText.textContent = 'لديك حساب بالفعل؟';
+        switchLink.textContent = 'تسجيل الدخول';
+      } else {
+        title.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> تسجيل الدخول';
+        nameGroup.style.display = 'none';
+        submitBtn.textContent = 'دخول';
+        switchText.textContent = 'ليس لديك حساب؟';
+        switchLink.textContent = 'إنشاء حساب جديد';
+      }
+    }
+
+    // زر المصادقة في شريط التنقل العلوي
+    const authActionBtn = document.getElementById('authActionBtn');
+    if (authActionBtn) {
+      authActionBtn.addEventListener('click', () => {
+        if (currentUser) {
+          if (confirm('هل تريد تسجيل الخروج؟')) {
+            handleSignOut();
+          }
+        } else {
+          openModal('authModal');
+        }
+      });
+    }
+
+    // معالجة تسجيل الدخول أو إنشاء الحساب عبر Supabase
+    async function handleAuthSubmit(e) {
+      e.preventDefault();
+      if (!db) {
+        showToast('يرجى ضبط بيانات Supabase أولاً', 'error');
+        return;
+      }
+
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const fullName = document.getElementById('authFullName').value.trim() || 'مستخدم جديد';
+
+      try {
+        if (isRegisterMode) {
+          // تسجيل حساب جديد
+          const { data, error } = await db.auth.signUp({
+            email,
+            password,
+            options: {
+              data: { full_name: fullName }
+            }
+          });
+          if (error) throw error;
+
+          // التأكد من إدراج سجل المستخدم في جدول profiles
+          if (data.user) {
+            await db.from('profiles').upsert({
+              id: data.user.id,
+              email: data.user.email,
+              full_name: fullName,
+              balance: 0.00,
+              role: 'مضيف'
+            });
+          }
+
+          showToast('تم إنشاء الحساب بنجاح! تم تسجيل دخولك تلقائياً', 'success');
+        } else {
+          // تسجيل الدخول
+          const { error } = await db.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+          showToast('تم تسجيل الدخول بنجاح', 'success');
+        }
+
+        closeModal('authModal');
+        document.getElementById('authForm').reset();
+        await checkAuthSession();
+      } catch (err) {
+        showToast(err.message || 'حدث خطأ أثناء المصادقة', 'error');
+      }
+    }
+
+    // تسجيل الخروج
+    async function handleSignOut() {
+      if (!db) return;
+      await db.auth.signOut();
+      currentUser = null;
+      currentUserProfile = null;
+      updateAuthUI();
+      showToast('تم تسجيل الخروج بنجاح', 'info');
+    }
+
+    // فحص الجلسة النشطة وتحميل الملف الشخصي
+    async function checkAuthSession() {
+      if (!db) return;
+      try {
+        const { data: { session } } = await db.auth.getSession();
+        if (session && session.user) {
+          currentUser = session.user;
+          const { data: profile } = await db
+            .from('profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single();
+
+          currentUserProfile = profile || null;
+        } else {
+          currentUser = null;
+          currentUserProfile = null;
+        }
+      } catch (err) {
+        console.error('Session check error:', err);
+      } finally {
+        updateAuthUI();
+      }
+    }
+
+    // تحديث عناصر الواجهة بناءً على حالة تسجيل الدخول ورتبة المستخدم
+    function updateAuthUI() {
+      const balanceBadge = document.getElementById('userBalanceBadge');
+      const balanceVal = document.getElementById('userBalanceVal');
+      const depositOpenBtn = document.getElementById('depositOpenBtn');
+      const adminBtn = document.getElementById('adminPanelOpenBtn');
+      const authBtn = document.getElementById('authActionBtn');
+
+      if (currentUser && currentUserProfile) {
+        balanceBadge.style.display = 'flex';
+        balanceVal.textContent = `$${Number(currentUserProfile.balance || 0).toFixed(2)}`;
+        depositOpenBtn.style.display = 'flex';
+
+        authBtn.innerHTML = '<i class="fa-solid fa-arrow-right-from-bracket"></i>';
+        authBtn.title = 'تسجيل الخروج';
+
+        // إظهار زر لوحة الإدارة للمدير فقط
+        if (currentUserProfile.role === 'مدير') {
+          adminBtn.style.display = 'flex';
+        } else {
+          adminBtn.style.display = 'none';
+        }
+      } else {
+        balanceBadge.style.display = 'none';
+        depositOpenBtn.style.display = 'none';
+        adminBtn.style.display = 'none';
+        authBtn.innerHTML = '<i class="fa-solid fa-user"></i>';
+        authBtn.title = 'تسجيل الدخول';
+      }
+    }
+    // 6. جلب الأقسام من قاعدة البيانات وعرضها في شريط التصنيفات
+    async function loadCategories() {
+      if (!db) return;
+      try {
+        const { data, error } = await db
+          .from('categories')
+          .select('*')
+          .order('id', { ascending: true });
+
+        if (error) throw error;
+        categoriesData = data || [];
+        renderCategoriesBar();
+        populateCategorySelects();
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      }
+    }
+
+    // عرض أزرار الأقسام في شريط التصفية
+    function renderCategoriesBar() {
+      const container = document.getElementById('categoriesBar');
+      if (!container) return;
+
+      container.innerHTML = `
+        <button class="cat-pill ${activeCategory === 'all' ? 'active' : ''}" onclick="selectCategory('all')">
+          <i class="fa-solid fa-border-all"></i>
+          <span>الكل</span>
+        </button>
+      `;
+
+      categoriesData.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = `cat-pill ${activeCategory == cat.id ? 'active' : ''}`;
+        btn.onclick = () => selectCategory(cat.id);
+        btn.innerHTML = `
+          ${cat.image_url ? `<img src="${cat.image_url}" style="width:16px;height:16px;border-radius:4px;object-fit:cover;">` : '<i class="fa-solid fa-folder"></i>'}
+          <span>${cat.name}</span>
+        `;
+        container.appendChild(btn);
+      });
+    }
+
+    // تحديد القسم النشط وإعادة تصفية عرض المنتجات
+    function selectCategory(catId) {
+      activeCategory = catId;
+      renderCategoriesBar();
+      renderProductsGrid();
+    }
+
+    // تعبئة خيارات الأقسام في نوافذ الإدارة والإدخال
+    function populateCategorySelects() {
+      const prodSelect = document.getElementById('productCategorySelect');
+      const parentSelect = document.getElementById('categoryParentSelect');
+
+      if (prodSelect) {
+        prodSelect.innerHTML = '<option value="">اختر القسم...</option>';
+        categoriesData.forEach(c => {
+          prodSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+        });
+      }
+
+      if (parentSelect) {
+        parentSelect.innerHTML = '<option value="">قسم رئيسي (بدون أب)</option>';
+        categoriesData.forEach(c => {
+          parentSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+        });
+      }
+    }
+
+    // نظام البحث الفوري أثناء الكتابة
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        renderProductsGrid();
+      });
+    }
+    // 7. جلب المنتجات والخدمات من قاعدة البيانات
+    async function loadProducts() {
+      if (!db) return;
+      try {
+        const { data, error } = await db
+          .from('products')
+          .select('*')
+          .eq('is_active', true)
+          .order('id', { ascending: false });
+
+        if (error) throw error;
+        productsData = data || [];
+        renderProductsGrid();
+      } catch (err) {
+        console.error('Error fetching products:', err);
+      }
+    }
+
+    // رسم بطاقات المنتجات داخل الشبكة وتطبيق الفلاتر والبحث
+    function renderProductsGrid() {
+      const container = document.getElementById('servicesGrid');
+      if (!container) return;
+
+      const query = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+
+      // تصفية حسب القسم وشريط البحث
+      const filtered = productsData.filter(item => {
+        const matchesCategory = activeCategory === 'all' || item.category_id == activeCategory;
+        const matchesQuery = !query || item.name.toLowerCase().includes(query) || (item.description && item.description.toLowerCase().includes(query));
+        return matchesCategory && matchesQuery;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+            <i class="fa-solid fa-box-open" style="font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.5;"></i>
+            <p style="font-size: 0.95rem;">لا توجد خدمات متاحة مطابقة للبحث حالياً</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => {
+        const cat = categoriesData.find(c => c.id == item.category_id);
+        const catName = cat ? cat.name : 'خدمة فورية';
+        const imgUrl = item.image_url || 'https://via.placeholder.com/300x150?text=Service';
+
+        return `
+          <div class="service-card">
+            <div class="card-img-wrapper">
+              <img src="${imgUrl}" alt="${item.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/300x150?text=No+Image'">
+              <span class="card-badge">${catName}</span>
+            </div>
+            <div class="card-body">
+              <h3 class="card-title">${item.name}</h3>
+              <p class="card-desc">${item.description || 'خدمة شحن رقمية سريعة ومباشرة وموثوقة.'}</p>
+              <button class="card-btn" onclick="openOrderModal(${item.id})">
+                <i class="fa-solid fa-cart-plus"></i> طلب الآن
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    // 8. فتح نافذة الطلب وتجهيز خيارات الباقات
+    function openOrderModal(productId) {
+      if (!currentUser) {
+        showToast('يرجى تسجيل الدخول أولاً لإتمام عملية الشراء', 'info');
+        openModal('authModal');
+        return;
+      }
+
+      const product = productsData.find(p => p.id === productId);
+      if (!product) return;
+
+      document.getElementById('orderProductId').value = product.id;
+      document.getElementById('orderModalTitle').innerHTML = `
+        <i class="fa-solid fa-cart-shopping"></i> طلب: ${product.name}
+      `;
+
+      const select = document.getElementById('orderPackageSelect');
+      select.innerHTML = '<option value="">اختر الباقة المطلوبة...</option>';
+
+      let packages = [];
+      try {
+        packages = typeof product.packages === 'string' ? JSON.parse(product.packages) : (product.packages || []);
+      } catch (e) {
+        packages = [];
+      }
+
+      packages.forEach((pkg, idx) => {
+        select.innerHTML += `
+          <option value="${idx}" data-price="${pkg.price}" data-name="${pkg.name}">
+            ${pkg.name} - $${Number(pkg.price).toFixed(2)}
+          </option>
+        `;
+      });
+
+      document.getElementById('orderTargetAccount').value = '';
+      updateOrderPricePreview();
+      openModal('orderModal');
+    }
+
+    // تحديث السعر المعروض فور اختيار باقة معينة
+    function updateOrderPricePreview() {
+      const select = document.getElementById('orderPackageSelect');
+      const selectedOption = select.options[select.selectedIndex];
+
+      const priceUSD = selectedOption && selectedOption.dataset.price ? parseFloat(selectedOption.dataset.price) : 0;
+      const priceSYP = Math.round(priceUSD * baseExchangeRate);
+
+      document.getElementById('orderPriceUSD').textContent = `$${priceUSD.toFixed(2)}`;
+      document.getElementById('orderPriceSYP').textContent = `${priceSYP.toLocaleString()} ل.س`;
+    }
+
+    // معالجة تأكيد طلب الشراء وخصم الرصيد وتسجيل الطلب
+    async function handleOrderSubmit(e) {
+      e.preventDefault();
+      if (!db || !currentUser || !currentUserProfile) return;
+
+      const productId = parseInt(document.getElementById('orderProductId').value);
+      const product = productsData.find(p => p.id === productId);
+      const select = document.getElementById('orderPackageSelect');
+      const selectedOption = select.options[select.selectedIndex];
+      const targetAccount = document.getElementById('orderTargetAccount').value.trim();
+
+      if (!product || !selectedOption.dataset.price) {
+        showToast('يرجى تحديد الباقة المطلوبة', 'error');
+        return;
+      }
+
+      const priceUSD = parseFloat(selectedOption.dataset.price);
+      const packageName = selectedOption.dataset.name;
+      const currentBalance = parseFloat(currentUserProfile.balance || 0);
+
+      // التحقق من كفاية الرصيد
+      if (currentBalance < priceUSD) {
+        showToast('رصيدك غير كافٍ لإتمام العملية، يرجى شحن الرصيد أولاً', 'error');
+        return;
+      }
+
+      const submitBtn = document.getElementById('confirmOrderBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'جارٍ معالجة الطلب...';
+
+      try {
+        const newBalance = currentBalance - priceUSD;
+
+        // 1. إنشاء سجل الطلب في جدول orders
+        const { error: orderError } = await db.from('orders').insert({
+          user_id: currentUser.id,
+          user_email: currentUser.email,
+          service_title: product.name,
+          package_name: packageName,
+          target_account: targetAccount,
+          price_usd: priceUSD,
+          price_syp: Math.round(priceUSD * baseExchangeRate),
+          user_role: currentUserProfile.role || 'مضيف',
+          status: 'قيد المعالجة'
+        });
+
+        if (orderError) throw orderError;
+
+        // 2. تحديث رصيد المستخدم وعدد الطلبات في جدول profiles
+        const { error: profileError } = await db.from('profiles').update({
+          balance: newBalance,
+          orders_count: (currentUserProfile.orders_count || 0) + 1
+        }).eq('id', currentUser.id);
+
+        if (profileError) throw profileError;
+
+        currentUserProfile.balance = newBalance;
+        currentUserProfile.orders_count = (currentUserProfile.orders_count || 0) + 1;
+        updateAuthUI();
+
+        showToast('تم تنفيذ الطلب بنجاح وهو الآن قيد المعالجة!', 'success');
+        closeModal('orderModal');
+        document.getElementById('orderForm').reset();
+      } catch (err) {
+        showToast(err.message || 'حدث خطأ أثناء تنفيذ الطلب', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'تأكيد الشراء الفوري';
+      }
+    }
+    // 9. إدارة طرق وطلبات الإيداع
+    const depositOpenBtn = document.getElementById('depositOpenBtn');
+    if (depositOpenBtn) {
+      depositOpenBtn.addEventListener('click', () => {
+        loadPaymentMethods();
+        openModal('depositModal');
+      });
+    }
+
+    // جلب قنوات الإيداع النشطة
+    async function loadPaymentMethods() {
+      if (!db) return;
+      try {
+        const { data, error } = await db
+          .from('payment_methods')
+          .select('*')
+          .eq('is_active', true)
+          .order('id', { ascending: true });
+
+        if (error) throw error;
+        paymentMethodsData = data || [];
+
+        const select = document.getElementById('depositMethodSelect');
+        if (!select) return;
+
+        select.innerHTML = '<option value="">اختر طريقة الدفع...</option>';
+        paymentMethodsData.forEach(m => {
+          select.innerHTML += `<option value="${m.id}">${m.name} (${m.currency})</option>`;
+        });
+      } catch (err) {
+        console.error('Error fetching payment methods:', err);
+      }
+    }
+
+    // تفاعل اختيار طريقة الدفع وعرض التعليمات وسعر الصرف
+    function handleDepositMethodChange() {
+      const select = document.getElementById('depositMethodSelect');
+      const methodId = parseInt(select.value);
+      const detailsBox = document.getElementById('methodDetailsBox');
+
+      const method = paymentMethodsData.find(m => m.id === methodId);
+      if (!method) {
+        detailsBox.style.display = 'none';
+        return;
+      }
+
+      detailsBox.style.display = 'block';
+      document.getElementById('methodAccountNumber').textContent = method.account_number;
+      document.getElementById('methodExchangeRate').textContent = `1$ = ${Number(method.exchange_rate).toLocaleString()} ${method.currency}`;
+      document.getElementById('methodInstructions').textContent = method.instructions || '';
+
+      const qrBox = document.getElementById('methodQrContainer');
+      const qrImg = document.getElementById('methodQrImg');
+      if (method.qr_image_url) {
+        qrImg.src = method.qr_image_url;
+        qrBox.style.display = 'block';
+      } else {
+        qrBox.style.display = 'none';
+      }
+
+      calculateDepositUSD();
+    }
+
+    // حساب المبلغ المعادل بالدولار تلقائياً
+    function calculateDepositUSD() {
+      const select = document.getElementById('depositMethodSelect');
+      const methodId = parseInt(select.value);
+      const localAmount = parseFloat(document.getElementById('depositLocalAmount').value) || 0;
+      const usdInput = document.getElementById('depositUsdAmount');
+
+      const method = paymentMethodsData.find(m => m.id === methodId);
+      if (!method || !method.exchange_rate || localAmount <= 0) {
+        usdInput.value = '$0.00';
+        return;
+      }
+
+      const usdValue = localAmount / parseFloat(method.exchange_rate);
+      usdInput.value = `$${usdValue.toFixed(2)}`;
+    }
+
+    // رفع صورة الإيصال وإرسال طلب الإيداع
+    async function handleDepositSubmit(e) {
+      e.preventDefault();
+      if (!db || !currentUser) return;
+
+      const select = document.getElementById('depositMethodSelect');
+      const methodId = parseInt(select.value);
+      const localAmount = parseFloat(document.getElementById('depositLocalAmount').value);
+      const fileInput = document.getElementById('depositReceiptFile');
+      const method = paymentMethodsData.find(m => m.id === methodId);
+
+      if (!method || !localAmount || fileInput.files.length === 0) {
+        showToast('يرجى ملء جميع الحقول وإرفاق صورة الإشعار', 'error');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const usdAmount = parseFloat((localAmount / parseFloat(method.exchange_rate)).toFixed(2));
+      const submitBtn = document.getElementById('submitDepositBtn');
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'جارٍ رفع الإيصال والبيانات...';
+
+      try {
+        // رفع الصورة إلى Supabase Storage (حاوية receipts)
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${currentUser.id}_${Date.now()}.${fileExt}`;
+        const filePath = `receipts/${fileName}`;
+
+        let receiptUrl = '';
+        const { error: uploadError } = await db.storage
+          .from('receipts')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          // في حال عدم إعداد الحاوية سحابياً نستخدم تمثيل رابط محلي مؤقت
+          receiptUrl = URL.createObjectURL(file);
+        } else {
+          const { data: publicUrlData } = db.storage.from('receipts').getPublicUrl(filePath);
+          receiptUrl = publicUrlData.publicUrl;
+        }
+
+        // تسجيل الطلب في جدول deposit_requests
+        const { error: insertError } = await db.from('deposit_requests').insert({
+          user_id: currentUser.id,
+          user_email: currentUser.email,
+          method_id: method.id,
+          method_name: method.name,
+          amount_local: localAmount,
+          amount_usd: usdAmount,
+          currency: method.currency,
+          receipt_image_url: receiptUrl,
+          status: 'الانتظار'
+        });
+
+        if (insertError) throw insertError;
+
+        showToast('تم إرسال طلب الشحن بنجاح وهو بانتظار موافقة الإدارة', 'success');
+        closeModal('depositModal');
+        document.getElementById('depositForm').reset();
+        document.getElementById('methodDetailsBox').style.display = 'none';
+      } catch (err) {
+        showToast(err.message || 'فشل إرسال طلب الشحن', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'إرسال طلب الإيداع';
+      }
+    }
