@@ -1981,3 +1981,1172 @@
         submitBtn.textContent = 'إرسال طلب الإيداع';
       }
     }
+    // 10. التحكم في فتح وإغلاق لوحة الإدارة (Admin Drawer)
+    const adminPanelOpenBtn = document.getElementById('adminPanelOpenBtn');
+    if (adminPanelOpenBtn) {
+      adminPanelOpenBtn.addEventListener('click', () => {
+        toggleAdminDrawer(true);
+        loadAdminStats();
+      });
+    }
+
+    function toggleAdminDrawer(isOpen) {
+      const drawer = document.getElementById('adminDrawer');
+      if (!drawer) return;
+      if (isOpen) {
+        drawer.classList.add('open');
+      } else {
+        drawer.classList.remove('open');
+      }
+    }
+
+    // التبديل بين الأقسام الـ 10 في لوحة الإدارة
+    function switchAdminTab(targetSectionId) {
+      // تحديث أزرار التبويبات
+      const tabBtns = document.querySelectorAll('.admin-tab-btn');
+      tabBtns.forEach(btn => {
+        const onClickAttr = btn.getAttribute('onclick') || '';
+        if (onClickAttr.includes(targetSectionId)) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      // إظهار القسم المحدد وإخفاء البقية
+      const sections = document.querySelectorAll('.admin-section');
+      sections.forEach(sec => {
+        if (sec.id === targetSectionId) {
+          sec.classList.add('active');
+        } else {
+          sec.classList.remove('active');
+        }
+      });
+
+      // تشغيل الدالة المخصصة لكل تبويب فور الانتقال إليه
+      if (targetSectionId === 'adminStats') loadAdminStats();
+      if (targetSectionId === 'adminCategories') renderAdminCategoriesList();
+      if (targetSectionId === 'adminProducts') renderAdminProductsList();
+      if (targetSectionId === 'adminDepositMethods') renderAdminPaymentMethodsList();
+      if (targetSectionId === 'adminDepositRequests') loadAdminDepositRequests();
+      if (targetSectionId === 'adminOrders') loadAdminOrders();
+      if (targetSectionId === 'adminUsers') loadAdminUsers();
+      if (targetSectionId === 'adminLogs') renderActivityLogs();
+    }
+
+    // القسم 1: جلب واحتساب الإحصائيات المالية والعامة
+    async function loadAdminStats() {
+      if (!db) return;
+      try {
+        // حساب إجمالي الطلبات المكتملة والمبيعات
+        const { data: orders } = await db.from('orders').select('price_usd, status');
+        let totalSales = 0;
+        let pendingOrdersCount = 0;
+
+        (orders || []).forEach(o => {
+          if (o.status === 'مكتمل') {
+            totalSales += parseFloat(o.price_usd || 0);
+          }
+          if (o.status === 'قيد المعالجة') {
+            pendingOrdersCount++;
+          }
+        });
+
+        // حساب إجمالي الإيداعات المقبولة والطلبات المعلقة
+        const { data: deposits } = await db.from('deposit_requests').select('amount_usd, status');
+        let totalDeposits = 0;
+        let pendingDepositsCount = 0;
+
+        (deposits || []).forEach(d => {
+          if (d.status === 'مقبول') {
+            totalDeposits += parseFloat(d.amount_usd || 0);
+          }
+          if (d.status === 'الانتظار') {
+            pendingDepositsCount++;
+          }
+        });
+
+        // إجمالي المستخدمين
+        const { count: usersCount } = await db.from('profiles').select('id', { count: 'exact', head: true });
+
+        // إجمالي المنتجات
+        const { count: productsCount } = await db.from('products').select('id', { count: 'exact', head: true });
+
+        // تحديث أرقام كروت الإحصائيات
+        document.getElementById('statTotalSales').textContent = `$${totalSales.toFixed(2)}`;
+        document.getElementById('statTotalDeposits').textContent = `$${totalDeposits.toFixed(2)}`;
+        document.getElementById('statPendingDeposits').textContent = pendingDepositsCount;
+        document.getElementById('statPendingOrders').textContent = pendingOrdersCount;
+        document.getElementById('statTotalUsers').textContent = usersCount || 0;
+        document.getElementById('statTotalProducts').textContent = productsCount || 0;
+      } catch (err) {
+        console.error('Error loading admin stats:', err);
+      }
+    }
+    // 11. القسم 2: إدارة الأقسام والتصنيفات (CRUD)
+    function renderAdminCategoriesList() {
+      const container = document.getElementById('adminCategoriesList');
+      if (!container) return;
+
+      if (categoriesData.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; text-align: center;">لا توجد أقسام مضافة بعد.</p>';
+        return;
+      }
+
+      container.innerHTML = categoriesData.map(cat => `
+        <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-main); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            ${cat.image_url ? `<img src="${cat.image_url}" style="width: 28px; height: 28px; border-radius: 6px; object-fit: cover;">` : '<i class="fa-solid fa-folder" style="color: var(--primary);"></i>'}
+            <div>
+              <strong style="font-size: 0.85rem; color: var(--text-main); display: block;">${cat.name}</strong>
+              <small style="font-size: 0.75rem; color: var(--text-muted);">${cat.description || 'بدون وصف'}</small>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.4rem;">
+            <button class="action-btn" onclick="openEditCategoryModal(${cat.id})" title="تعديل">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+            <button class="action-btn" onclick="deleteCategory(${cat.id})" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3);" title="حذف">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function openAddCategoryModal() {
+      document.getElementById('categoryModalTitle').innerHTML = '<i class="fa-solid fa-folder-plus"></i> إضافة قسم جديد';
+      document.getElementById('editCategoryId').value = '';
+      document.getElementById('categoryForm').reset();
+      populateCategorySelects();
+      openModal('categoryModal');
+    }
+
+    function openEditCategoryModal(id) {
+      const cat = categoriesData.find(c => c.id === id);
+      if (!cat) return;
+
+      document.getElementById('categoryModalTitle').innerHTML = '<i class="fa-solid fa-pen"></i> تعديل القسم';
+      document.getElementById('editCategoryId').value = cat.id;
+      document.getElementById('categoryNameInput').value = cat.name;
+      document.getElementById('categoryParentSelect').value = cat.parent_id || '';
+      document.getElementById('categoryImageInput').value = cat.image_url || '';
+      document.getElementById('categoryDescInput').value = cat.description || '';
+
+      openModal('categoryModal');
+    }
+
+    async function handleCategorySubmit(e) {
+      e.preventDefault();
+      if (!db) return;
+
+      const id = document.getElementById('editCategoryId').value;
+      const name = document.getElementById('categoryNameInput').value.trim();
+      const parent_id = document.getElementById('categoryParentSelect').value || null;
+      const image_url = document.getElementById('categoryImageInput').value.trim();
+      const description = document.getElementById('categoryDescInput').value.trim();
+
+      try {
+        if (id) {
+          // تعديل قسم حالي
+          const { error } = await db.from('categories').update({
+            name,
+            parent_id,
+            image_url,
+            description
+          }).eq('id', id);
+
+          if (error) throw error;
+          showToast('تم تحديث القسم بنجاح', 'success');
+        } else {
+          // إضافة قسم جديد
+          const { error } = await db.from('categories').insert({
+            name,
+            parent_id,
+            image_url,
+            description
+          });
+
+          if (error) throw error;
+          showToast('تمت إضافة القسم بنجاح', 'success');
+        }
+
+        closeModal('categoryModal');
+        await loadCategories();
+        renderAdminCategoriesList();
+      } catch (err) {
+        showToast(err.message || 'حدث خطأ في حفظ بيانات القسم', 'error');
+      }
+    }
+
+    async function deleteCategory(id) {
+      if (!confirm('هل أنت متأكد من رغبتك في حذف هذا القسم؟ قد يؤثر ذلك على المنتجات المرتبطة به.')) return;
+      if (!db) return;
+
+      try {
+        const { error } = await db.from('categories').delete().eq('id', id);
+        if (error) throw error;
+
+        showToast('تم حذف القسم بنجاح', 'info');
+        await loadCategories();
+        renderAdminCategoriesList();
+      } catch (err) {
+        showToast(err.message || 'تعذر حذف القسم', 'error');
+      }
+    }
+    // 12. القسم 3: إدارة المنتجات والخدمات والباقات (CRUD)
+    function renderAdminProductsList() {
+      const container = document.getElementById('adminProductsList');
+      if (!container) return;
+
+      if (productsData.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; text-align: center;">لا توجد منتجات مضافة بعد.</p>';
+        return;
+      }
+
+      container.innerHTML = productsData.map(prod => {
+        let pkgs = [];
+        try {
+          pkgs = typeof prod.packages === 'string' ? JSON.parse(prod.packages) : (prod.packages || []);
+        } catch (e) {
+          pkgs = [];
+        }
+
+        return `
+          <div style="background: var(--bg-main); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <img src="${prod.image_url || 'https://via.placeholder.com/40'}" style="width: 36px; height: 36px; border-radius: 6px; object-fit: cover;">
+                <div>
+                  <strong style="font-size: 0.85rem; color: var(--text-main); display: block;">${prod.name}</strong>
+                  <span style="font-size: 0.75rem; color: var(--primary);">${pkgs.length} باقة متاحة</span>
+                </div>
+              </div>
+              <div style="display: flex; gap: 0.4rem;">
+                <button class="action-btn" onclick="openEditProductModal(${prod.id})" title="تعديل">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button class="action-btn" onclick="deleteProduct(${prod.id})" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3);" title="حذف">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.2rem;">
+              ${pkgs.map(p => `
+                <span style="font-size: 0.7rem; background: var(--card-bg); padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid var(--border-color); color: var(--text-muted);">
+                  ${p.name}: <strong style="color: var(--success);">$${Number(p.price).toFixed(2)}</strong>
+                </span>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // إضافة صف إدخال باقة جديد داخل نافذة المنتج
+    function addPackageInputRow(name = '', price = '') {
+      const container = document.getElementById('packagesListInputs');
+      if (!container) return;
+
+      const row = document.createElement('div');
+      row.className = 'pkg-input-row';
+      row.style.cssText = 'display: flex; gap: 0.4rem; align-items: center;';
+      row.innerHTML = `
+        <input type="text" class="form-input pkg-name" placeholder="اسم الباقة (مثال: 60 شدة)" value="${name}" required style="flex: 2;">
+        <input type="number" step="0.01" class="form-input pkg-price" placeholder="السعر ($)" value="${price}" required style="flex: 1;">
+        <button type="button" class="action-btn" onclick="this.parentElement.remove()" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3); padding: 0 0.5rem;">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      `;
+      container.appendChild(row);
+    }
+
+    function openAddProductModal() {
+      document.getElementById('productModalTitle').innerHTML = '<i class="fa-solid fa-box"></i> إضافة منتج جديد';
+      document.getElementById('editProductId').value = '';
+      document.getElementById('productForm').reset();
+      document.getElementById('packagesListInputs').innerHTML = '';
+      addPackageInputRow(); // إضافة صف باقة افتراضي فارغ
+      populateCategorySelects();
+      openModal('productModal');
+    }
+
+    function openEditProductModal(id) {
+      const prod = productsData.find(p => p.id === id);
+      if (!prod) return;
+
+      document.getElementById('productModalTitle').innerHTML = '<i class="fa-solid fa-pen"></i> تعديل المنتج';
+      document.getElementById('editProductId').value = prod.id;
+      document.getElementById('productNameInput').value = prod.name;
+      document.getElementById('productCategorySelect').value = prod.category_id || '';
+      document.getElementById('productImageInput').value = prod.image_url || '';
+      document.getElementById('productDescInput').value = prod.description || '';
+
+      const container = document.getElementById('packagesListInputs');
+      container.innerHTML = '';
+
+      let pkgs = [];
+      try {
+        pkgs = typeof prod.packages === 'string' ? JSON.parse(prod.packages) : (prod.packages || []);
+      } catch (e) {
+        pkgs = [];
+      }
+
+      if (pkgs.length > 0) {
+        pkgs.forEach(p => addPackageInputRow(p.name, p.price));
+      } else {
+        addPackageInputRow();
+      }
+
+      openModal('productModal');
+    }
+
+    async function handleProductSubmit(e) {
+      e.preventDefault();
+      if (!db) return;
+
+      const id = document.getElementById('editProductId').value;
+      const name = document.getElementById('productNameInput').value.trim();
+      const category_id = document.getElementById('productCategorySelect').value;
+      const image_url = document.getElementById('productImageInput').value.trim();
+      const description = document.getElementById('productDescInput').value.trim();
+
+      // تجميع بيانات الباقات
+      const rows = document.querySelectorAll('.pkg-input-row');
+      const packages = [];
+      rows.forEach(r => {
+        const pkgName = r.querySelector('.pkg-name').value.trim();
+        const pkgPrice = parseFloat(r.querySelector('.pkg-price').value) || 0;
+        if (pkgName) {
+          packages.push({ name: pkgName, price: pkgPrice });
+        }
+      });
+
+      if (packages.length === 0) {
+        showToast('يرجى إضافة باقة واحدة على الأقل لهذا المنتج', 'error');
+        return;
+      }
+
+      try {
+        if (id) {
+          // تعديل منتج
+          const { error } = await db.from('products').update({
+            name,
+            category_id,
+            image_url,
+            description,
+            packages: JSON.stringify(packages)
+          }).eq('id', id);
+
+          if (error) throw error;
+          showToast('تم تحديث بيانات المنتج بنجاح', 'success');
+        } else {
+          // إضافة منتج جديد
+          const { error } = await db.from('products').insert({
+            name,
+            category_id,
+            image_url,
+            description,
+            packages: JSON.stringify(packages),
+            is_active: true
+          });
+
+          if (error) throw error;
+          showToast('تمت إضافة المنتج بنجاح', 'success');
+        }
+
+        closeModal('productModal');
+        await loadProducts();
+        renderAdminProductsList();
+      } catch (err) {
+        showToast(err.message || 'حدث خطأ في حفظ المنتج', 'error');
+      }
+    }
+
+    async function deleteProduct(id) {
+      if (!confirm('هل تريد بالتأكيد حذف هذا المنتج؟')) return;
+      if (!db) return;
+
+      try {
+        const { error } = await db.from('products').delete().eq('id', id);
+        if (error) throw error;
+
+        showToast('تم حذف المنتج بنجاح', 'info');
+        await loadProducts();
+        renderAdminProductsList();
+      } catch (err) {
+        showToast(err.message || 'تعذر حذف المنتج', 'error');
+      }
+    }
+    // 13. القسم 4: إدارة طرق الدفع والإيداع بالخانات الـ 7 (CRUD)
+    function renderAdminPaymentMethodsList() {
+      const container = document.getElementById('adminPaymentMethodsList');
+      if (!container) return;
+
+      if (paymentMethodsData.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; text-align: center;">لا توجد طرق دفع مضافة بعد.</p>';
+        return;
+      }
+
+      container.innerHTML = paymentMethodsData.map(method => `
+        <div style="background: var(--bg-main); padding: 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.5rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+              <img src="${method.logo_url || 'https://via.placeholder.com/32'}" style="width: 32px; height: 32px; border-radius: 6px; object-fit: contain; background: #fff; padding: 2px;">
+              <div>
+                <strong style="font-size: 0.85rem; color: var(--text-main); display: block;">${method.name} (${method.currency})</strong>
+                <span style="font-size: 0.75rem; color: var(--primary); direction: ltr; display: inline-block;">${method.account_number}</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.4rem;">
+              <button class="action-btn" onclick="openEditPaymentMethodModal(${method.id})" title="تعديل">
+                <i class="fa-solid fa-pen-to-square"></i>
+              </button>
+              <button class="action-btn" onclick="deletePaymentMethod(${method.id})" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3);" title="حذف">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.05); pt: 0.4rem;">
+            <span>سعر الصرف: 1$ = ${Number(method.exchange_rate).toLocaleString()} ${method.currency}</span>
+            <span>${method.qr_image_url ? '<i class="fa-solid fa-qrcode" style="color: var(--success);"></i> كود QR متاح' : 'بدون QR'}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function openAddPaymentMethodModal() {
+      document.getElementById('paymentMethodModalTitle').innerHTML = '<i class="fa-solid fa-credit-card"></i> إضافة وسيلة دفع جديدة';
+      document.getElementById('editPaymentMethodId').value = '';
+      document.getElementById('paymentMethodForm').reset();
+      openModal('paymentMethodModal');
+    }
+
+    function openEditPaymentMethodModal(id) {
+      const m = paymentMethodsData.find(item => item.id === id);
+      if (!m) return;
+
+      document.getElementById('paymentMethodModalTitle').innerHTML = '<i class="fa-solid fa-pen"></i> تعديل وسيلة الدفع';
+      document.getElementById('editPaymentMethodId').value = m.id;
+      document.getElementById('methodNameInput').value = m.name;
+      document.getElementById('methodAccountInput').value = m.account_number;
+      document.getElementById('methodCurrencyInput').value = m.currency;
+      document.getElementById('methodRateInput').value = m.exchange_rate;
+      document.getElementById('methodInstructionsInput').value = m.instructions || '';
+      document.getElementById('methodQrInput').value = m.qr_image_url || '';
+      document.getElementById('methodLogoInput').value = m.logo_url || '';
+
+      openModal('paymentMethodModal');
+    }
+
+    async function handlePaymentMethodSubmit(e) {
+      e.preventDefault();
+      if (!db) return;
+
+      const id = document.getElementById('editPaymentMethodId').value;
+      const name = document.getElementById('methodNameInput').value.trim();
+      const account_number = document.getElementById('methodAccountInput').value.trim();
+      const currency = document.getElementById('methodCurrencyInput').value.trim().toUpperCase();
+      const exchange_rate = parseFloat(document.getElementById('methodRateInput').value) || 1;
+      const instructions = document.getElementById('methodInstructionsInput').value.trim();
+      const qr_image_url = document.getElementById('methodQrInput').value.trim();
+      const logo_url = document.getElementById('methodLogoInput').value.trim();
+
+      try {
+        if (id) {
+          // تعديل وسيلة دفع حالية
+          const { error } = await db.from('payment_methods').update({
+            name,
+            account_number,
+            currency,
+            exchange_rate,
+            instructions,
+            qr_image_url,
+            logo_url
+          }).eq('id', id);
+
+          if (error) throw error;
+          showToast('تم تحديث وسيلة الدفع بنجاح', 'success');
+        } else {
+          // إضافة وسيلة دفع جديدة
+          const { error } = await db.from('payment_methods').insert({
+            name,
+            account_number,
+            currency,
+            exchange_rate,
+            instructions,
+            qr_image_url,
+            logo_url,
+            is_active: true
+          });
+
+          if (error) throw error;
+          showToast('تمت إضافة وسيلة الدفع بنجاح', 'success');
+        }
+
+        closeModal('paymentMethodModal');
+        await loadPaymentMethods();
+        renderAdminPaymentMethodsList();
+      } catch (err) {
+        showToast(err.message || 'حدث خطأ في حفظ وسيلة الدفع', 'error');
+      }
+    }
+
+    async function deletePaymentMethod(id) {
+      if (!confirm('هل تريد بالتأكيد حذف وسيلة الدفع هذه؟')) return;
+      if (!db) return;
+
+      try {
+        const { error } = await db.from('payment_methods').delete().eq('id', id);
+        if (error) throw error;
+
+        showToast('تم حذف وسيلة الدفع بنجاح', 'info');
+        await loadPaymentMethods();
+        renderAdminPaymentMethodsList();
+      } catch (err) {
+        showToast(err.message || 'تعذر حذف وسيلة الدفع', 'error');
+      }
+    }
+    // 14. القسم 5: إدارة طلبات شحن الرصيد والإيداع
+    let currentDepositFilter = 'الكل';
+
+    async function loadAdminDepositRequests() {
+      if (!db) return;
+      try {
+        const { data, error } = await db
+          .from('deposit_requests')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        depositRequestsData = data || [];
+        renderAdminDepositRequestsList();
+      } catch (err) {
+        console.error('Error fetching deposit requests:', err);
+      }
+    }
+
+    function filterDepositRequests(status) {
+      currentDepositFilter = status;
+      // تحديث مظهر أزرار الفلترة
+      const sec = document.getElementById('adminDepositRequests');
+      if (sec) {
+        sec.querySelectorAll('.cat-pill').forEach(btn => {
+          btn.classList.toggle('active', btn.textContent.trim() === status || (status === 'الانتظار' && btn.textContent.trim() === 'قيد الانتظار') || (status === 'مقبول' && btn.textContent.trim() === 'مقبولة') || (status === 'مرفوض' && btn.textContent.trim() === 'مرفوضة'));
+        });
+      }
+      renderAdminDepositRequestsList();
+    }
+
+    function renderAdminDepositRequestsList() {
+      const container = document.getElementById('adminDepositRequestsList');
+      if (!container) return;
+
+      const filtered = depositRequestsData.filter(d => {
+        if (currentDepositFilter === 'الكل') return true;
+        return d.status === currentDepositFilter;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; text-align: center;">لا توجد طلبات إيداع مطابقة.</p>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(d => {
+        let badgeColor = 'var(--warning)';
+        if (d.status === 'مقبول') badgeColor = 'var(--success)';
+        if (d.status === 'مرفوض') badgeColor = 'var(--danger)';
+
+        return `
+          <div style="background: var(--bg-main); padding: 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.6rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <div>
+                <strong style="font-size: 0.85rem; color: var(--text-main);">${d.user_email}</strong>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">
+                  الوسيلة: <strong>${d.method_name}</strong> | المبلغ: <strong style="color: var(--success);">$${Number(d.amount_usd).toFixed(2)}</strong> (${Number(d.amount_local).toLocaleString()} ${d.currency})
+                </div>
+              </div>
+              <span style="font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.05); color: ${badgeColor}; border: 1px solid ${badgeColor};">
+                ${d.status}
+              </span>
+            </div>
+
+            <!-- عرض الإشعار مع رابط للفتح -->
+            ${d.receipt_image_url ? `
+              <div style="display: flex; align-items: center; gap: 0.5rem; background: var(--card-bg); padding: 0.4rem 0.6rem; border-radius: 6px;">
+                <i class="fa-solid fa-image" style="color: var(--primary);"></i>
+                <a href="${d.receipt_image_url}" target="_blank" style="font-size: 0.75rem; color: var(--primary); text-decoration: underline;">
+                  معاينة إشعار التحويل المرفق
+                </a>
+              </div>
+            ` : ''}
+
+            <!-- أزرار الإجراءات في حال كان الطلب قيد الانتظار -->
+            ${d.status === 'الانتظار' ? `
+              <div style="display: flex; gap: 0.5rem; margin-top: 0.2rem;">
+                <button class="action-btn" onclick="approveDepositRequest(${d.id}, '${d.user_id}',${d.amount_usd})" style="flex: 1; background: var(--success); color: #fff; border: none; font-size: 0.75rem;">
+                  <i class="fa-solid fa-check"></i> قبول وشحن الرصيد
+                </button>
+                <button class="action-btn" onclick="rejectDepositRequest(${d.id})" style="flex: 1; background: var(--danger); color: #fff; border: none; font-size: 0.75rem;">
+                  <i class="fa-solid fa-xmark"></i> رفض الطلب
+                </button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // قبول طلب الإيداع وزيادة رصيد المستخدم تلقائياً
+    async function approveDepositRequest(depositId, userId, amountUSD) {
+      if (!confirm(`هل أنت متأكد من قبول الإيداع وإضافة مبلغ $${amountUSD.toFixed(2)} إلى رصيد المستخدم؟`)) return;
+      if (!db) return;
+
+      try {
+        // 1. جلب رصيد المستخدم الحالي
+        const { data: userProfile, error: profileErr } = await db
+          .from('profiles')
+          .select('balance')
+          .eq('id', userId)
+          .single();
+
+        if (profileErr) throw profileErr;
+
+        const currentBalance = parseFloat(userProfile.balance || 0);
+        const updatedBalance = currentBalance + parseFloat(amountUSD);
+
+        // 2. تحديث رصيد المستخدم في قاعدة البيانات
+        const { error: updateBalErr } = await db
+          .from('profiles')
+          .update({ balance: updatedBalance })
+          .eq('id', userId);
+
+        if (updateBalErr) throw updateBalErr;
+
+        // 3. تحديث حالة الطلب إلى "مقبول"
+        const { error: updateReqErr } = await db
+          .from('deposit_requests')
+          .update({ status: 'مقبول' })
+          .eq('id', depositId);
+
+        if (updateReqErr) throw updateReqErr;
+
+        // إضافة سجل نشاط
+        logActivity(`تم قبول إيداع بمبلغ $${amountUSD} للمستخدم (${userId.substring(0, 8)}...)`);
+
+        showToast('تمت الموافقة على الطلب وشحن الرصيد بنجاح', 'success');
+        await loadAdminDepositRequests();
+        loadAdminStats();
+      } catch (err) {
+        showToast(err.message || 'حدث خطأ أثناء معالجة قبول الإيداع', 'error');
+      }
+    }
+
+    // رفض طلب الإيداع
+    async function rejectDepositRequest(depositId) {
+      if (!confirm('هل تريد بالتأكيد رفض طلب شحن الرصيد هذا؟')) return;
+      if (!db) return;
+
+      try {
+        const { error } = await db
+          .from('deposit_requests')
+          .update({ status: 'مرفوض' })
+          .eq('id', depositId);
+
+        if (error) throw error;
+
+        logActivity(`تم رفض طلب إيداع برقم #${depositId}`);
+        showToast('تم رفض طلب الإيداع بنجاح', 'info');
+        await loadAdminDepositRequests();
+        loadAdminStats();
+      } catch (err) {
+        showToast(err.message || 'تعذر رفض طلب الإيداع', 'error');
+      }
+    }
+    // 15. القسم 6: إدارة ومتابعة طلبات الشراء والمشتريات
+    let currentOrderFilter = 'الكل';
+
+    async function loadAdminOrders() {
+      if (!db) return;
+      try {
+        const { data, error } = await db
+          .from('orders')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        ordersData = data || [];
+        renderAdminOrdersList();
+      } catch (err) {
+        console.error('Error fetching admin orders:', err);
+      }
+    }
+
+    function filterAdminOrders(status) {
+      currentOrderFilter = status;
+      const sec = document.getElementById('adminOrders');
+      if (sec) {
+        sec.querySelectorAll('.cat-pill').forEach(btn => {
+          btn.classList.toggle('active', btn.textContent.trim() === status);
+        });
+      }
+      renderAdminOrdersList();
+    }
+
+    function renderAdminOrdersList() {
+      const container = document.getElementById('adminOrdersList');
+      if (!container) return;
+
+      const filtered = ordersData.filter(o => {
+        if (currentOrderFilter === 'الكل') return true;
+        return o.status === currentOrderFilter;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; text-align: center;">لا توجد طلبات مطابقة.</p>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(order => {
+        let badgeColor = 'var(--primary)';
+        if (order.status === 'مكتمل') badgeColor = 'var(--success)';
+        if (order.status === 'ملغي') badgeColor = 'var(--danger)';
+
+        return `
+          <div style="background: var(--bg-main); padding: 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.6rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <div>
+                <strong style="font-size: 0.85rem; color: var(--text-main);">${order.service_title} - ${order.package_name}</strong>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">
+                  العميل: ${order.user_email} | السعر: <strong style="color: var(--success);">$${Number(order.price_usd).toFixed(2)}</strong>
+                </div>
+              </div>
+              <span style="font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.05); color: ${badgeColor}; border: 1px solid ${badgeColor};">
+                ${order.status}
+              </span>
+            </div>
+
+            <div style="background: var(--card-bg); padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: var(--text-muted);">الحساب / المعرّف المطلوب:</span>
+              <strong style="color: var(--primary); direction: ltr; font-family: monospace;">${order.target_account}</strong>
+            </div>
+
+            ${order.status === 'قيد المعالجة' ? `
+              <div style="display: flex; gap: 0.5rem; margin-top: 0.2rem;">
+                <button class="action-btn" onclick="completeOrder(${order.id})" style="flex: 1; background: var(--success); color: #fff; border: none; font-size: 0.75rem;">
+                  <i class="fa-solid fa-check"></i> تأكيد التنفيذ (مكتمل)
+                </button>
+                <button class="action-btn" onclick="cancelAndRefundOrder(${order.id}, '${order.user_id}',${order.price_usd})" style="flex: 1; background: var(--danger); color: #fff; border: none; font-size: 0.75rem;">
+                  <i class="fa-solid fa-rotate-left"></i> إلغاء وإرجاع الرصيد
+                </button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // تأكيد إتمام الشحن والتنفيذ
+    async function completeOrder(orderId) {
+      if (!confirm('هل تم شحن الخدمة بنجاح وتريد تحويل الحالة إلى مكتمل؟')) return;
+      if (!db) return;
+
+      try {
+        const { error } = await db
+          .from('orders')
+          .update({ status: 'مكتمل' })
+          .eq('id', orderId);
+
+        if (error) throw error;
+
+        logActivity(`تم إكمال الطلب #${orderId} بنجاح`);
+        showToast('تم تحديث حالة الطلب إلى مكتمل', 'success');
+        await loadAdminOrders();
+        loadAdminStats();
+      } catch (err) {
+        showToast(err.message || 'حدث خطأ أثناء إكمال الطلب', 'error');
+      }
+    }
+
+    // إلغاء الطلب وإرجاع الرصيد للمستخدم تلقائياً
+    async function cancelAndRefundOrder(orderId, userId, priceUSD) {
+      if (!confirm(`هل تريد إلغاء الطلب واسترجاع مبلغ $${priceUSD.toFixed(2)} إلى حساب العميل؟`)) return;
+      if (!db) return;
+
+      try {
+        // 1. إعادة الرصيد إلى محفظة المستخدم
+        const { data: userProfile, error: profileErr } = await db
+          .from('profiles')
+          .select('balance')
+          .eq('id', userId)
+          .single();
+
+        if (profileErr) throw profileErr;
+
+        const currentBalance = parseFloat(userProfile.balance || 0);
+        const updatedBalance = currentBalance + parseFloat(priceUSD);
+
+        const { error: updateBalErr } = await db
+          .from('profiles')
+          .update({ balance: updatedBalance })
+          .eq('id', userId);
+
+        if (updateBalErr) throw updateBalErr;
+
+        // 2. تحديث حالة الطلب إلى "ملغي"
+        const { error: updateOrderErr } = await db
+          .from('orders')
+          .update({ status: 'ملغي' })
+          .eq('id', orderId);
+
+        if (updateOrderErr) throw updateOrderErr;
+
+        logActivity(`تم إلغاء الطلب #${orderId} واسترجاع $${priceUSD} للعميل`);
+        showToast('تم إلغاء الطلب واسترجاع الرصيد بنجاح', 'info');
+        await loadAdminOrders();
+        loadAdminStats();
+      } catch (err) {
+        showToast(err.message || 'حدث خطأ أثناء إلغاء الطلب', 'error');
+      }
+    }
+    // 16. القسم 7: إدارة المستخدمين والأعضاء (البحث، الرصيد، والرتب)
+    async function loadAdminUsers() {
+      if (!db) return;
+      try {
+        const { data, error } = await db
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        usersData = data || [];
+        renderAdminUsersList();
+      } catch (err) {
+        console.error('Error fetching users:', err);
+      }
+    }
+
+    function handleUserSearch() {
+      renderAdminUsersList();
+    }
+
+    function renderAdminUsersList() {
+      const container = document.getElementById('adminUsersList');
+      if (!container) return;
+
+      const query = (document.getElementById('adminUserSearchInput')?.value || '').trim().toLowerCase();
+
+      const filtered = usersData.filter(u => {
+        if (!query) return true;
+        const emailMatch = (u.email || '').toLowerCase().includes(query);
+        const nameMatch = (u.full_name || '').toLowerCase().includes(query);
+        return emailMatch || nameMatch;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; text-align: center;">لا يوجد مستخدمون مطابقون.</p>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(user => {
+        let roleBadgeStyle = 'background: rgba(255,255,255,0.05); color: var(--text-muted);';
+        if (user.role === 'مدير') roleBadgeStyle = 'background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid var(--danger);';
+        if (user.role === 'وكيل') roleBadgeStyle = 'background: rgba(245, 158, 11, 0.1); color: var(--warning); border: 1px solid var(--warning);';
+
+        return `
+          <div style="background: var(--bg-main); padding: 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <strong style="font-size: 0.85rem; color: var(--text-main);">${user.full_name || 'بدون اسم'}</strong>
+                <span style="font-size: 0.7rem; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 4px; ${roleBadgeStyle}">
+                  ${user.role || 'مضيف'}
+                </span>
+              </div>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">${user.email}</span>
+              <span style="font-size: 0.75rem; color: var(--success); font-weight: 700;">
+                الرصيد: $${Number(user.balance || 0).toFixed(2)} | الطلبات: ${user.orders_count || 0}
+              </span>
+            </div>
+            <button class="action-btn" onclick="openEditUserModal('${user.id}')" title="تعديل الرصيد والرتبة">
+              <i class="fa-solid fa-user-pen"></i>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openEditUserModal(userId) {
+      const user = usersData.find(u => u.id === userId);
+      if (!user) return;
+
+      document.getElementById('editUserId').value = user.id;
+      document.getElementById('editUserEmail').value = user.email;
+      document.getElementById('editUserBalance').value = parseFloat(user.balance || 0).toFixed(2);
+      document.getElementById('editUserRole').value = user.role || 'مضيف';
+
+      openModal('editUserModal');
+    }
+
+    async function handleUserEditSubmit(e) {
+      e.preventDefault();
+      if (!db) return;
+
+      const userId = document.getElementById('editUserId').value;
+      const balance = parseFloat(document.getElementById('editUserBalance').value) || 0;
+      const role = document.getElementById('editUserRole').value;
+
+      try {
+        const { error } = await db.from('profiles').update({
+          balance,
+          role
+        }).eq('id', userId);
+
+        if (error) throw error;
+
+        // تحديث الجلسة الحالية في حال تم تعديل حساب المدير نفسه
+        if (currentUser && currentUser.id === userId) {
+          currentUserProfile.balance = balance;
+          currentUserProfile.role = role;
+          updateAuthUI();
+        }
+
+        logActivity(`تم تحديث بيانات المستخدم (${userId.substring(0, 8)}...): رصيد $${balance} ورتبة ${role}`);
+        showToast('تم تحديث بيانات المستخدم بنجاح', 'success');
+        closeModal('editUserModal');
+        await loadAdminUsers();
+      } catch (err) {
+        showToast(err.message || 'حدث خطأ في تحديث المستخدم', 'error');
+      }
+    }
+    // 17. القسم 8: إعدادات الموقع والهوية البصرية
+    async function loadSiteSettings() {
+      if (!db) return;
+      try {
+        const { data, error } = await db
+          .from('site_settings')
+          .select('*')
+          .single();
+
+        if (error && error.code !== 'PGRST116') throw error;
+
+        if (data) {
+          if (data.title) {
+            document.title = data.title;
+            const logoText = document.querySelector('.logo-text');
+            if (logoText) logoText.textContent = data.title;
+            const settingTitle = document.getElementById('settingSiteTitle');
+            if (settingTitle) settingTitle.value = data.title;
+          }
+          if (data.description) {
+            const settingDesc = document.getElementById('settingSiteDesc');
+            if (settingDesc) settingDesc.value = data.description;
+          }
+          if (data.logo_url) {
+            const logoImgs = document.querySelectorAll('.logo-img, #adminDrawerLogoImg');
+            logoImgs.forEach(img => img.src = data.logo_url);
+            const settingLogo = document.getElementById('settingLogoUrl');
+            if (settingLogo) settingLogo.value = data.logo_url;
+          }
+          if (data.support_link) {
+            const settingSupport = document.getElementById('settingSupportLink');
+            if (settingSupport) settingSupport.value = data.support_link;
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching site settings:', err);
+      }
+    }
+
+    async function handleSiteSettingsSubmit(e) {
+      e.preventDefault();
+      if (!db) return;
+
+      const title = document.getElementById('settingSiteTitle').value.trim();
+      const description = document.getElementById('settingSiteDesc').value.trim();
+      const logo_url = document.getElementById('settingLogoUrl').value.trim();
+      const support_link = document.getElementById('settingSupportLink').value.trim();
+
+      try {
+        const { error } = await db.from('site_settings').upsert({
+          id: 1,
+          title,
+          description,
+          logo_url,
+          support_link
+        });
+
+        if (error) throw error;
+
+        document.title = title;
+        const logoText = document.querySelector('.logo-text');
+        if (logoText) logoText.textContent = title;
+
+        if (logo_url) {
+          document.querySelectorAll('.logo-img, #adminDrawerLogoImg').forEach(img => img.src = logo_url);
+        }
+
+        logActivity(`تم تحديث إعدادات وهوية المتجر العامة`);
+        showToast('تم حفظ إعدادات الموقع بنجاح', 'success');
+      } catch (err) {
+        showToast(err.message || 'حدث خطأ في حفظ الإعدادات', 'error');
+      }
+    }
+
+    // رفع وتغيير شعار الموقع من لوحة الإدارة
+    function triggerDrawerLogoUpload() {
+      const fileInput = document.getElementById('drawerLogoFileInput');
+      if (fileInput) fileInput.click();
+    }
+
+    async function uploadAdminDrawerLogo(e) {
+      const file = e.target.files[0];
+      if (!file || !db) return;
+
+      try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `site_logo_${Date.now()}.${fileExt}`;
+        const filePath = `branding/${fileName}`;
+
+        const { error: uploadError } = await db.storage
+          .from('branding')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = db.storage.from('branding').getPublicUrl(filePath);
+        const newLogoUrl = publicUrlData.publicUrl;
+
+        document.getElementById('settingLogoUrl').value = newLogoUrl;
+        document.querySelectorAll('.logo-img, #adminDrawerLogoImg').forEach(img => img.src = newLogoUrl);
+
+        await db.from('site_settings').upsert({
+          id: 1,
+          logo_url: newLogoUrl
+        });
+
+        logActivity('تم رفع وتحديث شعار المتجر');
+        showToast('تم تحديث شعار المتجر بنجاح', 'success');
+      } catch (err) {
+        showToast(err.message || 'فشل رفع الشعار السحابي', 'error');
+      }
+    }
+
+    // 18. القسم 9: تحديث سعر الصرف المعتمد
+    async function updateBaseExchangeRate() {
+      const input = document.getElementById('baseExchangeRateSYP');
+      const newRate = parseFloat(input.value);
+
+      if (!newRate || newRate <= 0) {
+        showToast('يرجى إدخال سعر صرف صالح', 'error');
+        return;
+      }
+
+      baseExchangeRate = newRate;
+      localStorage.setItem('base_exchange_rate_syp', newRate);
+
+      if (db) {
+        try {
+          await db.from('site_settings').upsert({
+            id: 1,
+            exchange_rate_syp: newRate
+          });
+        } catch (err) {
+          console.error('Error saving exchange rate to database:', err);
+        }
+      }
+
+      logActivity(`تم تحديث سعر الصرف العام إلى: 1$ = ${newRate.toLocaleString()} ل.س`);
+      showToast(`تم تعميم سعر الصرف الجديد: ${newRate.toLocaleString()} ل.س`, 'success');
+    }
+    // 19. القسم 10: سجلات العمليات والنشاط العام (Activity Logs)
+    function logActivity(message) {
+      const logs = JSON.parse(localStorage.getItem('site_admin_logs') || '[]');
+      const newLog = {
+        id: Date.now(),
+        time: new Date().toLocaleTimeString('ar-SY', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        date: new Date().toLocaleDateString('ar-SY'),
+        text: message
+      };
+
+      logs.unshift(newLog);
+      // الاحتفاظ بآخر 50 سجل فقط لمنع التراكم
+      if (logs.length > 50) logs.pop();
+
+      localStorage.setItem('site_admin_logs', JSON.stringify(logs));
+      renderActivityLogs();
+    }
+
+    function renderActivityLogs() {
+      const container = document.getElementById('adminActivityLogsList');
+      if (!container) return;
+
+      const logs = JSON.parse(localStorage.getItem('site_admin_logs') || '[]');
+
+      if (logs.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 1rem;">لا توجد نشاطات مسجلة حتى الآن.</p>';
+        return;
+      }
+
+      container.innerHTML = logs.map(log => `
+        <div style="background: var(--bg-main); padding: 0.6rem 0.8rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fa-solid fa-circle-dot" style="font-size: 0.45rem; color: var(--primary);"></i>
+            <span style="color: var(--text-main);">${log.text}</span>
+          </div>
+          <span style="color: var(--text-muted); font-size: 0.7rem; direction: ltr; font-family: monospace;">${log.time}</span>
+        </div>
+      `).join('');
+    }
+
+    function clearActivityLogs() {
+      if (!confirm('هل أنت متأكد من مسح جميع سجلات النشاط؟')) return;
+      localStorage.removeItem('site_admin_logs');
+      renderActivityLogs();
+      showToast('تم مسح السجلات بنجاح', 'info');
+    }
+    // 20. دالة الإقلاع والتهيئة الشاملة للتطبيق عند تحميل الصفحة
+    async function initApp() {
+      // 1. استعادة سعر الصرف المخزن محلياً
+      const savedRate = localStorage.getItem('base_exchange_rate_syp');
+      if (savedRate) {
+        baseExchangeRate = parseFloat(savedRate);
+        const rateInput = document.getElementById('baseExchangeRateSYP');
+        if (rateInput) rateInput.value = baseExchangeRate;
+      }
+
+      // 2. فحص جلسة المستخدم الحالي
+      await checkAuthSession();
+
+      // 3. جلب بيانات الأقسام، المنتجات، الإعدادات، وطرق الدفع
+      await Promise.all([
+        loadSiteSettings(),
+        loadCategories(),
+        loadProducts(),
+        loadPaymentMethods()
+      ]);
+
+      // 4. إغلاق النوافذ عند النقر خارج صندوق المحتوى (Overlay Click)
+      document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) {
+            overlay.classList.remove('active');
+          }
+        });
+      });
+
+      // 5. إغلاق لوحة الإدارة عند الضغط على مفتاح Escape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          toggleAdminDrawer(false);
+          document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+        }
+      });
+
+      console.log('✅ تم تشغيل نظام المتجر ولوحة الإدارة بنجاح.');
+    }
+
+    // تشغيل التهيئة فور اكتمال بناء شجرة عناصر الصفحة (DOM)
+    window.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
