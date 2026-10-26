@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>متجر الخدمات وشحن الرصيد | لوحة التحكم</title>
+
+  <!-- الخطوط وأيقونات Font Awesome -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- مكتبة Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --bg-main: #0b0f19;
+      --bg-card: #151e2e;
+      --bg-sidebar: #0f172a;
+      --bg-input: #1e293b;
+      --bg-hover: #334155;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --accent: #38bdf8;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #1e293b;
+      --radius: 12px;
+      --transition: all 0.25s ease;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Tajawal', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    button, input, select, textarea {
+      font-family: inherit;
+      outline: none;
+      border: none;
+    }
+    /* Header & Navigation */
+    .app-header {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      padding: 0.8rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.25rem;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+    }
+
+    .brand-name {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(90deg, #fff, var(--text-muted));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Common Button & Badge Styles */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0.6rem 1.1rem;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: #fff;
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .user-badge {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 0.4rem 0.8rem;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+
+    .balance-badge {
+      color: var(--success);
+      font-weight: 700;
+    }
+    /* Main Layout */
+    .main-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem;
+      flex: 1;
+      width: 100%;
+    }
+
+    /* Categories Horizontal Scroll */
+    .categories-bar {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 12px;
+      margin-bottom: 1.5rem;
+      scrollbar-width: thin;
+    }
+
+    .category-chip {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 0.6rem 1.2rem;
+      border-radius: 25px;
+      white-space: nowrap;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .category-chip.active, .category-chip:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    /* Product Grid */
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .product-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: var(--transition);
+    }
+
+    .product-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+      border-color: var(--primary);
+    }
+
+    .product-image {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      background: var(--bg-input);
+    }
+
+    .product-info {
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .product-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+
+    .product-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      flex: 1;
+      line-height: 1.4;
+    }
+
+    .product-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: auto;
+    }
+
+    .product-price {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+    /* Admin Drawer & Sidebar */
+    .admin-drawer {
+      position: fixed;
+      top: 0;
+      right: -320px;
+      width: 300px;
+      height: 100vh;
+      background: var(--bg-sidebar);
+      border-left: 1px solid var(--border);
+      box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .admin-drawer.open {
+      right: 0;
+    }
+
+    .drawer-header {
+      padding: 1.25rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .drawer-header h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .close-drawer-btn {
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+
+    .admin-nav-list {
+      list-style: none;
+      padding: 1rem;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .admin-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+
+    .admin-nav-item:hover, .admin-nav-item.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    /* Modals & Overlays */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 550px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 1.5rem;
+      position: relative;
+    }
+
+    .modal-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    /* Form Styles */
+    .form-group {
+      margin-bottom: 1.1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .form-control {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      transition: var(--transition);
+      width: 100%;
+    }
+
+    .form-control:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+    }
+
+    .file-input-wrapper {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      background: rgba(30, 41, 59, 0.4);
+    }
+
+    .file-input-wrapper:hover {
+      border-color: var(--primary);
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toast {
+      padding: 0.8rem 1.2rem;
+      border-radius: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+  </style>
+</head>
+<body>
+  <!-- الشريط العلوي للتطبيق -->
+  <header class="app-header">
+    <div class="brand-container">
+      <div class="brand-logo">
+        <i class="fa-solid fa-bolt"></i>
+      </div>
+      <div class="brand-name">متجر الخدمات الرقمية</div>
+    </div>
+
+    <div class="header-actions">
+      <!-- أزرار وواجهة العميل بعد تسجيل الدخول -->
+      <div id="userHeaderArea" style="display: none; align-items: center; gap: 10px;">
+        <div class="user-badge">
+          <i class="fa-solid fa-wallet" style="color: var(--success);"></i>
+          <span>الرصيد: </span>
+          <span class="balance-badge" id="headerUserBalance">0.00$</span>
+        </div>
+
+        <button class="btn btn-primary" onclick="openDepositModal()">
+          <i class="fa-solid fa-plus-circle"></i> شحن
+        </button>
+
+        <!-- زر لوحة التحكم يظهر فقط للحساب المخصص fhdsd686@gmail.com -->
+        <button id="adminDrawerBtn" class="btn" style="display: none; background: #4f46e5; color: #fff;" onclick="toggleAdminDrawer()">
+          <i class="fa-solid fa-screwdriver-wrench"></i> الإدارة
+        </button>
+
+        <button class="btn" style="background: var(--bg-card); border: 1px solid var(--border);" onclick="logoutUser()">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        </button>
+      </div>
+
+      <!-- أزرار الدخول والتسجيل للزائر -->
+      <div id="guestHeaderArea" style="display: flex; gap: 8px;">
+        <button class="btn btn-primary" onclick="openAuthModal('login')">
+          <i class="fa-solid fa-right-to-bracket"></i> دخول
+        </button>
+        <button class="btn" style="background: var(--bg-card); border: 1px solid var(--border);" onclick="openAuthModal('register')">
+          إنشاء حساب
+        </button>
+      </div>
+    </div>
+  </header>
+  <!-- المحتوى الرئيسي للمتجر -->
+  <main class="main-container">
+    <!-- شريط تصفية الأقسام -->
+    <div class="categories-bar" id="storeCategoriesBar">
+      <button class="category-chip active" onclick="filterCategory('all', this)">
+        <i class="fa-solid fa-border-all"></i> الكل
+      </button>
+      <!-- سيتم تحميل باقي الأقسام هنا ديناميكياً من Supabase -->
+    </div>
+
+    <!-- شبكة عرض المنتجات -->
+    <section>
+      <div class="products-grid" id="storeProductsGrid">
+        <!-- رسالة تحميل مبدئية -->
+        <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-muted);">
+          <i class="fa-solid fa-spinner fa-spin fa-2x" style="margin-bottom: 10px;"></i>
+          <p>جاري تحميل المنتجات...</p>
+        </div>
+      </div>
+    </section>
+  </main>
+  <!-- لوحة التحكم الجانبية للأدمن -->
+  <aside class="admin-drawer" id="adminDrawer">
+    <div class="drawer-header">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-shield-halved" style="color: var(--accent);"></i>
+        <h3>لوحة إدارة المتجر</h3>
+      </div>
+      <button class="close-drawer-btn" onclick="toggleAdminDrawer()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- قائمة الأقسام الـ 10 للوحة التحكم -->
+    <ul class="admin-nav-list">
+      <!-- 1. الإحصائيات -->
+      <li class="admin-nav-item active" onclick="switchAdminTab('stats', this)">
+        <i class="fa-solid fa-chart-line"></i>
+        <span>الإحصائيات</span>
+      </li>
+
+      <!-- 2. المستخدمين -->
+      <li class="admin-nav-item" onclick="switchAdminTab('users', this)">
+        <i class="fa-solid fa-users"></i>
+        <span>المستخدمين</span>
+      </li>
+
+      <!-- 3. رفع مستوى مستخدم -->
+      <li class="admin-nav-item" onclick="switchAdminTab('upgrade-user', this)">
+        <i class="fa-solid fa-user-shield"></i>
+        <span>رفع مستوى مستخدم</span>
+      </li>
+
+      <!-- 4. المنتجات -->
+      <li class="admin-nav-item" onclick="switchAdminTab('products-list', this)">
+        <i class="fa-solid fa-box-open"></i>
+        <span>المنتجات</span>
+      </li>
+
+      <!-- 5. إضافة منتج -->
+      <li class="admin-nav-item" onclick="switchAdminTab('add-product', this)">
+        <i class="fa-solid fa-square-plus"></i>
+        <span>إضافة منتج</span>
+      </li>
+
+      <!-- 6. الأقسام الحالية -->
+      <li class="admin-nav-item" onclick="switchAdminTab('categories-list', this)">
+        <i class="fa-solid fa-layer-group"></i>
+        <span>الأقسام الحالية</span>
+      </li>
+
+      <!-- 7. إضافة قسم -->
+      <li class="admin-nav-item" onclick="switchAdminTab('add-category', this)">
+        <i class="fa-solid fa-folder-plus"></i>
+        <span>إضافة قسم</span>
+      </li>
+
+      <!-- 8. طلبات الإيداع -->
+      <li class="admin-nav-item" onclick="switchAdminTab('deposit-requests', this)">
+        <i class="fa-solid fa-money-bill-transfer"></i>
+        <span>طلبات الإيداع</span>
+      </li>
+
+      <!-- 9. طرق الإيداع -->
+      <li class="admin-nav-item" onclick="switchAdminTab('payment-methods', this)">
+        <i class="fa-solid fa-wallet"></i>
+        <span>طرق الإيداع</span>
+      </li>
+
+      <!-- 10. إضافة طريقة إيداع -->
+      <li class="admin-nav-item" onclick="switchAdminTab('add-method', this)">
+        <i class="fa-solid fa-credit-card"></i>
+        <span>إضافة طريقة إيداع</span>
+      </li>
+    </ul>
+  </aside>
+  <!-- نافذة عرض لوحة التحكم الرئيسية والمحتوى المخصص -->
+  <div class="modal-overlay" id="adminPanelModal">
+    <div class="modal-box" style="max-width: 850px; width: 95%;">
+      <div class="modal-title">
+        <span id="adminPanelModalTitle" style="color: var(--accent);">
+          <i class="fa-solid fa-chart-line"></i> الإحصائيات العامة
+        </span>
+        <button class="btn" style="background: transparent; color: var(--text-muted); font-size: 1.2rem; padding: 4px;" onclick="closeAdminPanelModal()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- 1. تبويب الإحصائيات -->
+      <div id="tab-stats" class="admin-tab-content">
+        <!-- تصفية الإحصائيات حسب التاريخ -->
+        <div style="display: flex; gap: 10px; margin-bottom: 1.25rem; flex-wrap: wrap; background: var(--bg-input); padding: 10px; border-radius: 8px;">
+          <input type="date" id="statsDateFilter" class="form-control" style="max-width: 200px;" onchange="loadAdminStats()">
+          <button class="btn btn-primary" onclick="resetStatsFilter()">
+            <i class="fa-solid fa-rotate-right"></i> عرض الكل
+          </button>
+        </div>
+
+        <!-- بطاقات الأرقام والمؤشرات -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+          <div style="background: var(--bg-main); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--border);">
+            <div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 5px;">إجمالي المبيعات</div>
+            <div id="statTotalSales" style="font-size: 1.4rem; font-weight: 800; color: var(--success);">$0.00</div>
+          </div>
+          <div style="background: var(--bg-main); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--border);">
+            <div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 5px;">إجمالي الطلبات</div>
+            <div id="statTotalOrders" style="font-size: 1.4rem; font-weight: 800; color: var(--accent);">0</div>
+          </div>
+          <div style="background: var(--bg-main); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--border);">
+            <div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 5px;">المستخدمين المسجلين</div>
+            <div id="statTotalUsers" style="font-size: 1.4rem; font-weight: 800; color: var(--text-main);">0</div>
+          </div>
+          <div style="background: var(--bg-main); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--border);">
+            <div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 5px;">الإيداعات المكتملة</div>
+            <div id="statTotalDeposits" style="font-size: 1.4rem; font-weight: 800; color: var(--warning);">$0.00</div>
+          </div>
+        </div>
+
+        <!-- جدول أحدث العمليات -->
+        <h4 style="font-size: 0.95rem; margin-bottom: 10px; color: var(--text-muted);">أحدث عمليات الشراء</h4>
+        <div style="overflow-x: auto; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border);">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: right;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);">
+                <th style="padding: 10px;">العميل</th>
+                <th style="padding: 10px;">المنتج</th>
+                <th style="padding: 10px;">المبلغ</th>
+                <th style="padding: 10px;">التاريخ</th>
+              </tr>
+            </thead>
+            <tbody id="recentOrdersTableBody">
+              <tr>
+                <td colspan="4" style="text-align: center; padding: 20px; color: var(--text-muted);">لا توجد عمليات مبيعات بعد</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <!-- 2. تبويب المستخدمين -->
+      <div id="tab-users" class="admin-tab-content" style="display: none;">
+        <!-- شريط البحث والفلترة للمستخدمين -->
+        <div style="display: flex; gap: 10px; margin-bottom: 1.25rem; flex-wrap: wrap;">
+          <input type="text" id="adminUsersSearch" class="form-control" style="flex: 1; min-width: 200px;" placeholder="ابحث بالاسم أو البريد الإلكتروني..." oninput="filterUsersList()">
+          <select id="adminUsersRoleFilter" class="form-control" style="width: auto; min-width: 140px;" onchange="filterUsersList()">
+            <option value="all">كل الرتب</option>
+            <option value="مضيف">مضيف</option>
+            <option value="وكيل">وكيل</option>
+            <option value="مدير">مدير</option>
+          </select>
+          <button class="btn btn-primary" onclick="loadAdminUsers()">
+            <i class="fa-solid fa-arrows-rotate"></i> تحديث
+          </button>
+        </div>
+
+        <!-- جدول قائمة المستخدمين -->
+        <div style="overflow-x: auto; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border);">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: right;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);">
+                <th style="padding: 10px;">الاسم / البريد</th>
+                <th style="padding: 10px;">الرتبة</th>
+                <th style="padding: 10px;">الرصيد ($)</th>
+                <th style="padding: 10px;">تاريخ التسجيل</th>
+                <th style="padding: 10px; text-align: center;">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="adminUsersTableBody">
+              <tr>
+                <td colspan="5" style="text-align: center; padding: 20px; color: var(--text-muted);">
+                  <i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل المستخدمين...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
