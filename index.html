@@ -2026,3 +2026,830 @@
         showToast(err.message || 'حدث خطأ أثناء تحديث الرتبة', 'error');
       }
     }
+    // --- 12. منطق القسم 4: إدارة المنتجات الحالية ---
+
+    let cachedAdminProducts = [];
+
+    // جلب جميع المنتجات في لوحة الإدارة
+    async function loadAdminProducts() {
+      const tbody = document.getElementById('adminProductsTableBody');
+      const filterSelect = document.getElementById('adminProductsCategoryFilter');
+
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 20px; color: var(--text-muted);">
+            <i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل المنتجات...
+          </td>
+        </tr>
+      `;
+
+      // تحديث قائمة فلترة الأقسام
+      filterSelect.innerHTML = '<option value="all">كل الأقسام</option>';
+      currentStoreCategories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat.name;
+        opt.textContent = cat.name;
+        filterSelect.appendChild(opt);
+      });
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('products')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        cachedAdminProducts = data || [];
+        renderAdminProductsTable(cachedAdminProducts);
+      } catch (err) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 20px; color: var(--danger);">
+              حدث خطأ أثناء جلب قائمة المنتجات.
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    // عرض المنتجات داخل جدول الإدارة
+    function renderAdminProductsTable(productsList) {
+      const tbody = document.getElementById('adminProductsTableBody');
+
+      if (!productsList || productsList.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 20px; color: var(--text-muted);">
+              لا توجد منتجات مطابقة للبحث.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = productsList.map(prod => `
+        <tr style="border-bottom: 1px solid var(--border);">
+          <td style="padding: 10px;">
+            <img src="${prod.image_url || 'https://via.placeholder.com/40'}" alt="${prod.name}" style="width: 40px; height: 40px; border-radius: 6px; object-fit: cover;">
+          </td>
+          <td style="padding: 10px; font-weight: 600;">${prod.name}</td>
+          <td style="padding: 10px; color: var(--text-muted);">${prod.category || 'عام'}</td>
+          <td style="padding: 10px; color: var(--accent); font-weight: 700;">$${parseFloat(prod.price).toFixed(2)}</td>
+          <td style="padding: 10px;">
+            <span style="font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; background: ${prod.status === 'active' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)'}; color: ${prod.status === 'active' ? 'var(--success)' : 'var(--danger)'};">
+              ${prod.status === 'active' ? 'نشط' : 'معطل'}
+            </span>
+          </td>
+          <td style="padding: 10px; text-align: center;">
+            <div style="display: flex; gap: 6px; justify-content: center;">
+              <button class="btn" style="padding: 4px 8px; font-size: 0.75rem; background: var(--bg-input);" onclick="toggleProductStatus('${prod.id}', '${prod.status}')" title="تغيير الحالة">
+                <i class="fa-solid fa-power-off"></i>
+              </button>
+              <button class="btn" style="padding: 4px 8px; font-size: 0.75rem; background: rgba(239, 68, 68, 0.15); color: var(--danger);" onclick="deleteAdminProduct('${prod.id}')" title="حذف المنتج">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // تصفية المنتجات في لوحة التحكم
+    function filterAdminProductsList() {
+      const searchVal = document.getElementById('adminProductsSearch').value.toLowerCase().trim();
+      const catVal = document.getElementById('adminProductsCategoryFilter').value;
+
+      const filtered = cachedAdminProducts.filter(p => {
+        const matchesName = (p.name || '').toLowerCase().includes(searchVal);
+        const matchesCat = (catVal === 'all') || (p.category === catVal);
+        return matchesName && matchesCat;
+      });
+
+      renderAdminProductsTable(filtered);
+    }
+
+    // تبديل حالة المنتج بين نشط ومعطل
+    async function toggleProductStatus(productId, currentStatus) {
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+      try {
+        const { error } = await supabaseClient
+          .from('products')
+          .update({ status: newStatus })
+          .eq('id', productId);
+
+        if (error) throw error;
+
+        showToast('تم تحديث حالة المنتج بنجاح', 'success');
+        loadAdminProducts();
+        loadStoreProducts();
+      } catch (err) {
+        showToast('فشل تعديل حالة المنتج', 'error');
+      }
+    }
+
+    // حذف منتج
+    async function deleteAdminProduct(productId) {
+      if (!confirm('هل أنت متأكد من رغبتك في حذف هذا المنتج نهائياً؟')) return;
+
+      try {
+        const { error } = await supabaseClient
+          .from('products')
+          .delete()
+          .eq('id', productId);
+
+        if (error) throw error;
+
+        showToast('تم حذف المنتج بنجاح', 'success');
+        loadAdminProducts();
+        loadStoreProducts();
+      } catch (err) {
+        showToast('حدث خطأ أثناء حذف المنتج', 'error');
+      }
+    }
+    // --- 13. منطق القسم 5: إضافة منتج جديد ورفع صورته ---
+
+    let selectedNewProductImage = null;
+
+    // ملء قائمة الأقسام داخل نموذج إضافة منتج
+    function populateAddProductCategories() {
+      const select = document.getElementById('newProductCategory');
+      select.innerHTML = '<option value="">اختر القسم...</option>';
+
+      currentStoreCategories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat.name;
+        opt.textContent = cat.name;
+        select.appendChild(opt);
+      });
+    }
+
+    // معالجة اختيار صورة المنتج من الجهاز
+    function handleProductImageSelect(input) {
+      if (input.files && input.files[0]) {
+        selectedNewProductImage = input.files[0];
+        document.getElementById('newProductImageLabel').textContent = `تم اختيار: ${selectedNewProductImage.name}`;
+      }
+    }
+
+    // حفظ ونشر المنتج الجديد
+    async function submitNewProduct() {
+      const name = document.getElementById('newProductName').value.trim();
+      const category = document.getElementById('newProductCategory').value;
+      const priceVal = parseFloat(document.getElementById('newProductPrice').value);
+      const description = document.getElementById('newProductDesc').value.trim();
+      const saveBtn = document.getElementById('saveProductBtn');
+
+      if (!name) {
+        showToast('يرجى كتابة اسم المنتج', 'error');
+        return;
+      }
+
+      if (!category) {
+        showToast('يرجى تحديد قسم للمنتج', 'error');
+        return;
+      }
+
+      if (isNaN(priceVal) || priceVal < 0) {
+        showToast('يرجى تحديد سعر صالح للمنتج', 'error');
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ والنشر...';
+
+      try {
+        let imageUrl = '';
+
+        // 1. رفع صورة المنتج إذا تم اختيارها
+        if (selectedNewProductImage) {
+          const fileExt = selectedNewProductImage.name.split('.').pop();
+          const fileName = `product_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const filePath = `products/${fileName}`;
+
+          const { error: uploadError } = await supabaseClient
+            .storage
+            .from('store_assets')
+            .upload(filePath, selectedNewProductImage);
+
+          if (uploadError) throw uploadError;
+
+          const { data: publicUrlData } = supabaseClient
+            .storage
+            .from('store_assets')
+            .getPublicUrl(filePath);
+
+          imageUrl = publicUrlData.publicUrl;
+        }
+
+        // 2. إدراج المنتج في جدول products
+        const { error: insertError } = await supabaseClient
+          .from('products')
+          .insert({
+            name,
+            category,
+            price: priceVal,
+            description,
+            image_url: imageUrl,
+            status: 'active'
+          });
+
+        if (insertError) throw insertError;
+
+        showToast('تمت إضافة المنتج ونشره بنجاح!', 'success');
+
+        // تفريغ الحقول وإعادة التعيين
+        document.getElementById('newProductName').value = '';
+        document.getElementById('newProductPrice').value = '';
+        document.getElementById('newProductDesc').value = '';
+        document.getElementById('newProductCategory').value = '';
+        document.getElementById('newProductImageLabel').textContent = 'اضغط لاختيار صورة المنتج من جهازك';
+        document.getElementById('newProductImageFile').value = '';
+        selectedNewProductImage = null;
+
+        // تحديث عرض المنتجات في المتجر واللوحة
+        loadStoreProducts();
+        if (activeAdminTab === 'products-list') {
+          loadAdminProducts();
+        }
+      } catch (err) {
+        showToast(err.message || 'حدث خطأ أثناء إضافة المنتج', 'error');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> حفظ ونشر المنتج';
+      }
+    }
+    // --- 14. منطق القسم 6: إدارة الأقسام الحالية ---
+
+    // جلب وعرض الأقسام داخل جدول لوحة التحكم
+    async function loadAdminCategories() {
+      const tbody = document.getElementById('adminCategoriesTableBody');
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 20px; color: var(--text-muted);">
+            <i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل الأقسام...
+          </td>
+        </tr>
+      `;
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('categories')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        currentStoreCategories = data || [];
+        renderAdminCategoriesTable(currentStoreCategories);
+      } catch (err) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 20px; color: var(--danger);">
+              حدث خطأ أثناء جلب قائمة الأقسام.
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    // بناء وتعبئة صفوف جدول الأقسام
+    function renderAdminCategoriesTable(categoriesList) {
+      const tbody = document.getElementById('adminCategoriesTableBody');
+
+      if (!categoriesList || categoriesList.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 20px; color: var(--text-muted);">
+              لا توجد أقسام مضافة حتى الآن.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = categoriesList.map(cat => {
+        const dateStr = cat.created_at
+          ? new Date(cat.created_at).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' })
+          : 'غير محدد';
+
+        return `
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 10px;">
+              <img src="${cat.image_url || 'https://via.placeholder.com/40?text=Cat'}" alt="${cat.name}" style="width: 36px; height: 36px; border-radius: 6px; object-fit: cover;">
+            </td>
+            <td style="padding: 10px; font-weight: 700; color: var(--accent);">${cat.name}</td>
+            <td style="padding: 10px; color: var(--text-muted); font-size: 0.85rem;">${cat.description || 'بدون وصف'}</td>
+            <td style="padding: 10px; color: var(--text-muted); font-size: 0.8rem;">${dateStr}</td>
+            <td style="padding: 10px; text-align: center;">
+              <button class="btn" style="padding: 4px 8px; font-size: 0.75rem; background: rgba(239, 68, 68, 0.15); color: var(--danger);" onclick="deleteAdminCategory('${cat.id}', '${cat.name}')" title="حذف القسم">
+                <i class="fa-solid fa-trash-can"></i> حذف
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // حذف قسم من المتجر
+    async function deleteAdminCategory(categoryId, categoryName) {
+      if (!confirm(`هل أنت متأكد من حذف القسم "${categoryName}"؟`)) return;
+
+      try {
+        const { error } = await supabaseClient
+          .from('categories')
+          .delete()
+          .eq('id', categoryId);
+
+        if (error) throw error;
+
+        showToast('تم حذف القسم بنجاح', 'success');
+
+        // إعادة تحميل الأقسام في اللوحة والمتجر الرئيسي
+        await loadAdminCategories();
+        renderStoreCategoriesBar();
+      } catch (err) {
+        showToast(err.message || 'حدث خطأ أثناء محاولة حذف القسم', 'error');
+      }
+    }
+    // --- 15. منطق القسم 7: إضافة قسم جديد ورفع صورته ---
+
+    let selectedNewCategoryImage = null;
+
+    // معالجة اختيار صورة القسم من الجهاز
+    function handleCategoryImageSelect(input) {
+      if (input.files && input.files[0]) {
+        selectedNewCategoryImage = input.files[0];
+        document.getElementById('newCategoryImageLabel').textContent = `تم اختيار: ${selectedNewCategoryImage.name}`;
+      }
+    }
+
+    // حفظ ونشر القسم الجديد
+    async function submitNewCategory() {
+      const name = document.getElementById('newCategoryName').value.trim();
+      const description = document.getElementById('newCategoryDesc').value.trim();
+      const saveBtn = document.getElementById('saveCategoryBtn');
+
+      if (!name) {
+        showToast('يرجى إدخال اسم القسم', 'error');
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري إضافة القسم...';
+
+      try {
+        let imageUrl = '';
+
+        // 1. رفع صورة القسم إذا تم تحديدها
+        if (selectedNewCategoryImage) {
+          const fileExt = selectedNewCategoryImage.name.split('.').pop();
+          const fileName = `cat_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const filePath = `categories/${fileName}`;
+
+          const { error: uploadError } = await supabaseClient
+            .storage
+            .from('store_assets')
+            .upload(filePath, selectedNewCategoryImage);
+
+          if (uploadError) throw uploadError;
+
+          const { data: publicUrlData } = supabaseClient
+            .storage
+            .from('store_assets')
+            .getPublicUrl(filePath);
+
+          imageUrl = publicUrlData.publicUrl;
+        }
+
+        // 2. حفظ القسم في جدول categories
+        const { error: insertError } = await supabaseClient
+          .from('categories')
+          .insert({
+            name,
+            description,
+            image_url: imageUrl
+          });
+
+        if (insertError) throw insertError;
+
+        showToast('تمت إضافة القسم الجديد بنجاح!', 'success');
+
+        // إعادة ضبط الحقول
+        document.getElementById('newCategoryName').value = '';
+        document.getElementById('newCategoryDesc').value = '';
+        document.getElementById('newCategoryImageLabel').textContent = 'اضغط لاختيار صورة للقسم';
+        document.getElementById('newCategoryImageFile').value = '';
+        selectedNewCategoryImage = null;
+
+        // تحديث بيانات الأقسام في التطبيق
+        await loadStoreCategories();
+        if (activeAdminTab === 'categories-list') {
+          loadAdminCategories();
+        }
+      } catch (err) {
+        showToast(err.message || 'حدث خطأ أثناء إضافة القسم', 'error');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fa-solid fa-plus"></i> إضافة وتفعيل القسم';
+      }
+    }
+    // --- 16. منطق القسم 8: مراجعة وإدارة طلبات الإيداع والشحن ---
+
+    let cachedAdminDeposits = [];
+
+    // جلب جميع طلبات الإيداع
+    async function loadAdminDepositRequests() {
+      const tbody = document.getElementById('adminDepositsTableBody');
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 20px; color: var(--text-muted);">
+            <i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل الطلبات...
+          </td>
+        </tr>
+      `;
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('deposits')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        cachedAdminDeposits = data || [];
+        filterDepositRequestsList();
+      } catch (err) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 20px; color: var(--danger);">
+              حدث خطأ أثناء جلب طلبات الإيداع.
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    // تصفية وعرض طلبات الإيداع بحسب الحالة
+    function filterDepositRequestsList() {
+      const statusFilter = document.getElementById('depositRequestsStatusFilter').value;
+      const tbody = document.getElementById('adminDepositsTableBody');
+
+      const filtered = (statusFilter === 'الكل')
+        ? cachedAdminDeposits
+        : cachedAdminDeposits.filter(d => d.status === statusFilter);
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 20px; color: var(--text-muted);">
+              لا توجد طلبات إيداع مطابقة للفلتر المحدد.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(d => {
+        let badgeColor = 'var(--text-muted)';
+        let badgeBg = 'rgba(255,255,255,0.05)';
+
+        if (d.status === 'مقبول') {
+          badgeColor = 'var(--success)';
+          badgeBg = 'rgba(16, 185, 129, 0.15)';
+        } else if (d.status === 'مرفوض') {
+          badgeColor = 'var(--danger)';
+          badgeBg = 'rgba(239, 68, 68, 0.15)';
+        } else if (d.status === 'الانتظار') {
+          badgeColor = 'var(--warning, #f59e0b)';
+          badgeBg = 'rgba(245, 158, 11, 0.15)';
+        }
+
+        const isPending = (d.status === 'الانتظار');
+
+        return `
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 10px;">
+              <div style="font-weight: 600;">${d.user_email || 'مستخدم'}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">${d.user_id ? d.user_id.substring(0, 8) + '...' : ''}</div>
+            </td>
+            <td style="padding: 10px;">${d.method_name}</td>
+            <td style="padding: 10px;">${parseFloat(d.amount).toFixed(2)}</td>
+            <td style="padding: 10px; font-weight: 700; color: var(--success);">$${parseFloat(d.usd_amount || 0).toFixed(2)}</td>
+            <td style="padding: 10px;">
+              ${d.receipt_url ? `
+                <a href="${d.receipt_url}" target="_blank" style="color: var(--accent); display: inline-flex; align-items: center; gap: 4px; text-decoration: underline;">
+                  <i class="fa-solid fa-receipt"></i> عرض الإيصال
+                </a>
+              ` : '<span style="color: var(--text-muted);">بدون إيصال</span>'}
+            </td>
+            <td style="padding: 10px;">
+              <span style="font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; background: ${badgeBg}; color: ${badgeColor};">
+                ${d.status}
+              </span>
+            </td>
+            <td style="padding: 10px; text-align: center;">
+              ${isPending ? `
+                <div style="display: flex; gap: 6px; justify-content: center;">
+                  <button class="btn btn-success" style="padding: 4px 8px; font-size: 0.75rem;" onclick="processDepositAction('${d.id}', '${d.user_id}', ${d.usd_amount}, 'مقبول')" title="قبول وشحن الرصيد">
+                    <i class="fa-solid fa-check"></i> قبول
+                  </button>
+                  <button class="btn" style="padding: 4px 8px; font-size: 0.75rem; background: rgba(239, 68, 68, 0.15); color: var(--danger);" onclick="processDepositAction('${d.id}', '${d.user_id}', 0, 'مرفوض')" title="رفض الطلب">
+                    <i class="fa-solid fa-xmark"></i> رفض
+                  </button>
+                </div>
+              ` : '<span style="color: var(--text-muted); font-size: 0.8rem;">تمت المعالجة</span>'}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // اتخاذ إجراء بشأن طلب الإيداع (قبول مع إضافة الرصيد أو رفض)
+    async function processDepositAction(depositId, userId, usdAmount, newStatus) {
+      const confirmMsg = newStatus === 'مقبول'
+        ? `هل أنت متأكد من قبول الطلب وإضافة مبلغ $${parseFloat(usdAmount).toFixed(2)} إلى رصيد المستخدم؟`
+        : 'هل أنت متأكد من رفض هذا الطلب؟';
+
+      if (!confirm(confirmMsg)) return;
+
+      try {
+        // 1. إذا تمت الموافقة، نقوم بإضافة الرصيد إلى جدول profiles
+        if (newStatus === 'مقبول' && usdAmount > 0) {
+          const { data: userProfile, error: profileGetErr } = await supabaseClient
+            .from('profiles')
+            .select('balance')
+            .eq('id', userId)
+            .single();
+
+          if (profileGetErr) throw profileGetErr;
+
+          const currentBal = parseFloat(userProfile?.balance || 0);
+          const updatedBal = currentBal + parseFloat(usdAmount);
+
+          const { error: profileUpdateErr } = await supabaseClient
+            .from('profiles')
+            .update({ balance: updatedBal })
+            .eq('id', userId);
+
+          if (profileUpdateErr) throw profileUpdateErr;
+        }
+
+        // 2. تحديث حالة الطلب في جدول deposits
+        const { error: depositUpdateErr } = await supabaseClient
+          .from('deposits')
+          .update({ status: newStatus })
+          .eq('id', depositId);
+
+        if (depositUpdateErr) throw depositUpdateErr;
+
+        showToast(`تم ${newStatus === 'مقبول' ? 'قبول الطلب وشحن الرصيد' : 'رفض الطلب'} بنجاح`, 'success');
+        loadAdminDepositRequests();
+      } catch (err) {
+        showToast(err.message || 'حدث خطأ أثناء معالجة الطلب', 'error');
+      }
+    }
+    // --- 17. منطق القسم 9: إدارة طرق ووسائل الدفع الحالية ---
+
+    let cachedPaymentMethods = [];
+
+    // جلب جميع وسائل الدفع في لوحة التحكم
+    async function loadAdminPaymentMethods() {
+      const tbody = document.getElementById('adminPaymentMethodsTableBody');
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 20px; color: var(--text-muted);">
+            <i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل طرق الإيداع...
+          </td>
+        </tr>
+      `;
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('payment_methods')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        cachedPaymentMethods = data || [];
+        renderAdminPaymentMethodsTable(cachedPaymentMethods);
+      } catch (err) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 20px; color: var(--danger);">
+              حدث خطأ أثناء جلب طرق الإيداع.
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    // بناء وتعبئة صفوف جدول طرق الإيداع
+    function renderAdminPaymentMethodsTable(methodsList) {
+      const tbody = document.getElementById('adminPaymentMethodsTableBody');
+
+      if (!methodsList || methodsList.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 20px; color: var(--text-muted);">
+              لا توجد طرق دفع مضافة حتى الآن.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = methodsList.map(m => {
+        const isActive = (m.status === 'active');
+        return `
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 10px; font-weight: 700; color: var(--accent);">${m.name}</td>
+            <td style="padding: 10px;">${m.currency || 'USD'}</td>
+            <td style="padding: 10px;">1$ = ${parseFloat(m.exchange_rate || 1).toFixed(2)}</td>
+            <td style="padding: 10px; font-family: monospace; font-size: 0.8rem; color: var(--text-muted); user-select: all;">
+              ${m.account_number || 'غير محدد'}
+            </td>
+            <td style="padding: 10px;">
+              <span style="font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; background: ${isActive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)'}; color: ${isActive ? 'var(--success)' : 'var(--danger)'};">
+                ${isActive ? 'نشط' : 'معطل'}
+              </span>
+            </td>
+            <td style="padding: 10px; text-align: center;">
+              <div style="display: flex; gap: 6px; justify-content: center;">
+                <button class="btn" style="padding: 4px 8px; font-size: 0.75rem; background: var(--bg-input);" onclick="togglePaymentMethodStatus('${m.id}', '${m.status}')" title="تغيير الحالة">
+                  <i class="fa-solid fa-power-off"></i>
+                </button>
+                <button class="btn" style="padding: 4px 8px; font-size: 0.75rem; background: rgba(239, 68, 68, 0.15); color: var(--danger);" onclick="deleteAdminPaymentMethod('${m.id}', '${m.name}')" title="حذف الطريقة">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // تبديل حالة وسيلة الدفع (نشطة / معطلة)
+    async function togglePaymentMethodStatus(methodId, currentStatus) {
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+      try {
+        const { error } = await supabaseClient
+          .from('payment_methods')
+          .update({ status: newStatus })
+          .eq('id', methodId);
+
+        if (error) throw error;
+
+        showToast('تم تغيير حالة وسيلة الدفع بنجاح', 'success');
+        loadAdminPaymentMethods();
+      } catch (err) {
+        showToast('فشل تعديل حالة وسيلة الدفع', 'error');
+      }
+    }
+
+    // حذف وسيلة دفع نهائياً
+    async function deleteAdminPaymentMethod(methodId, methodName) {
+      if (!confirm(`هل أنت متأكد من رغبتك في حذف وسيلة الدفع "${methodName}"؟`)) return;
+
+      try {
+        const { error } = await supabaseClient
+          .from('payment_methods')
+          .delete()
+          .eq('id', methodId);
+
+        if (error) throw error;
+
+        showToast('تم حذف وسيلة الدفع بنجاح', 'success');
+        loadAdminPaymentMethods();
+      } catch (err) {
+        showToast(err.message || 'حدث خطأ أثناء حذف وسيلة الدفع', 'error');
+      }
+    }
+    // --- 18. منطق القسم 10: إضافة طريقة إيداع جديدة ---
+
+    let selectedMethodQrFile = null;
+
+    // معالجة اختيار صورة كود QR
+    function handleMethodQrSelect(input) {
+      if (input.files && input.files[0]) {
+        selectedMethodQrFile = input.files[0];
+        document.getElementById('newMethodQrLabel').textContent = `تم اختيار: ${selectedMethodQrFile.name}`;
+      }
+    }
+
+    // حفظ ونشر وسيلة الدفع الجديدة
+    async function submitNewPaymentMethod() {
+      const name = document.getElementById('newMethodName').value.trim();
+      const currency = document.getElementById('newMethodCurrency').value.trim();
+      const rateVal = parseFloat(document.getElementById('newMethodRate').value);
+      const accountNumber = document.getElementById('newMethodAccount').value.trim();
+      const instructions = document.getElementById('newMethodInstructions').value.trim();
+      const saveBtn = document.getElementById('saveMethodBtn');
+
+      if (!name) {
+        showToast('يرجى إدخال اسم وسيلة الدفع', 'error');
+        return;
+      }
+
+      if (isNaN(rateVal) || rateVal <= 0) {
+        showToast('يرجى تحديد سعر صرف صحيح أكبر من 0', 'error');
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ...';
+
+      try {
+        let qrUrl = '';
+
+        // 1. رفع صورة الـ QR إن وُجدت
+        if (selectedMethodQrFile) {
+          const fileExt = selectedMethodQrFile.name.split('.').pop();
+          const fileName = `qr_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const filePath = `methods/${fileName}`;
+
+          const { error: uploadError } = await supabaseClient
+            .storage
+            .from('store_assets')
+            .upload(filePath, selectedMethodQrFile);
+
+          if (uploadError) throw uploadError;
+
+          const { data: publicUrlData } = supabaseClient
+            .storage
+            .from('store_assets')
+            .getPublicUrl(filePath);
+
+          qrUrl = publicUrlData.publicUrl;
+        }
+
+        // 2. إدراج وسيلة الدفع في قاعدة البيانات
+        const { error: insertError } = await supabaseClient
+          .from('payment_methods')
+          .insert({
+            name,
+            currency: currency || 'USD',
+            exchange_rate: rateVal,
+            account_number: accountNumber,
+            instructions,
+            qr_code_url: qrUrl,
+            status: 'active'
+          });
+
+        if (insertError) throw insertError;
+
+        showToast('تمت إضافة طريقة الدفع بنجاح!', 'success');
+
+        // إعادة ضبط الحقول
+        document.getElementById('newMethodName').value = '';
+        document.getElementById('newMethodCurrency').value = '';
+        document.getElementById('newMethodRate').value = '';
+        document.getElementById('newMethodAccount').value = '';
+        document.getElementById('newMethodInstructions').value = '';
+        document.getElementById('newMethodQrLabel').textContent = 'اضغط لاختيار صورة باركود الدفع';
+        document.getElementById('newMethodQrFile').value = '';
+        selectedMethodQrFile = null;
+
+        // تحديث القائمة إن كان التبويب مفتوحاً
+        if (activeAdminTab === 'payment-methods') {
+          loadAdminPaymentMethods();
+        }
+      } catch (err) {
+        showToast(err.message || 'حدث خطأ أثناء إضافة وسيلة الدفع', 'error');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> حفظ ونشر الطريقة';
+      }
+    }
+    // --- 19. تهيئة إقلاع النظام وإغلاق النوافذ التفاعلية ---
+
+    // إغلاق النوافذ المنبثقة عند الضغط خارج محتواها
+    window.addEventListener('click', (e) => {
+      const authModal = document.getElementById('authModal');
+      const depositModal = document.getElementById('userDepositModal');
+      const purchaseModal = document.getElementById('purchaseModal');
+      const adminModal = document.getElementById('adminPanelModal');
+
+      if (e.target === authModal) closeAuthModal();
+      if (e.target === depositModal) closeDepositModal();
+      if (e.target === purchaseModal) closePurchaseModal();
+      if (e.target === adminModal) closeAdminPanelModal();
+    });
+
+    // نقطة انطلاق التطبيق عند اكتمال تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', async () => {
+      // 1. تفعيل متابعة الجلسات والمصادقة
+      await initAuthListener();
+
+      // 2. تحميل الأقسام وعرضها في شريط التصفية
+      await loadStoreCategories();
+
+      // 3. تحميل المنتجات وعرضها في المتجر
+      await loadStoreProducts();
+    });
+  </script>
+</body>
+</html>
+const SUPABASE_URL = 'https://YOUR_SUPABASE_PROJECT_URL.supabase.co';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
