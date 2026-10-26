@@ -674,3 +674,425 @@
           </table>
         </div>
       </div>
+      <!-- 3. تبويب رفع مستوى مستخدم -->
+      <div id="tab-upgrade-user" class="admin-tab-content" style="display: none;">
+        <div style="background: var(--bg-main); padding: 1.5rem; border-radius: 10px; border: 1px solid var(--border); max-width: 500px; margin: 0 auto;">
+          <h4 style="margin-bottom: 1.25rem; font-size: 1rem; color: var(--accent); display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-user-shield"></i> ترقية رتبة وصلاحيات المستخدم
+          </h4>
+
+          <div class="form-group">
+            <label class="form-label">البريد الإلكتروني للمستخدم</label>
+            <input type="email" id="upgradeUserEmailInput" class="form-control" placeholder="user@example.com">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">اختر الرتبة الجديدة</label>
+            <select id="upgradeUserRoleSelect" class="form-control">
+              <option value="مضيف">مضيف (حساب عادي)</option>
+              <option value="وكيل">وكيل (أسعار وخصومات مخصصة)</option>
+              <option value="مدير">مدير (صلاحيات إدارية)</option>
+            </select>
+          </div>
+
+          <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
+            <button class="btn btn-primary" onclick="submitUserRoleUpgrade()">
+              <i class="fa-solid fa-check"></i> حفظ الترقية
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- 4. تبويب المنتجات (عرض وإدارة المنتجات الحالية) -->
+      <div id="tab-products-list" class="admin-tab-content" style="display: none;">
+        <!-- شريط الفلترة والبحث للمنتجات -->
+        <div style="display: flex; gap: 10px; margin-bottom: 1.25rem; flex-wrap: wrap;">
+          <input type="text" id="adminProductsSearch" class="form-control" style="flex: 1; min-width: 200px;" placeholder="ابحث عن منتج..." oninput="filterAdminProductsList()">
+          <select id="adminProductsCategoryFilter" class="form-control" style="width: auto; min-width: 140px;" onchange="filterAdminProductsList()">
+            <option value="all">كل الأقسام</option>
+            <!-- ستُحمّل الأقسام ديناميكياً هنا -->
+          </select>
+          <button class="btn btn-primary" onclick="loadAdminProducts()">
+            <i class="fa-solid fa-arrows-rotate"></i> تحديث
+          </button>
+        </div>
+
+        <!-- جدول قائمة المنتجات -->
+        <div style="overflow-x: auto; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border);">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: right;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);">
+                <th style="padding: 10px;">الصورة</th>
+                <th style="padding: 10px;">اسم المنتج</th>
+                <th style="padding: 10px;">القسم</th>
+                <th style="padding: 10px;">السعر ($)</th>
+                <th style="padding: 10px;">الحالة</th>
+                <th style="padding: 10px; text-align: center;">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="adminProductsTableBody">
+              <tr>
+                <td colspan="6" style="text-align: center; padding: 20px; color: var(--text-muted);">
+                  <i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل المنتجات...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <!-- 5. تبويب إضافة منتج جديد -->
+      <div id="tab-add-product" class="admin-tab-content" style="display: none;">
+        <div style="background: var(--bg-main); padding: 1.5rem; border-radius: 10px; border: 1px solid var(--border); max-width: 600px; margin: 0 auto;">
+          <h4 style="margin-bottom: 1.25rem; font-size: 1rem; color: var(--accent); display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-square-plus"></i> إضافة منتج جديد إلى المتجر
+          </h4>
+
+          <div class="form-group">
+            <label class="form-label">اسم المنتج</label>
+            <input type="text" id="newProductName" class="form-control" placeholder="مثال: شدات ببجي 660 UC">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">القسم التابع له</label>
+            <select id="newProductCategory" class="form-control">
+              <option value="">اختر القسم...</option>
+              <!-- سيتم ملء الأقسام ديناميكياً -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">السعر بالدولار ($)</label>
+            <input type="number" id="newProductPrice" step="0.01" class="form-control" placeholder="0.00">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">وصف المنتج</label>
+            <textarea id="newProductDesc" class="form-control" rows="3" placeholder="أدخل تفاصيل ومميزات المنتج..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">صورة المنتج</label>
+            <div class="file-input-wrapper" onclick="document.getElementById('newProductImageFile').click()">
+              <i class="fa-solid fa-cloud-arrow-up fa-2x" style="color: var(--accent); margin-bottom: 8px;"></i>
+              <p style="font-size: 0.85rem; color: var(--text-muted);" id="newProductImageLabel">اضغط لاختيار صورة المنتج من جهازك</p>
+            </div>
+            <input type="file" id="newProductImageFile" accept="image/*" style="display: none;" onchange="handleProductImageSelect(this)">
+          </div>
+
+          <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
+            <button class="btn btn-primary" id="saveProductBtn" onclick="submitNewProduct()">
+              <i class="fa-solid fa-floppy-disk"></i> حفظ ونشر المنتج
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- 6. تبويب الأقسام الحالية -->
+      <div id="tab-categories-list" class="admin-tab-content" style="display: none;">
+        <!-- رأس قائمة الأقسام وزر التحديث -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+          <h4 style="font-size: 0.95rem; color: var(--text-muted);">إدارة أقسام وتصنيفات المتجر</h4>
+          <button class="btn btn-primary" onclick="loadAdminCategories()">
+            <i class="fa-solid fa-arrows-rotate"></i> تحديث الأقسام
+          </button>
+        </div>
+
+        <!-- جدول الأقسام -->
+        <div style="overflow-x: auto; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border);">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: right;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);">
+                <th style="padding: 10px;">الصورة</th>
+                <th style="padding: 10px;">اسم القسم</th>
+                <th style="padding: 10px;">الوصف</th>
+                <th style="padding: 10px;">تاريخ الإنشاء</th>
+                <th style="padding: 10px; text-align: center;">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="adminCategoriesTableBody">
+              <tr>
+                <td colspan="5" style="text-align: center; padding: 20px; color: var(--text-muted);">
+                  <i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل الأقسام...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <!-- 7. تبويب إضافة قسم جديد -->
+      <div id="tab-add-category" class="admin-tab-content" style="display: none;">
+        <div style="background: var(--bg-main); padding: 1.5rem; border-radius: 10px; border: 1px solid var(--border); max-width: 550px; margin: 0 auto;">
+          <h4 style="margin-bottom: 1.25rem; font-size: 1rem; color: var(--accent); display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-folder-plus"></i> إضافة قسم جديد للمتجر
+          </h4>
+
+          <div class="form-group">
+            <label class="form-label">اسم القسم</label>
+            <input type="text" id="newCategoryName" class="form-control" placeholder="مثال: شحن ألعاب، اشتراكات، بطاقات رقمية...">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">وصف القسم (اختياري)</label>
+            <textarea id="newCategoryDesc" class="form-control" rows="2" placeholder="وصف مختصر لمحتوى هذا القسم..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">صورة أو أيقونة القسم</label>
+            <div class="file-input-wrapper" onclick="document.getElementById('newCategoryImageFile').click()">
+              <i class="fa-solid fa-image fa-2x" style="color: var(--accent); margin-bottom: 8px;"></i>
+              <p style="font-size: 0.85rem; color: var(--text-muted);" id="newCategoryImageLabel">اضغط لاختيار صورة للقسم</p>
+            </div>
+            <input type="file" id="newCategoryImageFile" accept="image/*" style="display: none;" onchange="handleCategoryImageSelect(this)">
+          </div>
+
+          <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
+            <button class="btn btn-primary" id="saveCategoryBtn" onclick="submitNewCategory()">
+              <i class="fa-solid fa-plus"></i> إضافة وتفعيل القسم
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- 8. تبويب طلبات الإيداع -->
+      <div id="tab-deposit-requests" class="admin-tab-content" style="display: none;">
+        <!-- شريط الفلترة لطلبات الإيداع -->
+        <div style="display: flex; gap: 10px; margin-bottom: 1.25rem; flex-wrap: wrap; justify-content: space-between; align-items: center;">
+          <div style="display: flex; gap: 10px; flex: 1; max-width: 400px;">
+            <select id="depositRequestsStatusFilter" class="form-control" onchange="filterDepositRequestsList()">
+              <option value="الكل">كل الطلبات</option>
+              <option value="الانتظار" selected>قيد الانتظار</option>
+              <option value="مقبول">المقبولة</option>
+              <option value="مرفوض">المرفوضة</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="loadAdminDepositRequests()">
+            <i class="fa-solid fa-arrows-rotate"></i> تحديث الطلبات
+          </button>
+        </div>
+
+        <!-- جدول طلبات الإيداع -->
+        <div style="overflow-x: auto; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border);">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: right;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);">
+                <th style="padding: 10px;">العميل</th>
+                <th style="padding: 10px;">وسيلة الدفع</th>
+                <th style="padding: 10px;">المبلغ المحول</th>
+                <th style="padding: 10px;">الرصيد ($)</th>
+                <th style="padding: 10px;">الإيصال</th>
+                <th style="padding: 10px;">الحالة</th>
+                <th style="padding: 10px; text-align: center;">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="adminDepositsTableBody">
+              <tr>
+                <td colspan="7" style="text-align: center; padding: 20px; color: var(--text-muted);">
+                  <i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل الطلبات...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <!-- 9. تبويب طرق الإيداع الحالية -->
+      <div id="tab-payment-methods" class="admin-tab-content" style="display: none;">
+        <!-- شريط الرأس لطرق الإيداع وزر التحديث -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+          <h4 style="font-size: 0.95rem; color: var(--text-muted);">إدارة طرق ووسائل الدفع والشحن</h4>
+          <button class="btn btn-primary" onclick="loadAdminPaymentMethods()">
+            <i class="fa-solid fa-arrows-rotate"></i> تحديث الطرق
+          </button>
+        </div>
+
+        <!-- جدول طرق الإيداع -->
+        <div style="overflow-x: auto; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border);">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: right;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);">
+                <th style="padding: 10px;">الوسيلة</th>
+                <th style="padding: 10px;">العملة</th>
+                <th style="padding: 10px;">سعر الصرف ($)</th>
+                <th style="padding: 10px;">رقم الحساب / العنوان</th>
+                <th style="padding: 10px;">الحالة</th>
+                <th style="padding: 10px; text-align: center;">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="adminPaymentMethodsTableBody">
+              <tr>
+                <td colspan="6" style="text-align: center; padding: 20px; color: var(--text-muted);">
+                  <i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل طرق الإيداع...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <!-- 10. تبويب إضافة طريقة إيداع جديدة -->
+      <div id="tab-add-method" class="admin-tab-content" style="display: none;">
+        <div style="background: var(--bg-main); padding: 1.5rem; border-radius: 10px; border: 1px solid var(--border); max-width: 600px; margin: 0 auto;">
+          <h4 style="margin-bottom: 1.25rem; font-size: 1rem; color: var(--accent); display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-credit-card"></i> إضافة طريقة دفع وإيداع جديدة
+          </h4>
+
+          <div class="form-group">
+            <label class="form-label">اسم الوسيلة</label>
+            <input type="text" id="newMethodName" class="form-control" placeholder="مثال: USDT TRC20، شام كاش، بايير...">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="form-group">
+              <label class="form-label">العملة</label>
+              <input type="text" id="newMethodCurrency" class="form-control" placeholder="USDT / ليرة / ريال...">
+            </div>
+            <div class="form-group">
+              <label class="form-label">سعر الصرف مقابل 1$</label>
+              <input type="number" id="newMethodRate" step="0.01" class="form-control" placeholder="1.00">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">رقم الحساب / عنوان المحفظة</label>
+            <input type="text" id="newMethodAccount" class="form-control" placeholder="أدخل رقم الحساب أو المحفظة هنا...">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">تعليمات الإيداع للعميل (اختياري)</label>
+            <textarea id="newMethodInstructions" class="form-control" rows="2" placeholder="اكتب ملاحظات للمستخدم عند التحويل..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">صورة باركود QR (اختياري)</label>
+            <div class="file-input-wrapper" onclick="document.getElementById('newMethodQrFile').click()">
+              <i class="fa-solid fa-qrcode fa-2x" style="color: var(--accent); margin-bottom: 8px;"></i>
+              <p style="font-size: 0.85rem; color: var(--text-muted);" id="newMethodQrLabel">اضغط لاختيار صورة باركود الدفع</p>
+            </div>
+            <input type="file" id="newMethodQrFile" accept="image/*" style="display: none;" onchange="handleMethodQrSelect(this)">
+          </div>
+
+          <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
+            <button class="btn btn-primary" id="saveMethodBtn" onclick="submitNewPaymentMethod()">
+              <i class="fa-solid fa-floppy-disk"></i> حفظ ونشر الطريقة
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- نافذة تسجيل الدخول وإنشاء الحساب للمستخدمين -->
+  <div class="modal-overlay" id="authModal">
+    <div class="modal-box">
+      <div class="modal-title">
+        <span id="authModalTitle">تسجيل الدخول</span>
+        <button class="btn" style="background: transparent; color: var(--text-muted); font-size: 1.2rem; padding: 4px;" onclick="closeAuthModal()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="form-group" id="authNameGroup" style="display: none;">
+        <label class="form-label">الاسم الكامل</label>
+        <input type="text" id="authFullName" class="form-control" placeholder="أدخل اسمك الكامل">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">البريد الإلكتروني</label>
+        <input type="email" id="authEmail" class="form-control" placeholder="user@example.com">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">كلمة المرور</label>
+        <input type="password" id="authPassword" class="form-control" placeholder="••••••••">
+      </div>
+
+      <button class="btn btn-primary" id="authSubmitBtn" style="width: 100%; margin-top: 1rem;" onclick="handleAuthSubmit()">
+        دخول
+      </button>
+
+      <div style="text-align: center; margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted);">
+        <span id="authToggleText">ليس لديك حساب؟</span>
+        <a href="javascript:void(0)" id="authToggleLink" style="color: var(--accent); font-weight: 700; margin-right: 5px;" onclick="toggleAuthMode()">إنشاء حساب جديد</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة طلب شحن الرصيد للعميل -->
+  <div class="modal-overlay" id="userDepositModal">
+    <div class="modal-box">
+      <div class="modal-title">
+        <span><i class="fa-solid fa-wallet" style="color: var(--success);"></i> شحن رصيد الحساب</span>
+        <button class="btn" style="background: transparent; color: var(--text-muted); font-size: 1.2rem; padding: 4px;" onclick="closeDepositModal()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">اختر وسيلة الدفع</label>
+        <select id="userDepositMethodSelect" class="form-control" onchange="handleUserDepositMethodChange()">
+          <option value="">اختر طريقة الدفع المناسبة...</option>
+        </select>
+      </div>
+
+      <!-- تفاصيل وسيلة الدفع ومعلومات التحويل -->
+      <div id="methodPaymentDetailsBox" style="display: none; background: var(--bg-input); padding: 12px; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem;">
+        <div style="margin-bottom: 6px;"><strong>رقم الحساب / المحفظة:</strong> <span id="methodAccountNumDisplay" style="color: var(--accent); user-select: all;"></span></div>
+        <div style="margin-bottom: 6px;"><strong>سعر الصرف:</strong> <span id="methodRateDisplay"></span></div>
+        <div id="methodInstructionsDisplay" style="color: var(--text-muted); line-height: 1.4;"></div>
+        <div id="methodQrContainer" style="text-align: center; margin-top: 10px; display: none;">
+          <img id="methodQrImg" src="" alt="QR Code" style="max-width: 150px; border-radius: 8px; border: 1px solid var(--border);">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">المبلغ المحول بعملة الوسيلة</label>
+        <input type="number" id="userDepositAmountInput" class="form-control" placeholder="0.00" oninput="calculateUsdEquivalent()">
+      </div>
+
+      <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+        الرصيد التقريبي الذي سيصلك: <strong id="depositUsdEquivalent" style="color: var(--success);">$0.00</strong>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">صورة إشعار التحويل (الإيصال)</label>
+        <div class="file-input-wrapper" onclick="document.getElementById('userReceiptFile').click()">
+          <i class="fa-solid fa-file-invoice-dollar fa-2x" style="color: var(--success); margin-bottom: 8px;"></i>
+          <p style="font-size: 0.85rem; color: var(--text-muted);" id="userReceiptFileLabel">اضغط لرفع صورة إشعار التحويل</p>
+        </div>
+        <input type="file" id="userReceiptFile" accept="image/*" style="display: none;" onchange="handleReceiptFileSelect(this)">
+      </div>
+
+      <button class="btn btn-success" id="submitDepositBtn" style="width: 100%; margin-top: 1rem;" onclick="submitDepositRequest()">
+        <i class="fa-solid fa-paper-plane"></i> إرسال طلب الشحن
+      </button>
+    </div>
+  </div>
+  <!-- نافذة تأكيد شراء منتج -->
+  <div class="modal-overlay" id="purchaseModal">
+    <div class="modal-box">
+      <div class="modal-title">
+        <span><i class="fa-solid fa-cart-shopping" style="color: var(--primary);"></i> تأكيد الطلب والشراء</span>
+        <button class="btn" style="background: transparent; color: var(--text-muted); font-size: 1.2rem; padding: 4px;" onclick="closePurchaseModal()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div style="background: var(--bg-input); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+        <h4 id="purchaseProductTitle" style="font-size: 1rem; margin-bottom: 6px;"></h4>
+        <div style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 10px;" id="purchaseProductDesc"></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 8px;">
+          <span style="font-size: 0.9rem;">السعر الإجمالي:</span>
+          <span id="purchaseProductPrice" style="font-size: 1.1rem; font-weight: 800; color: var(--accent);">$0.00</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">البيانات الإضافية المطلوبة لتنفيذ الخدمة (مثل الآيدي ID أو البريد)</label>
+        <textarea id="purchaseCustomerNotes" class="form-control" rows="3" placeholder="أدخل الآيدي (ID) أو التفاصيل المطلوبة لشحن حسابك..."></textarea>
+      </div>
+
+      <button class="btn btn-primary" id="confirmPurchaseBtn" style="width: 100%; margin-top: 1rem;" onclick="processProductPurchase()">
+        <i class="fa-solid fa-circle-check"></i> تأكيد الخصم والشراء
+      </button>
+    </div>
+  </div>
+
+  <!-- حاوية إشعارات التنبيه السريعة (Toasts) -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- بداية كود الجافاسكريبت والربط البرمجي -->
+  <script>
