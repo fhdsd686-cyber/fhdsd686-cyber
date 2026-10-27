@@ -1777,3 +1777,722 @@
         console.error('Error loading stats:', err);
       }
     }
+    // --- 9. إدارة المنتجات في لوحة التحكم (Admin Products Management) ---
+
+    // تحميل وعرض المنتجات في جدول لوحة التحكم
+    async function loadAdminProducts() {
+      const tbody = document.getElementById('adminProductsTableBody');
+      if (!tbody) return;
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('products')
+          .select('*, categories(name)')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        cachedProducts = data || [];
+
+        if (cachedProducts.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">لا توجد منتجات مسجلة حالياً.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = cachedProducts.map(prod => {
+          const catName = prod.categories ? prod.categories.name : 'غير محدد';
+          const defaultImg = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=60';
+          const isAvailable = prod.stock > 0;
+
+          return `
+            <tr>
+              <td>
+                <img src="${prod.image_url || defaultImg}" alt="${prod.title}" style="width: 40px; height: 40px; border-radius: 6px; object-fit: cover;" onerror="this.src='${defaultImg}'">
+              </td>
+              <td><strong>${prod.title}</strong></td>
+              <td><span class="badge-status" style="background: rgba(99, 102, 241, 0.1); color: var(--primary);">${catName}</span></td>
+              <td>$${formatMoney(prod.price)}</td>
+              <td>${prod.stock}</td>
+              <td>
+                <span class="badge-status ${isAvailable ? 'badge-completed' : 'badge-rejected'}">
+                  ${isAvailable ? 'متوفر' : 'نفد'}
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-outline btn-sm" onclick="editProduct('${prod.id}')" title="تعديل">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteProduct('${prod.id}')" title="حذف">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Error loading admin products:', err);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger);">فشل تحميل المنتجات.</td></tr>';
+      }
+    }
+
+    // فتح نافذة المنتج (إضافة أو تجهيزها للتعديل)
+    function openProductModal() {
+      document.getElementById('productForm').reset();
+      document.getElementById('prodFormId').value = '';
+      document.getElementById('productModalTitle').innerHTML = '<i class="fa-solid fa-box"></i> إضافة منتج جديد';
+      populateCategorySelectDropdown();
+      openModal('productModal');
+    }
+
+    // تجهيز بيانات منتج موجود للتعديل
+    function editProduct(productId) {
+      const prod = cachedProducts.find(p => p.id === productId);
+      if (!prod) return;
+
+      document.getElementById('prodFormId').value = prod.id;
+      document.getElementById('prodTitle').value = prod.title;
+      document.getElementById('prodCategory').value = prod.category_id || '';
+      document.getElementById('prodPrice').value = prod.price;
+      document.getElementById('prodStock').value = prod.stock;
+      document.getElementById('prodImageUrl').value = prod.image_url || '';
+      document.getElementById('prodDescription').value = prod.description || '';
+
+      document.getElementById('productModalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> تعديل منتج';
+      openModal('productModal');
+    }
+
+    // حفظ المنتج (إضافة جديد أو تعديل الحالي)
+    async function handleProductSubmit(event) {
+      event.preventDefault();
+      const formId = document.getElementById('prodFormId').value;
+      const title = document.getElementById('prodTitle').value.trim();
+      const category_id = document.getElementById('prodCategory').value;
+      const price = parseFloat(document.getElementById('prodPrice').value);
+      const stock = parseInt(document.getElementById('prodStock').value, 10);
+      const image_url = document.getElementById('prodImageUrl').value.trim();
+      const description = document.getElementById('prodDescription').value.trim();
+      const btn = document.getElementById('prodSaveBtn');
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ...';
+
+      const payload = { title, category_id, price, stock, image_url, description };
+
+      try {
+        if (formId) {
+          const { error } = await supabaseClient.from('products').update(payload).eq('id', formId);
+          if (error) throw error;
+          showToast('تم تحديث بيانات المنتج بنجاح', 'success');
+        } else {
+          const { error } = await supabaseClient.from('products').insert([payload]);
+          if (error) throw error;
+          showToast('تم إضافة المنتج بنجاح', 'success');
+        }
+
+        closeModal('productModal');
+        await loadAdminProducts();
+        await loadProducts();
+      } catch (err) {
+        console.error('Error saving product:', err);
+        showToast('تعذر حفظ بيانات المنتج', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> حفظ المنتج';
+      }
+    }
+
+    // حذف منتج
+    async function deleteProduct(productId) {
+      if (!confirm('هل أنت متأكد من رغبتك في حذف هذا المنتج نهائياً؟')) return;
+
+      try {
+        const { error } = await supabaseClient.from('products').delete().eq('id', productId);
+        if (error) throw error;
+        showToast('تم حذف المنتج بنجاح', 'info');
+        await loadAdminProducts();
+        await loadProducts();
+      } catch (err) {
+        console.error('Error deleting product:', err);
+        showToast('تعذر حذف المنتج، قد يكون مرتبطاً بطلبات سابقة', 'error');
+      }
+    }
+    // --- 10. إدارة التصنيفات في لوحة التحكم (Admin Categories Management) ---
+
+    // تحميل وعرض التصنيفات في جدول لوحة الأدمن
+    async function loadAdminCategories() {
+      const tbody = document.getElementById('adminCategoriesTableBody');
+      if (!tbody) return;
+
+      try {
+        const { data: categories, error } = await supabaseClient
+          .from('categories')
+          .select('*, products(id)')
+          .order('name', { ascending: true });
+
+        if (error) throw error;
+
+        if (!categories || categories.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">لا توجد تصنيفات حالياً.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = categories.map(cat => {
+          const productCount = cat.products ? cat.products.length : 0;
+          const iconClass = cat.icon || 'fa-tag';
+
+          return `
+            <tr>
+              <td><strong>${cat.name}</strong></td>
+              <td><i class="fa-solid ${iconClass}" style="color: var(--accent);"></i> <span style="font-size: 0.8rem; color: var(--text-muted);">${iconClass}</span></td>
+              <td>${productCount} منتج</td>
+              <td>
+                <button class="btn btn-danger btn-sm" onclick="deleteCategory('${cat.id}')" title="حذف">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Error loading admin categories:', err);
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--danger);">تعذر تحميل التصنيفات.</td></tr>';
+      }
+    }
+
+    // فتح نافذة إضافة تصنيف جديد
+    function openCategoryModal() {
+      document.getElementById('categoryForm').reset();
+      openModal('categoryModal');
+    }
+
+    // حفظ التصنيف الجديد
+    async function handleCategorySubmit(event) {
+      event.preventDefault();
+      const name = document.getElementById('catNameInput').value.trim();
+      const icon = document.getElementById('catIconInput').value.trim() || 'fa-tag';
+      const btn = document.getElementById('catSaveBtn');
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ...';
+
+      try {
+        const { error } = await supabaseClient
+          .from('categories')
+          .insert([{ name, icon }]);
+
+        if (error) throw error;
+
+        showToast('تمت إضافة التصنيف بنجاح', 'success');
+        closeModal('categoryModal');
+        await loadCategories();
+        await loadAdminCategories();
+      } catch (err) {
+        console.error('Error saving category:', err);
+        showToast('تعذر حفظ التصنيف', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> حفظ التصنيف';
+      }
+    }
+
+    // حذف تصنيف
+    async function deleteCategory(categoryId) {
+      if (!confirm('هل أنت متأكد من حذف هذا التصنيف؟')) return;
+
+      try {
+        const { error } = await supabaseClient
+          .from('categories')
+          .delete()
+          .eq('id', categoryId);
+
+        if (error) throw error;
+
+        showToast('تم حذف التصنيف بنجاح', 'info');
+        await loadCategories();
+        await loadAdminCategories();
+      } catch (err) {
+        console.error('Error deleting category:', err);
+        showToast('تعذر حذف التصنيف، تأكد من عدم ارتباطه بمنتجات قائمة', 'error');
+      }
+    }
+    // --- 11. إدارة الطلبات في لوحة التحكم (Admin Orders Management) ---
+
+    let cachedAdminOrders = [];
+
+    // جلب وعرض قائمة الطلبات في جدول الإدارة
+    async function loadAdminOrders() {
+      const tbody = document.getElementById('adminOrdersTableBody');
+      if (!tbody) return;
+
+      try {
+        const { data: orders, error } = await supabaseClient
+          .from('orders')
+          .select('*, profiles(email), products(title)')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        cachedAdminOrders = orders || [];
+
+        if (cachedAdminOrders.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">لا توجد طلبات مسجلة حتى الآن.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = cachedAdminOrders.map(order => {
+          const userEmail = order.profiles ? order.profiles.email : 'مستخدم محذوف';
+          const productTitle = order.products ? order.products.title : 'منتج غير محدد';
+          const dateStr = new Date(order.created_at).toLocaleDateString('ar-EG');
+
+          let statusBadge = '<span class="badge-status badge-pending">قيد الانتظار</span>';
+          if (order.status === 'completed') {
+            statusBadge = '<span class="badge-status badge-completed">مكتمل</span>';
+          } else if (order.status === 'cancelled') {
+            statusBadge = '<span class="badge-status badge-rejected">ملغي</span>';
+          }
+
+          return `
+            <tr>
+              <td><code style="font-size: 0.75rem;">${order.id.slice(0, 8)}...</code></td>
+              <td>${userEmail}</td>
+              <td><strong>${productTitle}</strong></td>
+              <td>$${formatMoney(order.price)}</td>
+              <td>${dateStr}</td>
+              <td>${statusBadge}</td>
+              <td>
+                <button class="btn btn-outline btn-sm" onclick="openOrderDeliveryModal('${order.id}')">
+                  <i class="fa-solid fa-truck-ramp-box"></i> إدارة
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Error loading admin orders:', err);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger);">فشل تحميل الطلبات.</td></tr>';
+      }
+    }
+
+    // فتح نافذة تفاصيل الطلب وتسليم البيانات للعميل
+    function openOrderDeliveryModal(orderId) {
+      const order = cachedAdminOrders.find(o => o.id === orderId);
+      if (!order) return;
+
+      document.getElementById('deliveryOrderId').value = order.id;
+      document.getElementById('modalOrderId').textContent = order.id;
+      document.getElementById('modalOrderUser').textContent = order.profiles?.email || 'غير معروف';
+      document.getElementById('modalOrderProduct').textContent = order.products?.title || 'غير محدد';
+      document.getElementById('modalOrderPrice').textContent = `$${formatMoney(order.price)}`;
+      document.getElementById('modalOrderStatusBadge').textContent = order.status;
+      document.getElementById('deliveryDataInput').value = order.delivery_data || '';
+      document.getElementById('deliveryStatusSelect').value = order.status;
+
+      openModal('orderDetailsModal');
+    }
+
+    // حفظ تحديث حالة الطلب وبيانات التسليم
+    async function handleOrderDeliverySubmit(event) {
+      event.preventDefault();
+      const orderId = document.getElementById('deliveryOrderId').value;
+      const deliveryData = document.getElementById('deliveryDataInput').value.trim();
+      const status = document.getElementById('deliveryStatusSelect').value;
+      const btn = document.getElementById('orderDeliveryBtn');
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري التحديث...';
+
+      try {
+        const { error } = await supabaseClient
+          .from('orders')
+          .update({ delivery_data: deliveryData, status: status })
+          .eq('id', orderId);
+
+        if (error) throw error;
+
+        showToast('تم تحديث حالة الطلب وبيانات التسليم بنجاح', 'success');
+        closeModal('orderDetailsModal');
+        await loadAdminOrders();
+      } catch (err) {
+        console.error('Error updating order:', err);
+        showToast('تعذر تحديث الطلب', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check-double"></i> تحديث وحفظ الطلب';
+      }
+    }
+    // --- 12. إدارة طلبات شحن الرصيد في لوحة التحكم (Admin Deposits Management) ---
+
+    // جلب وعرض طلبات شحن الرصيد في جدول الإدارة
+    async function loadAdminDeposits() {
+      const tbody = document.getElementById('adminDepositsTableBody');
+      if (!tbody) return;
+
+      try {
+        const { data: deposits, error } = await supabaseClient
+          .from('deposits')
+          .select('*, profiles(email, balance), payment_methods(name)')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!deposits || deposits.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">لا توجد طلبات شحن مسجلة.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = deposits.map(dep => {
+          const userEmail = dep.profiles ? dep.profiles.email : 'مستخدم محذوف';
+          const methodName = dep.payment_methods ? dep.payment_methods.name : 'طريقة محذوفة';
+          const dateStr = new Date(dep.created_at).toLocaleDateString('ar-EG');
+          const isPending = dep.status === 'pending';
+
+          let statusBadge = '<span class="badge-status badge-pending">قيد المراجعة</span>';
+          if (dep.status === 'approved') {
+            statusBadge = '<span class="badge-status badge-completed">مقبول ومضاف</span>';
+          } else if (dep.status === 'rejected') {
+            statusBadge = '<span class="badge-status badge-rejected">مرفوض</span>';
+          }
+
+          let actionButtons = '-';
+          if (isPending) {
+            actionButtons = `
+              <button class="btn btn-success btn-sm" onclick="approveDeposit('${dep.id}', '${dep.user_id}', ${dep.amount}, ${dep.profiles?.balance || 0})" title="قبول وشحن الرصيد">
+                <i class="fa-solid fa-check"></i> قبول
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="rejectDeposit('${dep.id}')" title="رفض الطلب">
+                <i class="fa-solid fa-xmark"></i> رفض
+              </button>
+            `;
+          }
+
+          return `
+            <tr>
+              <td>${userEmail}</td>
+              <td><strong style="color: var(--success);">$${formatMoney(dep.amount)}</strong></td>
+              <td>${methodName}</td>
+              <td><code style="font-size: 0.8rem; background: var(--bg-input); padding: 2px 6px; border-radius: 4px;">${dep.transaction_id}</code></td>
+              <td>${dateStr}</td>
+              <td>${statusBadge}</td>
+              <td>${actionButtons}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Error loading admin deposits:', err);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger);">فشل تحميل طلبات الشحن.</td></tr>';
+      }
+    }
+
+    // قبول طلب الشحن وتحديث رصيد العميل مباشرة
+    async function approveDeposit(depositId, userId, amount, currentBal) {
+      if (!confirm(`هل أنت متأكد من قبول شحن مبلغ $${formatMoney(amount)} لهذا المستخدم؟`)) return;
+
+      try {
+        const newBalance = parseFloat(currentBal) + parseFloat(amount);
+
+        // 1. تحديث رصيد المستخدم
+        const { error: userError } = await supabaseClient
+          .from('profiles')
+          .update({ balance: newBalance })
+          .eq('id', userId);
+
+        if (userError) throw userError;
+
+        // 2. تحديث حالة طلب الشحن إلى معتمد
+        const { error: depError } = await supabaseClient
+          .from('deposits')
+          .update({ status: 'approved' })
+          .eq('id', depositId);
+
+        if (depError) throw depError;
+
+        showToast('تم قبول الطلب وإضافة الرصيد لحساب المستخدم بنجاح', 'success');
+        await loadAdminDeposits();
+        await loadAdminStats();
+      } catch (err) {
+        console.error('Error approving deposit:', err);
+        showToast('تعذر قبول طلب الشحن', 'error');
+      }
+    }
+
+    // رفض طلب الشحن
+    async function rejectDeposit(depositId) {
+      if (!confirm('هل أنت متأكد من رفض هذا الطلب؟')) return;
+
+      try {
+        const { error } = await supabaseClient
+          .from('deposits')
+          .update({ status: 'rejected' })
+          .eq('id', depositId);
+
+        if (error) throw error;
+
+        showToast('تم رفض طلب الشحن بنجاح', 'info');
+        await loadAdminDeposits();
+        await loadAdminStats();
+      } catch (err) {
+        console.error('Error rejecting deposit:', err);
+        showToast('تعذر رفض الطلب', 'error');
+      }
+    }
+    // --- 13. إدارة وسائل الدفع في لوحة التحكم (Admin Payment Methods Management) ---
+
+    // جلب وعرض وسائل الدفع في جدول لوحة الأدمن
+    async function loadAdminPaymentMethods() {
+      const tbody = document.getElementById('adminPaymentMethodsTableBody');
+      if (!tbody) return;
+
+      try {
+        const { data: methods, error } = await supabaseClient
+          .from('payment_methods')
+          .select('*')
+          .order('name', { ascending: true });
+
+        if (error) throw error;
+        cachedPaymentMethods = methods || [];
+
+        if (cachedPaymentMethods.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">لا توجد وسائل دفع مضافة.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = cachedPaymentMethods.map(pm => {
+          const qrBadge = pm.qr_url 
+            ? '<span class="badge-status badge-completed">مرفق</span>' 
+            : '<span class="badge-status" style="background: rgba(148, 163, 184, 0.1); color: var(--text-muted);">لا يوجد</span>';
+
+          return `
+            <tr>
+              <td><strong>${pm.name}</strong></td>
+              <td><code style="font-size: 0.8rem; background: var(--bg-input); padding: 2px 6px; border-radius: 4px;">${pm.account_info}</code></td>
+              <td><small style="color: var(--text-muted);">${pm.instructions || '-'}</small></td>
+              <td>${qrBadge}</td>
+              <td>
+                <button class="btn btn-outline btn-sm" onclick="editPaymentMethod('${pm.id}')" title="تعديل">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deletePaymentMethod('${pm.id}')" title="حذف">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Error loading admin payment methods:', err);
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--danger);">فشل تحميل وسائل الدفع.</td></tr>';
+      }
+    }
+
+    // فتح نافذة وسيلة الدفع لإضافة طريقة جديدة
+    function openPaymentMethodModal() {
+      document.getElementById('paymentMethodForm').reset();
+      document.getElementById('pmFormId').value = '';
+      document.getElementById('paymentMethodModalTitle').innerHTML = '<i class="fa-solid fa-credit-card"></i> إضافة وسيلة دفع';
+      openModal('paymentMethodModal');
+    }
+
+    // تجهيز بيانات وسيلة دفع قائمة للتعديل
+    function editPaymentMethod(methodId) {
+      const pm = cachedPaymentMethods.find(m => m.id === methodId);
+      if (!pm) return;
+
+      document.getElementById('pmFormId').value = pm.id;
+      document.getElementById('pmName').value = pm.name;
+      document.getElementById('pmAccount').value = pm.account_info;
+      document.getElementById('pmInstructions').value = pm.instructions || '';
+      document.getElementById('pmQrUrl').value = pm.qr_url || '';
+
+      document.getElementById('paymentMethodModalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> تعديل وسيلة الدفع';
+      openModal('paymentMethodModal');
+    }
+
+    // حفظ وسيلة الدفع (إضافة أو تعديل)
+    async function handlePaymentMethodSubmit(event) {
+      event.preventDefault();
+      const formId = document.getElementById('pmFormId').value;
+      const name = document.getElementById('pmName').value.trim();
+      const account_info = document.getElementById('pmAccount').value.trim();
+      const instructions = document.getElementById('pmInstructions').value.trim();
+      const qr_url = document.getElementById('pmQrUrl').value.trim();
+      const btn = document.getElementById('pmSaveBtn');
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ...';
+
+      const payload = { name, account_info, instructions, qr_url };
+
+      try {
+        if (formId) {
+          const { error } = await supabaseClient.from('payment_methods').update(payload).eq('id', formId);
+          if (error) throw error;
+          showToast('تم تحديث وسيلة الدفع بنجاح', 'success');
+        } else {
+          const { error } = await supabaseClient.from('payment_methods').insert([payload]);
+          if (error) throw error;
+          showToast('تمت إضافة وسيلة الدفع بنجاح', 'success');
+        }
+
+        closeModal('paymentMethodModal');
+        await loadPaymentMethods();
+        await loadAdminPaymentMethods();
+      } catch (err) {
+        console.error('Error saving payment method:', err);
+        showToast('تعذر حفظ وسيلة الدفع', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> حفظ وسيلة الدفع';
+      }
+    }
+
+    // حذف وسيلة دفع
+    async function deletePaymentMethod(methodId) {
+      if (!confirm('هل أنت متأكد من رغبتك في حذف وسيلة الدفع هذه؟')) return;
+
+      try {
+        const { error } = await supabaseClient
+          .from('payment_methods')
+          .delete()
+          .eq('id', methodId);
+
+        if (error) throw error;
+
+        showToast('تم حذف وسيلة الدفع بنجاح', 'info');
+        await loadPaymentMethods();
+        await loadAdminPaymentMethods();
+      } catch (err) {
+        console.error('Error deleting payment method:', err);
+        showToast('تعذر حذف وسيلة الدفع', 'error');
+      }
+    }
+    // --- 14. إدارة المستخدمين والأرصدة في لوحة التحكم (Admin Users Management) ---
+
+    let cachedAdminUsers = [];
+
+    // جلب وعرض قائمة المستخدمين في جدول لوحة الأدمن
+    async function loadAdminUsers() {
+      const tbody = document.getElementById('adminUsersTableBody');
+      if (!tbody) return;
+
+      try {
+        const { data: users, error } = await supabaseClient
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        cachedAdminUsers = users || [];
+
+        if (cachedAdminUsers.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">لا يوجد مستخدمون مسجلون.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = cachedAdminUsers.map(u => {
+          const dateStr = u.created_at ? new Date(u.created_at).toLocaleDateString('ar-EG') : '-';
+          const isAdminBadge = u.is_admin ? '<span class="badge-status badge-completed" style="margin-right: 5px;">أدمن</span>' : '';
+
+          return `
+            <tr>
+              <td><code style="font-size: 0.75rem;">${u.id.slice(0, 8)}...</code></td>
+              <td>${u.email} ${isAdminBadge}</td>
+              <td><strong style="color: var(--success);">$${formatMoney(u.balance)}</strong></td>
+              <td>${dateStr}</td>
+              <td>
+                <button class="btn btn-outline btn-sm" onclick="openUserBalanceModal('${u.id}')" title="تعديل الرصيد">
+                  <i class="fa-solid fa-coins"></i> تعديل الرصيد
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Error loading admin users:', err);
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--danger);">فشل تحميل قائمة المستخدمين.</td></tr>';
+      }
+    }
+
+    // فتح نافذة تعديل رصيد المستخدم
+    function openUserBalanceModal(userId) {
+      const user = cachedAdminUsers.find(u => u.id === userId);
+      if (!user) return;
+
+      document.getElementById('balanceModalUserId').value = user.id;
+      document.getElementById('balanceModalUserEmail').textContent = user.email;
+      document.getElementById('balanceModalNewAmount').value = parseFloat(user.balance || 0).toFixed(2);
+
+      openModal('userBalanceModal');
+    }
+
+    // حفظ الرصيد الجديد للمستخدم
+    async function handleUserBalanceSubmit(event) {
+      event.preventDefault();
+      const userId = document.getElementById('balanceModalUserId').value;
+      const newBalance = parseFloat(document.getElementById('balanceModalNewAmount').value);
+      const btn = document.getElementById('balanceModalSaveBtn');
+
+      if (isNaN(newBalance) || newBalance < 0) {
+        showToast('يرجى إدخال مبلغ صحيح', 'warning');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري التحديث...';
+
+      try {
+        const { error } = await supabaseClient
+          .from('profiles')
+          .update({ balance: newBalance })
+          .eq('id', userId);
+
+        if (error) throw error;
+
+        // إذا تم تعديل رصيد الحساب المسجل به حالياً
+        if (currentUser && currentUser.id === userId && currentProfile) {
+          currentProfile.balance = newBalance;
+          updateUserDisplay();
+        }
+
+        showToast('تم تحديث رصيد المستخدم بنجاح', 'success');
+        closeModal('userBalanceModal');
+        await loadAdminUsers();
+      } catch (err) {
+        console.error('Error updating user balance:', err);
+        showToast('تعذر تحديث رصيد المستخدم', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> تحديث الرصيد';
+      }
+    }
+    // --- 15. التهيئة الأولية للتطبيق (App Initialization) ---
+
+    // دالة بدء تشغيل النظام وتحميل البيانات الأساسية
+    async function initApp() {
+      try {
+        // التحقق من الجلسة الحالية للمستخدم إن وجدت
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session && session.user) {
+          currentUser = session.user;
+          await fetchUserProfile(currentUser.id, currentUser.email);
+          updateAuthUI(true);
+        } else {
+          updateAuthUI(false);
+        }
+
+        // تحميل التصنيفات وطرق الدفع والمنتجات للمتجر
+        await Promise.all([
+          loadCategories(),
+          loadPaymentMethods(),
+          loadProducts()
+        ]);
+      } catch (err) {
+        console.error('Initialization error:', err);
+        showToast('حدث خطأ أثناء تحميل بعض البيانات الأساسية', 'error');
+      }
+    }
+
+    // تشغيل التهيئة فور اكتمال تحميل عناصر الصفحة
+    document.addEventListener('DOMContentLoaded', () => {
+      initApp();
+    });
+  </script>
+</body>
+</html>
