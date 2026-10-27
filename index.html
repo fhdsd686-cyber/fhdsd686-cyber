@@ -639,3 +639,449 @@
       </button>
       <!-- سيتم توليد أزرار التصنيفات ديناميكياً هنا عبر الجافاسكريبت -->
     </section>
+    <!-- شبكة عرض المنتجات للمستخدمين -->
+    <section>
+      <div class="products-grid" id="productsGrid">
+        <!-- مؤشر تحميل مبدئي أثناء جلب المنتجات من Supabase -->
+        <div id="productsLoading" style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+          <i class="fa-solid fa-spinner fa-spin fa-2x" style="color: var(--primary); margin-bottom: 0.75rem;"></i>
+          <p>جاري تحميل المنتجات والخدمات...</p>
+        </div>
+      </div>
+
+      <!-- رسالة تظهر عندما لا توجد منتجات مطابقة -->
+      <div id="noProductsMsg" style="display: none; text-align: center; padding: 3rem 1rem; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 3rem;">
+        <i class="fa-solid fa-box-open fa-3x" style="color: var(--text-muted); margin-bottom: 1rem;"></i>
+        <h3 style="margin-bottom: 0.5rem;">لا توجد منتجات متوفرة حالياً</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">يرجى تجربة تصنيف آخر أو العودة لاحقاً.</p>
+      </div>
+    </section>
+    <!-- لوحة تحكم الأدمن (تظهر فقط للحساب المحدد كأدمن) -->
+    <section class="admin-container" id="adminContainer">
+      <div class="admin-header">
+        <h2 style="font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-solid fa-gauge-high" style="color: var(--primary);"></i>
+          <span>لوحة إدارة النظام</span>
+        </h2>
+        <span class="badge-status badge-completed">مسؤول</span>
+      </div>
+
+      <!-- أزرار التنقل بين تبويبات لوحة التحكم -->
+      <div class="admin-nav">
+        <button class="admin-nav-btn active" onclick="switchAdminTab('stats', this)">
+          <i class="fa-solid fa-chart-pie"></i> الإحصائيات
+        </button>
+        <button class="admin-nav-btn" onclick="switchAdminTab('products', this)">
+          <i class="fa-solid fa-boxes-stacked"></i> إدارة المنتجات
+        </button>
+        <button class="admin-nav-btn" onclick="switchAdminTab('categories', this)">
+          <i class="fa-solid fa-tags"></i> التصنيفات
+        </button>
+        <button class="admin-nav-btn" onclick="switchAdminTab('orders', this)">
+          <i class="fa-solid fa-receipt"></i> الطلبات
+        </button>
+        <button class="admin-nav-btn" onclick="switchAdminTab('deposits', this)">
+          <i class="fa-solid fa-money-bill-transfer"></i> شحن الرصيد
+        </button>
+        <button class="admin-nav-btn" onclick="switchAdminTab('paymentMethods', this)">
+          <i class="fa-solid fa-credit-card"></i> طرق الدفع
+        </button>
+        <button class="admin-nav-btn" onclick="switchAdminTab('users', this)">
+          <i class="fa-solid fa-users"></i> المستخدمين
+        </button>
+      </div>
+
+      <div class="admin-content">
+        <!-- 1. تبويب الإحصائيات (Stats Tab) -->
+        <div class="admin-tab active" id="tab-stats">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span class="stat-card-title"><i class="fa-solid fa-users"></i> إجمالي المستخدمين</span>
+              <span class="stat-card-value" id="statUsersCount">0</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-card-title"><i class="fa-solid fa-cart-shopping"></i> إجمالي الطلبات</span>
+              <span class="stat-card-value" id="statOrdersCount">0</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-card-title"><i class="fa-solid fa-clock"></i> طلبات الشحن المعلقة</span>
+              <span class="stat-card-value" id="statPendingDeposits" style="color: var(--warning);">0</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-card-title"><i class="fa-solid fa-dollar-sign"></i> إجمالي الأرباح والمبيعات</span>
+              <span class="stat-card-value" id="statTotalRevenue" style="color: var(--success);">$0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. تبويب إدارة المنتجات (Products Tab) -->
+        <div class="admin-tab" id="tab-products">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="font-size: 1rem;">قائمة المنتجات والخدمات</h3>
+            <button class="btn btn-primary btn-sm" onclick="openProductModal()">
+              <i class="fa-solid fa-plus"></i> إضافة منتج جديد
+            </button>
+          </div>
+          <div class="table-container">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>الصورة</th>
+                  <th>اسم المنتج</th>
+                  <th>التصنيف</th>
+                  <th>السعر</th>
+                  <th>الكمية المتاحة</th>
+                  <th>الحالة</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="adminProductsTableBody">
+                <tr>
+                  <td colspan="7" style="text-align: center; color: var(--text-muted);">جاري تحميل المنتجات...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <!-- 3. تبويب إدارة التصنيفات (Categories Tab) -->
+        <div class="admin-tab" id="tab-categories">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="font-size: 1rem;">قائمة التصنيفات</h3>
+            <button class="btn btn-primary btn-sm" onclick="openCategoryModal()">
+              <i class="fa-solid fa-plus"></i> إضافة تصنيف جديد
+            </button>
+          </div>
+          <div class="table-container">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>اسم التصنيف</th>
+                  <th>الأيقونة</th>
+                  <th>عدد المنتجات</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="adminCategoriesTableBody">
+                <tr>
+                  <td colspan="4" style="text-align: center; color: var(--text-muted);">جاري تحميل التصنيفات...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 4. تبويب إدارة الطلبات (Orders Tab) -->
+        <div class="admin-tab" id="tab-orders">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="font-size: 1rem;">سجل طلبات الشراء</h3>
+            <button class="btn btn-outline btn-sm" onclick="loadAdminOrders()">
+              <i class="fa-solid fa-rotate"></i> تحديث
+            </button>
+          </div>
+          <div class="table-container">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>رقم الطلب</th>
+                  <th>العميل</th>
+                  <th>المنتج</th>
+                  <th>السعر</th>
+                  <th>التاريخ</th>
+                  <th>الحالة</th>
+                  <th>تفاصيل / تسليم</th>
+                </tr>
+              </thead>
+              <tbody id="adminOrdersTableBody">
+                <tr>
+                  <td colspan="7" style="text-align: center; color: var(--text-muted);">جاري تحميل الطلبات...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <!-- 5. تبويب مراجعة طلبات شحن الرصيد (Deposits Tab) -->
+        <div class="admin-tab" id="tab-deposits">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="font-size: 1rem;">طلبات شحن الرصيد المعلقة والمنفذة</h3>
+            <button class="btn btn-outline btn-sm" onclick="loadAdminDeposits()">
+              <i class="fa-solid fa-rotate"></i> تحديث
+            </button>
+          </div>
+          <div class="table-container">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>المستخدم</th>
+                  <th>المبلغ</th>
+                  <th>طريقة الدفع</th>
+                  <th>رقم التحويل / الإشعار</th>
+                  <th>التاريخ</th>
+                  <th>الحالة</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="adminDepositsTableBody">
+                <tr>
+                  <td colspan="7" style="text-align: center; color: var(--text-muted);">جاري تحميل طلبات الشحن...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 6. تبويب إدارة وسائل وطرق الدفع (Payment Methods Tab) -->
+        <div class="admin-tab" id="tab-paymentMethods">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="font-size: 1rem;">وسائل الدفع المتاحة للعملاء</h3>
+            <button class="btn btn-primary btn-sm" onclick="openPaymentMethodModal()">
+              <i class="fa-solid fa-plus"></i> إضافة وسيلة دفع
+            </button>
+          </div>
+          <div class="table-container">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>اسم الوسيلة</th>
+                  <th>بيانات التحويل</th>
+                  <th>الحالة</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="adminPaymentMethodsTableBody">
+                <tr>
+                  <td colspan="4" style="text-align: center; color: var(--text-muted);">جاري تحميل وسائل الدفع...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <!-- 7. تبويب إدارة حسابات المستخدمين (Users Tab) -->
+        <div class="admin-tab" id="tab-users">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="font-size: 1rem;">قائمة المستخدمين والأرصدة</h3>
+            <button class="btn btn-outline btn-sm" onclick="loadAdminUsers()">
+              <i class="fa-solid fa-rotate"></i> تحديث
+            </button>
+          </div>
+          <div class="table-container">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>معرف المستخدم</th>
+                  <th>البريد الإلكتروني</th>
+                  <th>الرصيد الحالي</th>
+                  <th>تاريخ الانضمام</th>
+                  <th>تعديل الرصيد</th>
+                </tr>
+              </thead>
+              <tbody id="adminUsersTableBody">
+                <tr>
+                  <td colspan="5" style="text-align: center; color: var(--text-muted);">جاري تحميل المستخدمين...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div><!-- نهاية admin-content -->
+    </section><!-- نهاية admin-container -->
+
+  </main><!-- نهاية main container -->
+  <!-- نافذة تسجيل الدخول وإنشاء حساب (Auth Modal) -->
+  <div class="modal-overlay" id="authModal">
+    <div class="modal-box">
+      <div class="modal-title">
+        <span id="authModalTitle"><i class="fa-solid fa-right-to-bracket"></i> تسجيل الدخول</span>
+        <button class="btn btn-outline btn-sm" onclick="closeModal('authModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="authForm" onsubmit="handleAuthSubmit(event)">
+        <div class="form-group">
+          <label class="form-label" for="authEmail">البريد الإلكتروني</label>
+          <input type="email" id="authEmail" class="form-control" placeholder="name@example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="authPassword">كلمة المرور</label>
+          <input type="password" id="authPassword" class="form-control" placeholder="••••••••" required minlength="6">
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="authSubmitBtn" style="width: 100%; margin-top: 1rem;">
+          تسجيل الدخول
+        </button>
+      </form>
+
+      <div style="text-align: center; margin-top: 1.25rem; font-size: 0.85rem; color: var(--text-muted);">
+        <span id="authToggleText">ليس لديك حساب؟</span>
+        <a href="javascript:void(0)" id="authToggleLink" onclick="toggleAuthMode()" style="color: var(--accent); text-decoration: none; font-weight: 600; margin-right: 0.35rem;">
+          إنشاء حساب جديد
+        </a>
+      </div>
+    </div>
+  </div>
+  <!-- نافذة شحن الرصيد للمستخدم (Deposit Modal) -->
+  <div class="modal-overlay" id="depositModal">
+    <div class="modal-box">
+      <div class="modal-title">
+        <span><i class="fa-solid fa-wallet" style="color: var(--accent);"></i> شحن الرصيد</span>
+        <button class="btn btn-outline btn-sm" onclick="closeModal('depositModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="userDepositMethodSelect">اختر وسيلة الدفع</label>
+        <select id="userDepositMethodSelect" class="form-control" onchange="handlePaymentMethodChange()">
+          <option value="">-- اختر طريقة الدفع المناسبة --</option>
+        </select>
+      </div>
+
+      <!-- تفاصيل وسيلة الدفع ومعلومات التحويل -->
+      <div id="methodPaymentDetailsBox" style="display: none; background: var(--bg-input); padding: 1rem; border-radius: var(--radius); margin-bottom: 1.25rem; font-size: 0.85rem; border: 1px solid var(--border-color);">
+        <div style="margin-bottom: 6px;"><strong style="color: var(--text-muted);">بيانات المستلم:</strong> <span id="methodAccountDisplay" style="color: var(--accent); font-weight: 700;"></span></div>
+        <div style="margin-bottom: 6px;"><strong style="color: var(--text-muted);">التعليمات:</strong> <span id="methodInstructionsDisplay"></span></div>
+        <div id="methodQrContainer" style="text-align: center; margin-top: 10px; display: none;">
+          <img id="methodQrImg" src="" alt="QR Code" style="max-width: 150px; border-radius: 8px; border: 1px solid var(--border-color);">
+        </div>
+      </div>
+
+      <form id="depositForm" onsubmit="handleDepositSubmit(event)">
+        <div class="form-group">
+          <label class="form-label" for="depositAmount">المبلغ المراد شحنه ($)</label>
+          <input type="number" id="depositAmount" class="form-control" placeholder="10.00" step="0.01" min="1" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="depositTxId">رقم المعاملة / كود الحوالة أو الرابط</label>
+          <input type="text" id="depositTxId" class="form-control" placeholder="رقم التحويل أو كود العملية" required>
+        </div>
+
+        <button type="submit" class="btn btn-success" id="depositSubmitBtn" style="width: 100%; margin-top: 0.5rem;">
+          <i class="fa-solid fa-paper-plane"></i> إرسال طلب الشحن
+        </button>
+      </form>
+    </div>
+  </div>
+  <!-- نافذة إضافة وتعديل منتج للأدمن (Product Modal) -->
+  <div class="modal-overlay" id="productModal">
+    <div class="modal-box">
+      <div class="modal-title">
+        <span id="productModalTitle"><i class="fa-solid fa-box"></i> إضافة منتج جديد</span>
+        <button class="btn btn-outline btn-sm" onclick="closeModal('productModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="productForm" onsubmit="handleProductSubmit(event)">
+        <input type="hidden" id="prodFormId">
+
+        <div class="form-group">
+          <label class="form-label" for="prodTitle">اسم المنتج / الخدمة</label>
+          <input type="text" id="prodTitle" class="form-control" placeholder="مثال: اشتراك نتفليكس شهري" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="prodCategory">التصنيف</label>
+          <select id="prodCategory" class="form-control" required>
+            <option value="">-- اختر التصنيف --</option>
+          </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="form-group">
+            <label class="form-label" for="prodPrice">السعر ($)</label>
+            <input type="number" id="prodPrice" class="form-control" placeholder="9.99" step="0.01" min="0" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="prodStock">الكمية المتاحة</label>
+            <input type="number" id="prodStock" class="form-control" placeholder="10" min="0" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="prodImageUrl">رابط الصورة (URL)</label>
+          <input type="url" id="prodImageUrl" class="form-control" placeholder="https://example.com/image.jpg">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="prodDescription">وصف المنتج</label>
+          <textarea id="prodDescription" class="form-control" rows="3" placeholder="اكتب تفاصيل وميزات الخدمة هنا..."></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="prodSaveBtn" style="width: 100%; margin-top: 0.5rem;">
+          <i class="fa-solid fa-floppy-disk"></i> حفظ المنتج
+        </button>
+      </form>
+    </div>
+  </div>
+  <!-- نافذة إضافة تصنيف جديد للأدمن (Category Modal) -->
+  <div class="modal-overlay" id="categoryModal">
+    <div class="modal-box">
+      <div class="modal-title">
+        <span><i class="fa-solid fa-tags"></i> إضافة تصنيف جديد</span>
+        <button class="btn btn-outline btn-sm" onclick="closeModal('categoryModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="categoryForm" onsubmit="handleCategorySubmit(event)">
+        <div class="form-group">
+          <label class="form-label" for="catNameInput">اسم التصنيف</label>
+          <input type="text" id="catNameInput" class="form-control" placeholder="مثال: حسابات بريميوم" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="catIconInput">فئة أيقونة Font Awesome</label>
+          <input type="text" id="catIconInput" class="form-control" placeholder="fa-film" value="fa-tag">
+          <small style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.25rem;">اكتب كود الأيقونة فقط بدون علامات (مثل: fa-gem أو fa-gamepad)</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="catSaveBtn" style="width: 100%; margin-top: 0.5rem;">
+          <i class="fa-solid fa-check"></i> حفظ التصنيف
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- نافذة إضافة وتعديل وسيلة دفع للأدمن (Payment Method Modal) -->
+  <div class="modal-overlay" id="paymentMethodModal">
+    <div class="modal-box">
+      <div class="modal-title">
+        <span id="paymentMethodModalTitle"><i class="fa-solid fa-credit-card"></i> إضافة وسيلة دفع</span>
+        <button class="btn btn-outline btn-sm" onclick="closeModal('paymentMethodModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="paymentMethodForm" onsubmit="handlePaymentMethodSubmit(event)">
+        <input type="hidden" id="pmFormId">
+
+        <div class="form-group">
+          <label class="form-label" for="pmName">اسم الوسيلة (مثال: USDT TRC20, بايير, آسيا حوالة)</label>
+          <input type="text" id="pmName" class="form-control" placeholder="اسم طريقة الدفع" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pmAccount">رقم المحفظة / رقم الحساب المستلم</label>
+          <input type="text" id="pmAccount" class="form-control" placeholder="العنوان أو الرقم الذي يحول له العميل" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pmInstructions">تعليمات التحويل للعميل</label>
+          <textarea id="pmInstructions" class="form-control" rows="2" placeholder="اكتب ملاحظات للمشتري مثل إرسال الإشعار بعد التحويل..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="pmQrUrl">رابط صورة الباركود QR (اختياري)</label>
+          <input type="url" id="pmQrUrl" class="form-control" placeholder="https://example.com/qr.png">
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="pmSaveBtn" style="width: 100%; margin-top: 0.5rem;">
+          <i class="fa-solid fa-floppy-disk"></i> حفظ وسيلة الدفع
+        </button>
+      </form>
+    </div>
+  </div>
