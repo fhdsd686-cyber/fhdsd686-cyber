@@ -1085,3 +1085,695 @@
       </form>
     </div>
   </div>
+  <!-- نافذة تفاصيل الطلب وتسليم الخدمة للأدمن (Order Details Modal) -->
+  <div class="modal-overlay" id="orderDetailsModal">
+    <div class="modal-box">
+      <div class="modal-title">
+        <span><i class="fa-solid fa-receipt"></i> تفاصيل وتسليم الطلب</span>
+        <button class="btn btn-outline btn-sm" onclick="closeModal('orderDetailsModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div style="background: var(--bg-input); padding: 1rem; border-radius: var(--radius); margin-bottom: 1.25rem; font-size: 0.85rem; border: 1px solid var(--border-color);">
+        <div style="margin-bottom: 6px;"><strong style="color: var(--text-muted);">رقم الطلب:</strong> <span id="modalOrderId" style="color: var(--accent);"></span></div>
+        <div style="margin-bottom: 6px;"><strong style="color: var(--text-muted);">العميل:</strong> <span id="modalOrderUser"></span></div>
+        <div style="margin-bottom: 6px;"><strong style="color: var(--text-muted);">المنتج:</strong> <span id="modalOrderProduct"></span></div>
+        <div style="margin-bottom: 6px;"><strong style="color: var(--text-muted);">السعر:</strong> <span id="modalOrderPrice" style="color: var(--success); font-weight: 700;"></span></div>
+        <div><strong style="color: var(--text-muted);">الحالة الحالية:</strong> <span id="modalOrderStatusBadge"></span></div>
+      </div>
+
+      <form id="orderDeliveryForm" onsubmit="handleOrderDeliverySubmit(event)">
+        <input type="hidden" id="deliveryOrderId">
+
+        <div class="form-group">
+          <label class="form-label" for="deliveryDataInput">بيانات التسليم (أكواد التفعيل، الحساب، الروابط)</label>
+          <textarea id="deliveryDataInput" class="form-control" rows="4" placeholder="اكتب هنا الكود أو بيانات الحساب المسلمة للعميل..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="deliveryStatusSelect">تحديث حالة الطلب</label>
+          <select id="deliveryStatusSelect" class="form-control">
+            <option value="pending">قيد الانتظار (Pending)</option>
+            <option value="completed">مكتمل وتم التسليم (Completed)</option>
+            <option value="cancelled">ملغي وتم إرجاع الرصيد (Cancelled)</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="orderDeliveryBtn" style="width: 100%; margin-top: 0.5rem;">
+          <i class="fa-solid fa-check-double"></i> تحديث وحفظ الطلب
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- نافذة تعديل رصيد المستخدم للأدمن (User Balance Modal) -->
+  <div class="modal-overlay" id="userBalanceModal">
+    <div class="modal-box">
+      <div class="modal-title">
+        <span><i class="fa-solid fa-coins"></i> تعديل رصيد العميل</span>
+        <button class="btn btn-outline btn-sm" onclick="closeModal('userBalanceModal')">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div style="background: var(--bg-input); padding: 0.85rem; border-radius: var(--radius); margin-bottom: 1rem; font-size: 0.85rem; border: 1px solid var(--border-color);">
+        <div><strong style="color: var(--text-muted);">المستخدم:</strong> <span id="balanceModalUserEmail" style="color: var(--accent);"></span></div>
+      </div>
+
+      <form id="userBalanceForm" onsubmit="handleUserBalanceSubmit(event)">
+        <input type="hidden" id="balanceModalUserId">
+
+        <div class="form-group">
+          <label class="form-label" for="balanceModalNewAmount">الرصيد الجديد ($)</label>
+          <input type="number" id="balanceModalNewAmount" class="form-control" step="0.01" min="0" required>
+        </div>
+
+        <button type="submit" class="btn btn-success" id="balanceModalSaveBtn" style="width: 100%; margin-top: 0.5rem;">
+          <i class="fa-solid fa-floppy-disk"></i> تحديث الرصيد
+        </button>
+      </form>
+    </div>
+  </div>
+  <!-- حاوية إشعارات التنبيه السريعة (Toast Container) -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- تضمين مكتبة Supabase JS الرسمية -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    // --- 1. إعدادات والاتصال بـ Supabase ---
+    const SUPABASE_URL = 'https://teqekqerigunjyqbdvhx.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // الحساب المخصص كأدمن رئيسي للنظام
+    const SUPER_ADMIN_EMAIL = 'fhdsd686@gmail.com';
+
+    // متغيرات الحالة العامة للنظام
+    let currentUser = null;
+    let currentProfile = null;
+    let isSignUpMode = false;
+    let activeCategoryFilter = 'all';
+    let cachedProducts = [];
+    let cachedCategories = [];
+    let cachedPaymentMethods = [];
+    // --- 2. دوال المساعدة العامة (Utility Functions) ---
+
+    // دالة إظهار التنبيهات السريعة للمستخدم
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+
+      let iconClass = 'fa-info-circle';
+      let iconColor = 'var(--accent)';
+
+      if (type === 'success') {
+        iconClass = 'fa-circle-check';
+        iconColor = 'var(--success)';
+      } else if (type === 'error') {
+        iconClass = 'fa-circle-exclamation';
+        iconColor = 'var(--danger)';
+      } else if (type === 'warning') {
+        iconClass = 'fa-triangle-exclamation';
+        iconColor = 'var(--warning)';
+      }
+
+      toast.innerHTML = `
+        <i class="fa-solid ${iconClass}" style="color: ${iconColor}; font-size: 1.15rem;"></i>
+        <span>${message}</span>
+      `;
+
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.transition = 'all 0.3s ease';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(15px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // دوال التحكم بالنوافذ المنبثقة (Modals)
+    function openModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.add('active');
+    }
+
+    function closeModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.remove('active');
+    }
+
+    // إغلاق النافذة عند الضغط على الخلفية المعتمة
+    window.addEventListener('click', (e) => {
+      if (e.target.classList.contains('modal-overlay')) {
+        e.target.classList.remove('active');
+      }
+    });
+
+    // دالة تنسيق المبالغ المالية
+    function formatMoney(amount) {
+      const num = parseFloat(amount) || 0;
+      return num.toFixed(2);
+    }
+    // --- 3. إدارة المستخدمين والمصادقة (Authentication) ---
+
+    // التبديل بين واجهة الدخول وواجهة إنشاء الحساب
+    function toggleAuthMode() {
+      isSignUpMode = !isSignUpMode;
+      const title = document.getElementById('authModalTitle');
+      const submitBtn = document.getElementById('authSubmitBtn');
+      const toggleText = document.getElementById('authToggleText');
+      const toggleLink = document.getElementById('authToggleLink');
+
+      if (isSignUpMode) {
+        title.innerHTML = '<i class="fa-solid fa-user-plus"></i> إنشاء حساب جديد';
+        submitBtn.textContent = 'إنشاء حساب';
+        toggleText.textContent = 'لديك حساب بالفعل؟';
+        toggleLink.textContent = 'تسجيل الدخول';
+      } else {
+        title.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> تسجيل الدخول';
+        submitBtn.textContent = 'تسجيل الدخول';
+        toggleText.textContent = 'ليس لديك حساب؟';
+        toggleLink.textContent = 'إنشاء حساب جديد';
+      }
+    }
+
+    // إرسال نموذج المصادقة (دخول أو تسجيل جديد)
+    async function handleAuthSubmit(event) {
+      event.preventDefault();
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const submitBtn = document.getElementById('authSubmitBtn');
+
+      if (!email || !password) {
+        showToast('يرجى ملء جميع الحقول', 'warning');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري المعالجة...';
+
+      try {
+        if (isSignUpMode) {
+          const { data, error } = await supabaseClient.auth.signUp({ email, password });
+          if (error) throw error;
+          showToast('تم إنشاء الحساب بنجاح! تم تسجيل دخولك.', 'success');
+        } else {
+          const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+          showToast('تم تسجيل الدخول بنجاح.', 'success');
+        }
+        closeModal('authModal');
+        document.getElementById('authForm').reset();
+      } catch (err) {
+        showToast(err.message || 'حدث خطأ أثناء المصادقة', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = isSignUpMode ? 'إنشاء حساب' : 'تسجيل الدخول';
+      }
+    }
+
+    // تسجيل الخروج
+    async function handleLogout() {
+      try {
+        const { error } = await supabaseClient.auth.signOut();
+        if (error) throw error;
+        showToast('تم تسجيل الخروج بنجاح.', 'info');
+      } catch (err) {
+        showToast(err.message || 'تعذر تسجيل الخروج', 'error');
+      }
+    }
+    // مراقبة وتحديث حالة تسجيل الدخول وتغييرات الجلسة
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      if (session && session.user) {
+        currentUser = session.user;
+        await fetchUserProfile(currentUser.id, currentUser.email);
+        updateAuthUI(true);
+      } else {
+        currentUser = null;
+        currentProfile = null;
+        updateAuthUI(false);
+      }
+    });
+
+    // جلب ملف المستخدم أو إنشاؤه تلقائياً إذا لم يكن موجوداً
+    async function fetchUserProfile(userId, userEmail) {
+      try {
+        let { data, error } = await supabaseClient
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+
+        if (error && error.code === 'PGRST116') {
+          // الحساب غير موجود في جدول profiles، يتم إنشاؤه
+          const isSuper = userEmail.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+          const { data: newProfile, error: insertError } = await supabaseClient
+            .from('profiles')
+            .insert([{ id: userId, email: userEmail, balance: 0.00, is_admin: isSuper }])
+            .select()
+            .single();
+
+          if (insertError) throw insertError;
+          data = newProfile;
+        } else if (error) {
+          throw error;
+        }
+
+        currentProfile = data;
+        updateUserDisplay();
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+      }
+    }
+
+    // تحديث عناصر واجهة المستخدم حسب حالة الدخول
+    function updateAuthUI(isLoggedIn) {
+      const guestActions = document.getElementById('guestActions');
+      const userActions = document.getElementById('userActions');
+      const adminBtn = document.getElementById('adminPanelBtn');
+
+      if (isLoggedIn) {
+        guestActions.style.display = 'none';
+        userActions.style.display = 'flex';
+      } else {
+        guestActions.style.display = 'flex';
+        userActions.style.display = 'none';
+        adminBtn.style.display = 'none';
+        document.getElementById('adminContainer').style.display = 'none';
+      }
+    }
+
+    // تحديث عرض الرصيد وإظهار زر لوحة الإدارة إذا كان الحساب أدمن
+    function updateUserDisplay() {
+      if (!currentProfile) return;
+
+      const balanceEl = document.getElementById('navUserBalance');
+      if (balanceEl) {
+        balanceEl.textContent = formatMoney(currentProfile.balance);
+      }
+
+      const adminBtn = document.getElementById('adminPanelBtn');
+      const isSuper = currentProfile.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+      if (currentProfile.is_admin || isSuper) {
+        adminBtn.style.display = 'inline-flex';
+      } else {
+        adminBtn.style.display = 'none';
+      }
+    }
+    // --- 4. إدارة وعرض التصنيفات (Categories Logic) ---
+
+    // جلب التصنيفات من قاعدة البيانات
+    async function loadCategories() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('categories')
+          .select('*')
+          .order('name', { ascending: true });
+
+        if (error) throw error;
+        cachedCategories = data || [];
+        renderCategoryFilterBar();
+        populateCategorySelectDropdown();
+      } catch (err) {
+        console.error('Error loading categories:', err);
+      }
+    }
+
+    // عرض أزرار التصنيفات في شريط الفلترة العلوي
+    function renderCategoryFilterBar() {
+      const container = document.getElementById('categoriesBar');
+      if (!container) return;
+
+      let html = `
+        <button class="category-chip ${activeCategoryFilter === 'all' ? 'active' : ''}" onclick="filterByCategory('all')">
+          <i class="fa-solid fa-border-all"></i> الكل
+        </button>
+      `;
+
+      cachedCategories.forEach(cat => {
+        const isActive = activeCategoryFilter === cat.id ? 'active' : '';
+        const iconClass = cat.icon || 'fa-tag';
+        html += `
+          <button class="category-chip ${isActive}" onclick="filterByCategory('${cat.id}')">
+            <i class="fa-solid ${iconClass}"></i> ${cat.name}
+          </button>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    // تصفية المنتجات حسب التصنيف المحدد
+    function filterByCategory(categoryId) {
+      activeCategoryFilter = categoryId;
+      renderCategoryFilterBar();
+      renderProductsGrid();
+    }
+
+    // تعبئة قائمة التصنيفات داخل نافذة إضافة/تعديل المنتجات للأدمن
+    function populateCategorySelectDropdown() {
+      const select = document.getElementById('prodCategory');
+      if (!select) return;
+
+      select.innerHTML = '<option value="">-- اختر التصنيف --</option>';
+      cachedCategories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat.id;
+        opt.textContent = cat.name;
+        select.appendChild(opt);
+      });
+    }
+    // --- 5. إدارة وعرض المنتجات (Products Logic) ---
+
+    // جلب المنتجات من قاعدة البيانات
+    async function loadProducts() {
+      const loadingEl = document.getElementById('productsLoading');
+      if (loadingEl) loadingEl.style.display = 'block';
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('products')
+          .select('*, categories(name)')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        cachedProducts = data || [];
+        renderProductsGrid();
+      } catch (err) {
+        console.error('Error loading products:', err);
+        showToast('تعذر تحميل قائمة المنتجات', 'error');
+      } finally {
+        if (loadingEl) loadingEl.style.display = 'none';
+      }
+    }
+
+    // عرض بطاقات المنتجات في الواجهة الرئيسية
+    function renderProductsGrid() {
+      const grid = document.getElementById('productsGrid');
+      const emptyMsg = document.getElementById('noProductsMsg');
+      if (!grid) return;
+
+      // تصفية حسب التصنيف النشط
+      let filtered = cachedProducts;
+      if (activeCategoryFilter !== 'all') {
+        filtered = cachedProducts.filter(p => p.category_id === activeCategoryFilter);
+      }
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '';
+        if (emptyMsg) emptyMsg.style.display = 'block';
+        return;
+      }
+
+      if (emptyMsg) emptyMsg.style.display = 'none';
+
+      grid.innerHTML = filtered.map(product => {
+        const categoryName = product.categories ? product.categories.name : 'عام';
+        const isOutOfStock = product.stock <= 0;
+        const defaultImage = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=60';
+        const imageUrl = product.image_url || defaultImage;
+
+        return `
+          <div class="product-card">
+            <div class="product-img-wrapper">
+              <img src="${imageUrl}" alt="${product.title}" class="product-img" onerror="this.src='${defaultImage}'">
+              <span class="product-badge">${categoryName}</span>
+            </div>
+            <div class="product-info">
+              <h3 class="product-title">${product.title}</h3>
+              <p class="product-desc">${product.description || 'لا يوجد وصف متاح لهذا المنتج.'}</p>
+              <div class="product-meta">
+                <div>
+                  <span class="product-price">$${formatMoney(product.price)}</span>
+                  <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">
+                    المتوفر: <strong>${product.stock}</strong>
+                  </div>
+                </div>
+                <button 
+                  class="btn ${isOutOfStock ? 'btn-outline' : 'btn-primary'} btn-sm" 
+                  ${isOutOfStock ? 'disabled' : ''} 
+                  onclick="handleBuyProduct('${product.id}')">
+                  <i class="fa-solid ${isOutOfStock ? 'fa-ban' : 'fa-cart-plus'}"></i>
+                  <span>${isOutOfStock ? 'نفد' : 'شراء'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    // --- 6. منطق الشراء وإنشاء الطلبات (Purchase Logic) ---
+
+    // تنفيذ عملية شراء المنتج
+    async function handleBuyProduct(productId) {
+      if (!currentUser) {
+        showToast('يرجى تسجيل الدخول أولاً لإتمام عملية الشراء', 'warning');
+        openModal('authModal');
+        return;
+      }
+
+      const product = cachedProducts.find(p => p.id === productId);
+      if (!product) {
+        showToast('المنتج غير موجود', 'error');
+        return;
+      }
+
+      if (product.stock <= 0) {
+        showToast('عذراً، نفدت الكمية المتاحة من هذا المنتج', 'error');
+        return;
+      }
+
+      const currentBalance = parseFloat(currentProfile?.balance || 0);
+      const productPrice = parseFloat(product.price);
+
+      if (currentBalance < productPrice) {
+        showToast('رصيدك غير كافٍ لإتمام عملية الشراء. يرجى شحن الرصيد أولاً.', 'warning');
+        openModal('depositModal');
+        return;
+      }
+
+      const confirmBuy = confirm(`هل أنت متأكد من شراء "${product.title}" بقيمة $${formatMoney(productPrice)}؟`);
+      if (!confirmBuy) return;
+
+      try {
+        const newBalance = currentBalance - productPrice;
+
+        // 1. تحديث رصيد المستخدم
+        const { error: balanceError } = await supabaseClient
+          .from('profiles')
+          .update({ balance: newBalance })
+          .eq('id', currentUser.id);
+
+        if (balanceError) throw balanceError;
+
+        // 2. تحديث كمية المنتج المتاحة
+        const { error: stockError } = await supabaseClient
+          .from('products')
+          .update({ stock: product.stock - 1 })
+          .eq('id', product.id);
+
+        if (stockError) throw stockError;
+
+        // 3. إنشاء سجل الطلب الجديد
+        const { error: orderError } = await supabaseClient
+          .from('orders')
+          .insert([{
+            user_id: currentUser.id,
+            product_id: product.id,
+            price: productPrice,
+            status: 'pending',
+            delivery_data: ''
+          }]);
+
+        if (orderError) throw orderError;
+
+        // تحديث المتغيرات محلياً
+        currentProfile.balance = newBalance;
+        product.stock -= 1;
+
+        updateUserDisplay();
+        renderProductsGrid();
+
+        showToast('تمت عملية الشراء بنجاح! سيتم تسليم الخدمة قريباً.', 'success');
+      } catch (err) {
+        console.error('Error processing purchase:', err);
+        showToast('حدث خطأ أثناء معالجة الطلب، يرجى المحاولة لاحقاً', 'error');
+      }
+    }
+    // --- 7. منطق شحن الرصيد وطرق الدفع (Deposits Logic) ---
+
+    // جلب وسائل الدفع المتاحة
+    async function loadPaymentMethods() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('payment_methods')
+          .select('*')
+          .order('name', { ascending: true });
+
+        if (error) throw error;
+        cachedPaymentMethods = data || [];
+        populatePaymentMethodSelect();
+      } catch (err) {
+        console.error('Error loading payment methods:', err);
+      }
+    }
+
+    // تعبئة خيارات الدفع داخل نافذة شحن الرصيد
+    function populatePaymentMethodSelect() {
+      const select = document.getElementById('userDepositMethodSelect');
+      if (!select) return;
+
+      select.innerHTML = '<option value="">-- اختر طريقة الدفع المناسبة --</option>';
+      cachedPaymentMethods.forEach(pm => {
+        const opt = document.createElement('option');
+        opt.value = pm.id;
+        opt.textContent = pm.name;
+        select.appendChild(opt);
+      });
+    }
+
+    // عرض تفاصيل وسيلة الدفع عند اختيارها
+    function handlePaymentMethodChange() {
+      const select = document.getElementById('userDepositMethodSelect');
+      const detailsBox = document.getElementById('methodPaymentDetailsBox');
+      const accountDisplay = document.getElementById('methodAccountDisplay');
+      const instructionsDisplay = document.getElementById('methodInstructionsDisplay');
+      const qrContainer = document.getElementById('methodQrContainer');
+      const qrImg = document.getElementById('methodQrImg');
+
+      const selectedMethod = cachedPaymentMethods.find(m => m.id === select.value);
+
+      if (selectedMethod) {
+        accountDisplay.textContent = selectedMethod.account_info || 'غير متوفر';
+        instructionsDisplay.textContent = selectedMethod.instructions || 'يرجى إرسال المبلغ ثم إدخال رقم المعاملة.';
+        
+        if (selectedMethod.qr_url) {
+          qrImg.src = selectedMethod.qr_url;
+          qrContainer.style.display = 'block';
+        } else {
+          qrContainer.style.display = 'none';
+        }
+
+        detailsBox.style.display = 'block';
+      } else {
+        detailsBox.style.display = 'none';
+      }
+    }
+
+    // إرسال طلب الشحن من المستخدم
+    async function handleDepositSubmit(event) {
+      event.preventDefault();
+
+      if (!currentUser) {
+        showToast('يرجى تسجيل الدخول أولاً', 'warning');
+        return;
+      }
+
+      const methodId = document.getElementById('userDepositMethodSelect').value;
+      const amount = parseFloat(document.getElementById('depositAmount').value);
+      const txId = document.getElementById('depositTxId').value.trim();
+      const submitBtn = document.getElementById('depositSubmitBtn');
+
+      if (!methodId) {
+        showToast('يرجى اختيار وسيلة الدفع', 'warning');
+        return;
+      }
+
+      if (!amount || amount <= 0 || !txId) {
+        showToast('يرجى التأكد من صحة البيانات المدخلة', 'warning');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري إرسال الطلب...';
+
+      try {
+        const { error } = await supabaseClient
+          .from('deposits')
+          .insert([{
+            user_id: currentUser.id,
+            payment_method_id: methodId,
+            amount: amount,
+            transaction_id: txId,
+            status: 'pending'
+          }]);
+
+        if (error) throw error;
+
+        showToast('تم إرسال طلب الشحن بنجاح! ستتم مراجعته وإضافة الرصيد قريباً.', 'success');
+        closeModal('depositModal');
+        document.getElementById('depositForm').reset();
+        document.getElementById('methodPaymentDetailsBox').style.display = 'none';
+      } catch (err) {
+        console.error('Error submitting deposit:', err);
+        showToast('تعذر إرسال طلب الشحن، يرجى المحاولة لاحقاً', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> إرسال طلب الشحن';
+      }
+    }
+    // --- 8. منطق لوحة تحكم الأدمن (Admin Dashboard Logic) ---
+
+    // التبديل بين عرض المتجر ولوحة الإدارة
+    function toggleAdminView() {
+      const adminContainer = document.getElementById('adminContainer');
+      const isHidden = adminContainer.style.display === 'none' || !adminContainer.style.display;
+
+      if (isHidden) {
+        adminContainer.style.display = 'block';
+        adminContainer.scrollIntoView({ behavior: 'smooth' });
+        loadAdminStats();
+      } else {
+        adminContainer.style.display = 'none';
+      }
+    }
+
+    // التنقل بين تبويبات لوحة التحكم
+    function switchAdminTab(tabKey, btnElement) {
+      document.querySelectorAll('.admin-nav-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.admin-tab').forEach(tab => tab.classList.remove('active'));
+
+      if (btnElement) btnElement.classList.add('active');
+      const activeTab = document.getElementById(`tab-${tabKey}`);
+      if (activeTab) activeTab.classList.add('active');
+
+      if (tabKey === 'stats') loadAdminStats();
+      if (tabKey === 'products') loadAdminProducts();
+      if (tabKey === 'categories') loadAdminCategories();
+      if (tabKey === 'orders') loadAdminOrders();
+      if (tabKey === 'deposits') loadAdminDeposits();
+      if (tabKey === 'paymentMethods') loadAdminPaymentMethods();
+      if (tabKey === 'users') loadAdminUsers();
+    }
+
+    // تحميل وتحديث بطاقات الإحصائيات
+    async function loadAdminStats() {
+      try {
+        const { count: usersCount } = await supabaseClient
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+
+        const { data: orders, count: ordersCount } = await supabaseClient
+          .from('orders')
+          .select('price');
+
+        const { count: pendingCount } = await supabaseClient
+          .from('deposits')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending');
+
+        const totalRevenue = (orders || []).reduce((sum, ord) => sum + (parseFloat(ord.price) || 0), 0);
+
+        document.getElementById('statUsersCount').textContent = usersCount || 0;
+        document.getElementById('statOrdersCount').textContent = ordersCount || 0;
+        document.getElementById('statPendingDeposits').textContent = pendingCount || 0;
+        document.getElementById('statTotalRevenue').textContent = `$${formatMoney(totalRevenue)}`;
+      } catch (err) {
+        console.error('Error loading stats:', err);
+      }
+    }
