@@ -165,7 +165,7 @@
         </div>
         <div class="form-group">
           <label>اسم المستخدم أو البريد الإلكتروني</label>
-          <input type="text" id="auth-identifier" required placeholder="fhdsd686@gmail.com">
+          <input type="text" id="auth-identifier" required placeholder="اسم المستخدم">
         </div>
         <div class="form-group">
           <label>كلمة المرور</label>
@@ -228,7 +228,7 @@
             <div class="form-group"><label>السعر ($):</label><input type="number" step="0.01" id="prod-price-usd" required></div>
             <div class="form-group"><label>السعر (ل.س):</label><input type="number" id="prod-price-syp" required></div>
             <div class="form-group"><label>الوصف:</label><textarea id="prod-desc"></textarea></div>
-            <div class="form-group"><label>الصورة:</label><input type="url" id="prod-image" required></div>
+            <div class="form-group"><label>الصورة:</label><input type="text" id="prod-image" placeholder="رابط الصورة (اختياري)"></div>
             <button type="submit" class="btn-submit">حفظ المنتج</button>
           </form>
         </section>
@@ -240,7 +240,7 @@
           <form onsubmit="handleAddCategory(event)">
             <div class="form-group"><label>الاسم:</label><input type="text" id="cat-name" required></div>
             <div class="form-group"><label>النوع:</label><select id="cat-parent-select"></select></div>
-            <div class="form-group"><label>الصورة:</label><input type="url" id="cat-image" required></div>
+            <div class="form-group"><label>الصورة:</label><input type="text" id="cat-image" placeholder="رابط الصورة (اختياري)"></div>
             <button type="submit" class="btn-submit">إضافة قسم</button>
           </form>
         </section>
@@ -253,7 +253,7 @@
             <div class="form-group"><label>الحساب:</label><input type="text" id="method-account" required></div>
             <div class="form-group"><label>العملة:</label><input type="text" id="method-currency" required placeholder="USD"></div>
             <div class="form-group"><label>سعر الصرف:</label><input type="number" id="method-rate" required placeholder="1"></div>
-            <div class="form-group"><label>الصورة / الأيقونة:</label><input type="url" id="method-icon"></div>
+            <div class="form-group"><label>الصورة / الأيقونة:</label><input type="text" id="method-icon" placeholder="رابط الأيقونة (اختياري)"></div>
             <button type="submit" class="btn-submit">حفظ الطريقة</button>
           </form>
         </section>
