@@ -1,163 +1,148 @@
-// --- محرك لوحة الإدارة المتكاملة (10 أقسام + الإعدادات) ---
+// --- إدارة لوحة التحكم (Admin Panel) ---
 
-// فتح لوحة الإدارة مع فحص الحماية
-function openAdminPanel() {
-  if (!currentUser || currentUser.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
-    alert("عذراً، هذه اللوحة مخصصة لإدارة النظام فقط!");
-    return;
-  }
-  const adminWrapper = document.getElementById("admin-wrapper");
-  if (adminWrapper) {
-    adminWrapper.classList.remove("hidden");
-    switchAdminSection("stats");
-    loadAdminCategoriesSelect();
-  }
-}
+document.addEventListener("DOMContentLoaded", () => {
+  setupAdminNavigation();
+  populateCategorySelects();
+  updateStats();
+});
 
-// إغلاق لوحة الإدارة والعودة للمتجر
-function closeAdminPanel() {
-  const adminWrapper = document.getElementById("admin-wrapper");
-  if (adminWrapper) adminWrapper.classList.add("hidden");
-}
-
-// التنقل بين الأقسام العشرة
+// التنقل بين أقسام لوحة الإدارة
 function switchAdminSection(sectionName) {
   const sections = [
-    "stats", "users", "upgrade-user", "products", "add-product",
-    "categories", "add-category", "deposit-requests", "deposit-methods",
-    "add-deposit-method", "site-settings"
+    'stats', 'users', 'upgrade-user', 'products', 'add-product',
+    'categories', 'add-category', 'deposit-requests', 'deposit-methods', 'add-deposit-method'
   ];
 
   sections.forEach(sec => {
-    const el = document.getElementById("sec-" + sec);
-    if (el) el.classList.add("hidden");
+    const el = document.getElementById(`sec-${sec}`);
+    if (el) el.classList.add('hidden');
   });
 
-  const target = document.getElementById("sec-" + sectionName);
-  if (target) target.classList.remove("hidden");
+  const activeSec = document.getElementById(`sec-${sectionName}`);
+  if (activeSec) activeSec.classList.remove('hidden');
 
-  // تحديث الزر النشط في الشريط الجانبي
-  document.querySelectorAll(".admin-nav-item").forEach(btn => btn.classList.remove("active"));
-  const activeBtn = Array.from(document.querySelectorAll(".admin-nav-item")).find(b => 
-    b.getAttribute("onclick") && b.getAttribute("onclick").includes(sectionName)
-  );
-  if (activeBtn) activeBtn.classList.add("active");
-
-  // تشغيل دوال العرض حسب القسم
-  if (sectionName === "stats") updateStats();
-  if (sectionName === "users") renderAdminUsers();
-  if (sectionName === "products") renderAdminProducts();
-  if (sectionName === "categories") renderAdminCategories();
-  if (sectionName === "deposit-requests") renderDepositRequests();
-  if (sectionName === "deposit-methods") renderAdminDepositMethods();
-  if (sectionName === "add-product" || sectionName === "add-category") loadAdminCategoriesSelect();
-}
-
-// --- 1. قسم الإحصائيات ---
-function updateStats() {
-  const filterDate = document.getElementById("stats-date-filter")?.value;
-  const requests = getDB("deposit_requests", []);
-  const users = getDB("users", []);
-
-  let acceptedDeposits = requests.filter(r => r.status === "accepted");
-  if (filterDate) {
-    acceptedDeposits = acceptedDeposits.filter(r => r.date === filterDate);
+  // تحديث تمييز الأزرار في الشريط
+  const navBtns = document.querySelectorAll('.admin-nav-item');
+  navBtns.forEach(btn => btn.classList.remove('active'));
+  
+  if (event && event.currentTarget) {
+    event.currentTarget.classList.add('active');
   }
 
-  const totalDepositsUSD = acceptedDeposits.reduce((sum, r) => sum + Number(r.amountUSD || 0), 0);
-  const totalOrders = users.reduce((sum, u) => sum + Number(u.ordersCount || 0), 0);
-  const totalPurchasesUSD = users.reduce((sum, u) => sum + (Number(u.totalSuccessfulDepositsUSD || 0) - Number(u.balanceUSD || 0)), 0);
+  // تحميل بيانات القسم المختار
+  if (sectionName === 'stats') updateStats();
+  if (sectionName === 'users') renderAdminUsers();
+  if (sectionName === 'products') renderAdminProducts();
+  if (sectionName === 'categories') renderAdminCategories();
+  if (sectionName === 'deposit-requests') renderDepositRequests();
+  if (sectionName === 'deposit-methods') renderAdminMethods();
+  if (sectionName === 'add-product' || sectionName === 'add-category') populateCategorySelects();
+}
+
+function openAdminPanel() {
+  const wrapper = document.getElementById("admin-wrapper");
+  if (wrapper) wrapper.classList.remove("hidden");
+  switchAdminSection('stats');
+}
+
+function closeAdminPanel() {
+  const wrapper = document.getElementById("admin-wrapper");
+  if (wrapper) wrapper.classList.add("hidden");
+}
+
+// 1. الإحصائيات
+function updateStats() {
+  const users = getDB("users", []);
+  const products = getDB("products", []);
+  const deposits = getDB("deposit_requests", []);
+
+  let totalSales = 0;
+  let totalOrders = 0;
+  users.forEach(u => {
+    totalOrders += (u.ordersCount || 0);
+  });
+
+  let totalDeposits = 0;
+  deposits.filter(d => d.status === 'accepted').forEach(d => {
+    totalDeposits += Number(d.amountUSD || 0);
+  });
 
   const salesEl = document.getElementById("stat-sales");
   const ordersEl = document.getElementById("stat-orders-count");
   const depositsEl = document.getElementById("stat-total-deposits");
 
-  if (salesEl) salesEl.innerText = `$${Math.max(0, totalPurchasesUSD).toFixed(2)}`;
+  if (salesEl) salesEl.innerText = `$${totalSales.toFixed(2)}`;
   if (ordersEl) ordersEl.innerText = totalOrders;
-  if (depositsEl) depositsEl.innerText = `$${totalDepositsUSD.toFixed(2)}`;
+  if (depositsEl) depositsEl.innerText = `$${totalDeposits.toFixed(2)}`;
 }
 
-// --- 2. قسم المستخدمين ---
+// 2. إدارة المستخدمين
 function renderAdminUsers() {
-  const container = document.getElementById("admin-users-list");
-  if (!container) return;
+  const list = document.getElementById("admin-users-list");
+  if (!list) return;
 
-  const filter = document.getElementById("users-filter")?.value || "all";
-  let users = getDB("users", []);
+  const users = getDB("users", []);
+  const filter = document.getElementById("users-filter") ? document.getElementById("users-filter").value : "all";
 
-  if (filter === "has_balance") {
-    users = users.filter(u => Number(u.balanceUSD || 0) > 0 || Number(u.balanceSYP || 0) > 0);
-  } else if (filter === "no_balance") {
-    users = users.filter(u => Number(u.balanceUSD || 0) <= 0 && Number(u.balanceSYP || 0) <= 0);
-  }
+  let filtered = users;
+  if (filter === "has_balance") filtered = users.filter(u => (u.balanceUSD > 0 || u.balanceSYP > 0));
+  if (filter === "no_balance") filtered = users.filter(u => (!u.balanceUSD && !u.balanceSYP));
 
-  container.innerHTML = "";
-  if (users.length === 0) {
-    container.innerHTML = `<p style="color:var(--text-muted); text-align:center;">لا يوجد مستخدمين مطابقين</p>`;
+  list.innerHTML = "";
+  if (filtered.length === 0) {
+    list.innerHTML = "<p style='color:var(--text-muted);'>لا يوجد مستخدمين مسجلين</p>";
     return;
   }
 
-  users.forEach(u => {
+  filtered.forEach(u => {
     const card = document.createElement("div");
     card.className = "user-admin-card";
     card.innerHTML = `
       <div class="user-admin-header">
-        <img src="${u.avatar || 'https://via.placeholder.com/45'}" alt="Avatar">
+        <img src="${u.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}" alt="Avatar">
         <div>
-          <strong>${u.name}</strong> <span class="badge-rank">${u.role === 'مدير' ? 'مدير' : (u.rank || 'مضيف')}</span>
-          <div style="font-size:0.8rem; color:var(--text-muted);">${u.email}</div>
+          <strong>${u.name}</strong> (${u.role || 'عضو'})<br>
+          <small style="color:var(--text-muted);">${u.email || u.username}</small>
         </div>
       </div>
       <div class="user-stats-row">
-        <div><strong>الرصيد:</strong> $${Number(u.balanceUSD || 0).toFixed(2)} | ${Number(u.balanceSYP || 0).toLocaleString()} ل.س</div>
-        <div><strong>الطلبات:</strong> ${u.ordersCount || 0}</div>
-        <div><strong>المشتريات الناجحة:</strong> ${u.successPurchases || 0}</div>
-        <div><strong>الإيداعات:</strong> ${u.depositsCount || 0}</div>
-      </div>
-      <div style="font-size:0.8rem; color:var(--accent-neon); margin-top:4px;">
-        <strong>مجموع الإيداعات الناجحة:</strong> $${Number(u.totalSuccessfulDepositsUSD || 0).toFixed(2)}
-      </div>
-      <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted);">
-        <span><strong>المستوى الحالي:</strong> ${u.rank || 'مضيف'}</span>
-        <span><strong>تاريخ التسجيل:</strong> ${u.joinedDate || 'غير مسجل'}</span>
+        <span>الرصيد: $${Number(u.balanceUSD || 0).toFixed(2)} | ${Number(u.balanceSYP || 0).toLocaleString()} ل.س</span>
+        <span>الطلبات: ${u.ordersCount || 0}</span>
       </div>
     `;
-    container.appendChild(card);
+    list.appendChild(card);
   });
 }
 
-// --- 3. قسم رفع مستوى مستخدم ---
+// 3. ترقية المستخدمين
 function submitUserUpgrade() {
   const query = document.getElementById("upgrade-search-input").value.trim().toLowerCase();
-  const newRank = document.getElementById("upgrade-role-select").value;
+  const newRole = document.getElementById("upgrade-role-select").value;
 
   if (!query) {
-    alert("يرجى إدخال اسم أو بريد المستخدم المراد ترقيته");
+    alert("يرجى كتابة اسم أو بريد المستخدم");
     return;
   }
 
   const users = getDB("users", []);
-  const user = users.find(u => u.email.toLowerCase() === query || u.name.toLowerCase() === query);
+  const user = users.find(u => 
+    (u.name && u.name.toLowerCase().includes(query)) || 
+    (u.email && u.email.toLowerCase().includes(query)) ||
+    (u.username && u.username.toLowerCase().includes(query))
+  );
 
   if (!user) {
-    alert("لم يتم العثور على أي مستخدم بهذا البريد أو الاسم!");
+    alert("لم يتم العثور على هذا المستخدم");
     return;
   }
 
-  user.rank = newRank;
+  user.role = newRole;
   setDB("users", users);
-
-  if (currentUser && currentUser.id === user.id) {
-    currentUser.rank = newRank;
-    localStorage.setItem("mk_session", JSON.stringify(currentUser));
-    applyUserSession();
-  }
-
-  alert(`تم بنجاح رفع مستوى المستخدم (${user.name}) إلى رتبة: [${newRank}]`);
+  alert(`تمت ترقية ${user.name} إلى رتبة: ${newRole}`);
   document.getElementById("upgrade-search-input").value = "";
 }
 
-// --- 4. قسم المنتجات والتحكم بها ---
+// 4. عرض المنتجات
 function renderAdminProducts() {
   const tbody = document.getElementById("admin-products-table");
   if (!tbody) return;
@@ -170,14 +155,10 @@ function renderAdminProducts() {
     const cat = categories.find(c => c.id === p.categoryId);
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td><img src="${p.image}" style="width:35px; height:35px; border-radius:6px; object-fit:cover;"></td>
       <td>${p.name}</td>
-      <td>${cat ? cat.name : 'غير محدد'}</td>
-      <td>$${Number(p.priceUSD).toFixed(2)}</td>
-      <td>${Number(p.priceSYP).toLocaleString()} ل.س</td>
-      <td>
-        <button class="btn-danger-sm" onclick="deleteProduct('${p.id}')"><i class="fa-solid fa-trash"></i></button>
-      </td>
+      <td>${cat ? cat.name : 'بدون قسم'}</td>
+      <td>$${p.priceUSD}</td>
+      <td><button onclick="deleteProduct('${p.id}')" style="background:#ef4444; border:none; color:#fff; padding:4px 8px; border-radius:6px; cursor:pointer;">حذف</button></td>
     `;
     tbody.appendChild(tr);
   });
@@ -189,38 +170,45 @@ function deleteProduct(id) {
   products = products.filter(p => p.id !== id);
   setDB("products", products);
   renderAdminProducts();
-  renderProducts();
+  if (typeof renderProducts === "function") renderProducts();
 }
 
-// --- 5. قسم إضافة منتج ---
-function handleAddProduct(event) {
-  event.preventDefault();
-  const categoryId = document.getElementById("prod-category-select").value;
+// 5. إضافة منتج جديد
+function handleAddProduct(e) {
+  if (e) e.preventDefault();
+
+  const catId = document.getElementById("prod-category-select").value;
   const name = document.getElementById("prod-name").value.trim();
-  const priceUSD = parseFloat(document.getElementById("prod-price-usd").value);
-  const priceSYP = parseInt(document.getElementById("prod-price-syp").value);
+  const priceUSD = parseFloat(document.getElementById("prod-price-usd").value) || 0;
+  const priceSYP = parseFloat(document.getElementById("prod-price-syp").value) || 0;
   const desc = document.getElementById("prod-desc").value.trim();
   const image = document.getElementById("prod-image").value.trim();
 
+  if (!name) {
+    alert("يرجى كتابة اسم المنتج");
+    return;
+  }
+
   const products = getDB("products", []);
   const newProd = {
-    id: "prod-" + Date.now(),
-    categoryId,
-    name,
-    priceUSD,
-    priceSYP,
-    desc,
-    image
+    id: "prod_" + Date.now(),
+    categoryId: catId,
+    name: name,
+    priceUSD: priceUSD,
+    priceSYP: priceSYP,
+    desc: desc,
+    image: image || "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?w=300"
   };
 
   products.push(newProd);
   setDB("products", products);
   alert("تمت إضافة المنتج بنجاح!");
+
   document.getElementById("add-product-form").reset();
   switchAdminSection("products");
 }
 
-// --- 6. قسم الأقسام الحالية والتحكم بها ---
+// 6. عرض الأقسام الحالية
 function renderAdminCategories() {
   const tbody = document.getElementById("admin-categories-table");
   if (!tbody) return;
@@ -231,155 +219,153 @@ function renderAdminCategories() {
   categories.forEach(c => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td><img src="${c.image}" style="width:35px; height:35px; border-radius:6px; object-fit:cover;"></td>
       <td>${c.name}</td>
-      <td>${c.parent === 'main' ? 'رئيسي' : 'فرعي'}</td>
-      <td>
-        <button class="btn-danger-sm" onclick="deleteCategory('${c.id}')"><i class="fa-solid fa-trash"></i></button>
-      </td>
+      <td>${c.parentId ? 'فرعي' : 'رئيسي'}</td>
+      <td><button onclick="deleteCategory('${c.id}')" style="background:#ef4444; border:none; color:#fff; padding:4px 8px; border-radius:6px; cursor:pointer;">حذف</button></td>
     `;
     tbody.appendChild(tr);
   });
 }
 
 function deleteCategory(id) {
-  if (!confirm("هل أنت متأكد من حذف هذا القسم وكافة المنتجات داخله؟")) return;
+  if (!confirm("هل أنت متأكد من حذف هذا القسم؟")) return;
   let categories = getDB("categories", []);
-  let products = getDB("products", []);
-
   categories = categories.filter(c => c.id !== id);
-  products = products.filter(p => p.categoryId !== id);
-
   setDB("categories", categories);
-  setDB("products", products);
   renderAdminCategories();
-  renderCategories();
+  populateCategorySelects();
+  if (typeof renderCategories === "function") renderCategories();
 }
 
-// --- 7. قسم إضافة قسم ---
-function handleAddCategory(event) {
-  event.preventDefault();
-  const name = document.getElementById("cat-name").value.trim();
-  const parent = document.getElementById("cat-parent-select").value;
-  const desc = document.getElementById("cat-desc").value.trim();
-  const image = document.getElementById("cat-image").value.trim();
+// 7. دالة إضافة قسم (المحدثة والمرنة)
+function handleAddCategory(e) {
+  if (e) e.preventDefault();
+
+  const nameInput = document.getElementById("cat-name");
+  const parentSelect = document.getElementById("cat-parent-select");
+  const imageInput = document.getElementById("cat-image");
+
+  if (!nameInput || !nameInput.value.trim()) {
+    alert("يرجى إدخال اسم القسم");
+    return;
+  }
+
+  const name = nameInput.value.trim();
+  const parentId = parentSelect ? parentSelect.value : "main";
+  const image = (imageInput && imageInput.value.trim()) 
+    ? imageInput.value.trim() 
+    : "https://images.unsplash.com/photo-1611605698335-8b1569810432?w=300";
 
   const categories = getDB("categories", []);
+
   const newCat = {
-    id: "cat-" + Date.now(),
-    name,
-    parent,
-    desc,
-    image
+    id: "cat_" + Date.now(),
+    name: name,
+    parentId: parentId === "main" ? null : parentId,
+    image: image
   };
 
   categories.push(newCat);
   setDB("categories", categories);
+
   alert("تمت إضافة القسم بنجاح!");
-  document.getElementById("add-category-form").reset();
-  renderCategories();
+
+  // تصفير الخانات وتحديث الواجهة
+  nameInput.value = "";
+  if (imageInput) imageInput.value = "";
+
+  populateCategorySelects();
+  if (typeof renderCategories === "function") renderCategories();
   switchAdminSection("categories");
 }
 
-function loadAdminCategoriesSelect() {
-  const catSelect = document.getElementById("prod-category-select");
-  const parentSelect = document.getElementById("cat-parent-select");
+// تعبئة قوائم اختيار الأقسام
+function populateCategorySelects() {
   const categories = getDB("categories", []);
+  const prodCatSelect = document.getElementById("prod-category-select");
+  const catParentSelect = document.getElementById("cat-parent-select");
 
-  if (catSelect) {
-    catSelect.innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
+  if (prodCatSelect) {
+    prodCatSelect.innerHTML = "";
+    categories.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.name;
+      prodCatSelect.appendChild(opt);
+    });
   }
-  if (parentSelect) {
-    parentSelect.innerHTML = `<option value="main">قسم رئيسي</option>` + 
-      categories.map(c => `<option value="${c.id}">تابع لـ: ${c.name}</option>`).join("");
+
+  if (catParentSelect) {
+    catParentSelect.innerHTML = `<option value="main">قسم رئيسي</option>`;
+    categories.filter(c => !c.parentId).forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = `تابع لـ: ${c.name}`;
+      catParentSelect.appendChild(opt);
+    });
   }
 }
 
-// --- 8. قسم طلبات الإيداع بحالاتها الأربع وتكبير الصورة ---
+// 8. طلبات الإيداع
 function renderDepositRequests() {
   const container = document.getElementById("deposit-requests-container");
   if (!container) return;
 
-  const filter = document.getElementById("deposit-status-filter")?.value || "all";
-  let requests = getDB("deposit_requests", []);
+  const requests = getDB("deposit_requests", []);
+  const filter = document.getElementById("deposit-status-filter") ? document.getElementById("deposit-status-filter").value : "all";
 
-  if (filter !== "all") {
-    requests = requests.filter(r => r.status === filter);
-  }
+  let filtered = requests;
+  if (filter !== "all") filtered = requests.filter(r => r.status === filter);
 
   container.innerHTML = "";
-  if (requests.length === 0) {
-    container.innerHTML = `<p style="color:var(--text-muted); text-align:center;">لا توجد طلبات إيداع في هذا القسم</p>`;
+  if (filtered.length === 0) {
+    container.innerHTML = "<p style='color:var(--text-muted);'>لا توجد طلبات إيداع</p>";
     return;
   }
 
-  requests.forEach(r => {
+  filtered.forEach(req => {
     const card = document.createElement("div");
     card.className = "deposit-req-card";
     card.innerHTML = `
-      <div class="deposit-req-header">
-        <strong>${r.userName}</strong>
-        <span class="badge-rank">${r.methodName}</span>
+      <div style="display:flex; justify-content:space-between;">
+        <strong>المستخدم: ${req.userName || req.userId}</strong>
+        <span style="color:#38bdf8;">$${req.amountUSD} (${req.amountLocal || 0})</span>
       </div>
-      <div style="font-size:0.85rem; color:var(--accent-neon);">
-        المبلغ المحول: ${r.amountRaw} ${r.currency} ⇦ ($${Number(r.amountUSD).toFixed(2)})
-      </div>
-      <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted);">
-        <span>التاريخ: ${r.date}</span>
-        <span>البريد: ${r.userEmail}</span>
-      </div>
-      <div>
-        <label style="font-size:0.75rem; color:var(--text-muted);">إشعار التحويل (اضغط للتكبير):</label><br>
-        <img src="${r.proofImage}" class="deposit-proof-img" onclick="window.open('${r.proofImage}', '_blank')" alt="إشعار التحويل">
-      </div>
+      <small style="color:var(--text-muted);">الطريقة: ${req.methodName}</small>
+      ${req.proofImage ? `<img src="${req.proofImage}" class="deposit-proof-img" onclick="window.open('${req.proofImage}')">` : ''}
       <div style="margin-top:8px; display:flex; gap:8px;">
-        ${r.status === 'pending' ? `
-          <button class="btn-primary-sm" onclick="handleDepositDecision('${r.id}', 'accepted')">قبول وإضافة الرصيد</button>
-          <button class="btn-danger-sm" onclick="handleDepositDecision('${r.id}', 'rejected')">رفض</button>
-        ` : `
-          <span style="font-size:0.8rem; font-weight:bold; color:${r.status === 'accepted' ? 'var(--success)' : 'var(--danger)'};">
-            الحالة: ${r.status === 'accepted' ? 'مقبول وتم الشحن' : 'مرفوض'}
-          </span>
-        `}
+        ${req.status === 'pending' ? `
+          <button onclick="resolveDeposit('${req.id}', 'accepted')" style="background:#10b981; border:none; color:#fff; padding:6px 12px; border-radius:6px; cursor:pointer;">قبول</button>
+          <button onclick="resolveDeposit('${req.id}', 'rejected')" style="background:#ef4444; border:none; color:#fff; padding:6px 12px; border-radius:6px; cursor:pointer;">رفض</button>
+        ` : `<span>الحالة: ${req.status === 'accepted' ? 'مقبول' : 'مرفوض'}</span>`}
       </div>
     `;
     container.appendChild(card);
   });
 }
 
-function handleDepositDecision(reqId, decision) {
-  let requests = getDB("deposit_requests", []);
-  let users = getDB("users", []);
+function resolveDeposit(reqId, status) {
+  const requests = getDB("deposit_requests", []);
   const req = requests.find(r => r.id === reqId);
   if (!req) return;
 
-  req.status = decision;
-
-  if (decision === "accepted") {
-    const user = users.find(u => u.email.toLowerCase() === req.userEmail.toLowerCase());
+  req.status = status;
+  if (status === 'accepted') {
+    const users = getDB("users", []);
+    const user = users.find(u => u.id === req.userId);
     if (user) {
-      user.balanceUSD = Number((Number(user.balanceUSD || 0) + Number(req.amountUSD)).toFixed(2));
-      user.balanceSYP = Number(user.balanceSYP || 0) + Number(req.amountSYP || 0);
-      user.depositsCount = (user.depositsCount || 0) + 1;
-      user.totalSuccessfulDepositsUSD = Number(((user.totalSuccessfulDepositsUSD || 0) + Number(req.amountUSD)).toFixed(2));
-
-      if (currentUser && currentUser.id === user.id) {
-        currentUser = user;
-        localStorage.setItem("mk_session", JSON.stringify(currentUser));
-        applyUserSession();
-      }
+      user.balanceUSD = Number((user.balanceUSD || 0) + Number(req.amountUSD));
+      setDB("users", users);
     }
   }
 
   setDB("deposit_requests", requests);
-  setDB("users", users);
   renderDepositRequests();
   updateStats();
-  alert(decision === "accepted" ? "تم قبول الطلب وإضافة الرصيد لحساب العميل بنجاح!" : "تم رفض الطلب.");
 }
 
-// --- 9. قسم طرق الإيداع الحالية ---
-function renderAdminDepositMethods() {
+// 9. طرق الإيداع
+function renderAdminMethods() {
   const container = document.getElementById("admin-methods-container");
   if (!container) return;
 
@@ -388,122 +374,47 @@ function renderAdminDepositMethods() {
 
   methods.forEach(m => {
     const card = document.createElement("div");
-    card.className = "cat-card";
-    card.style.textAlign = "right";
+    card.style = "background:#1e293b; padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;";
     card.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <strong>${m.name}</strong>
-        <button class="btn-danger-sm" onclick="deleteDepositMethod('${m.id}')"><i class="fa-solid fa-trash"></i></button>
-      </div>
-      <p style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">الحساب: ${m.account}</p>
-      <p style="font-size:0.8rem; color:var(--accent-neon);">العملة: ${m.currency} | سعر الصرف: ${m.rateToUSD}</p>
+      <div><strong>${m.name}</strong> (${m.currency})<br><small>${m.account}</small></div>
+      <button onclick="deleteMethod('${m.id}')" style="background:#ef4444; border:none; color:#fff; padding:4px 8px; border-radius:6px; cursor:pointer;">حذف</button>
     `;
     container.appendChild(card);
   });
 }
 
-function deleteDepositMethod(id) {
-  if (!confirm("هل أنت متأكد من حذف وسيلة الإيداع هذه؟")) return;
+function deleteMethod(id) {
+  if (!confirm("هل تريد حذف طريقة الإيداع؟")) return;
   let methods = getDB("deposit_methods", []);
   methods = methods.filter(m => m.id !== id);
   setDB("deposit_methods", methods);
-  renderAdminDepositMethods();
+  renderAdminMethods();
 }
 
-// --- 10. قسم إضافة طريقة إيداع (7 خانات) ---
-function handleAddDepositMethod(event) {
-  event.preventDefault();
+// 10. إضافة طريقة إيداع
+function handleAddDepositMethod(e) {
+  if (e) e.preventDefault();
+
   const name = document.getElementById("method-name").value.trim();
   const account = document.getElementById("method-account").value.trim();
   const currency = document.getElementById("method-currency").value.trim();
-  const rateToUSD = parseFloat(document.getElementById("method-rate").value);
-  const instructions = document.getElementById("method-instructions").value.trim();
-  const qrImage = document.getElementById("method-qr").value.trim();
-  const iconImage = document.getElementById("method-icon").value.trim();
+  const rate = parseFloat(document.getElementById("method-rate").value) || 1;
+  const icon = document.getElementById("method-icon").value.trim();
 
   const methods = getDB("deposit_methods", []);
-  const newMethod = {
-    id: "method-" + Date.now(),
-    name,
-    account,
-    currency,
-    rateToUSD,
-    instructions,
-    qrImage,
-    iconImage
-  };
+  methods.push({
+    id: "meth_" + Date.now(),
+    name: name,
+    account: account,
+    currency: currency,
+    rate: rate,
+    icon: icon || ""
+  });
 
-  methods.push(newMethod);
   setDB("deposit_methods", methods);
-  alert("تمت إضافة طريقة الإيداع بنجاح!");
+  alert("تمت إضافة طريقة الإيداع!");
   document.getElementById("add-method-form").reset();
   switchAdminSection("deposit-methods");
 }
 
-// --- 11. إعدادات الموقع ونشر الإعلانات وتغيير الاسم والشعار ---
-function saveSiteBranding() {
-  const siteName = document.getElementById("setting-site-name").value.trim();
-  const siteLogo = document.getElementById("setting-site-logo").value.trim();
-
-  const settings = getDB("site_settings", {});
-  if (siteName) settings.siteName = siteName;
-  if (siteLogo) settings.siteLogo = siteLogo;
-
-  setDB("site_settings", settings);
-  renderStoreBranding();
-  alert("تم حفظ اسم الموقع والشعار بنجاح!");
-}
-
-function saveAnnouncement() {
-  const adText = document.getElementById("setting-ad-text").value.trim();
-  const adActive = document.getElementById("setting-ad-active").checked;
-
-  const settings = getDB("site_settings", {});
-  settings.adText = adText;
-  settings.adActive = adActive;
-
-  setDB("site_settings", settings);
-  renderAnnouncement();
-  alert("تم تحديث ونشر الإعلان بنجاح!");
-}
-
-// نافذة طلب الإيداع للزبائن
-function openDepositModal() {
-  if (!currentUser) {
-    alert("يرجى تسجيل الدخول أولاً لشحن رصيدك!");
-    openAuthModal();
-    return;
-  }
-  const methods = getDB("deposit_methods", []);
-  if (methods.length === 0) {
-    alert("لا توجد طرق إيداع مفعلة حالياً");
-    return;
-  }
-  const method = methods[0];
-  const amount = prompt(`طريقة الشحن المتاحة: ${method.name}\nالحساب: ${method.account}\n\nاكتب المبلغ المحول بـ ${method.currency}:`);
-  if (!amount || isNaN(amount)) return;
-
-  const proof = prompt("انسخ رابط صورة إشعار التحويل:") || "https://via.placeholder.com/200";
-
-  const rate = Number(method.rateToUSD) || 1;
-  const amountUSD = method.currency === "USD" || method.currency === "USDT" ? Number(amount) : (Number(amount) / rate);
-  const amountSYP = method.currency === "SYP" ? Number(amount) : (amountUSD * 15000);
-
-  const requests = getDB("deposit_requests", []);
-  requests.push({
-    id: "req-" + Date.now(),
-    userName: currentUser.name,
-    userEmail: currentUser.email,
-    methodName: method.name,
-    currency: method.currency,
-    amountRaw: amount,
-    amountUSD: amountUSD.toFixed(2),
-    amountSYP: amountSYP,
-    date: new Date().toISOString().split("T")[0],
-    proofImage: proof,
-    status: "pending"
-  });
-
-  setDB("deposit_requests", requests);
-  alert("تم إرسال طلب الشحن بنجاح! سيتم مراجعته وإضافة الرصيد لحسابك قريباً.");
-}
+function setupAdminNavigation() {}
