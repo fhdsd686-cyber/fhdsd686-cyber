@@ -31,12 +31,11 @@
   <!-- الحاوية الرئيسية للمتجر -->
   <main class="store-container">
     
-    <!-- البانر الترويجي -->
+    <!-- البانر الترويجي المتعدد -->
     <div class="banner-card">
       <img src="https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80" alt="Banner">
       <div class="banner-dots">
         <span class="b-dot active"></span>
-        <span class="b-dot"></span>
         <span class="b-dot"></span>
       </div>
     </div>
@@ -213,9 +212,9 @@
           </div>
         </section>
 
-        <!-- قسم إعدادات المتجر وشعار الموقع -->
+        <!-- قسم إعدادات المتجر وشعار الموقع والإعلانات المتعددة -->
         <section id="sec-site-settings" class="hidden">
-          <h4>تغيير لوجو وهوية المتجر</h4>
+          <h4>تغيير لوجو وهوية وإعلانات المتجر</h4>
           <form onsubmit="handleSiteSettingsUpdate(event)">
             <div class="form-group">
               <label>اسم المتجر:</label>
@@ -224,6 +223,10 @@
             <div class="form-group">
               <label>رابط لوجو الموقع (الصورة الدائرية بالهيدر):</label>
               <input type="text" id="setting-site-logo" placeholder="https://i.postimg.cc/..." required>
+            </div>
+            <div class="form-group">
+              <label>روابط صور الإعلانات (ضع كل رابط إعلان في سطر):</label>
+              <textarea id="setting-site-banner" rows="3" placeholder="https://i.postimg.cc/رابط1&#10;https://i.postimg.cc/رابط2"></textarea>
             </div>
             <button type="submit" class="btn-submit">حفظ التغييرات</button>
           </form>
