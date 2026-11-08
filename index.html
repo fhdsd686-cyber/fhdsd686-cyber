@@ -73,8 +73,11 @@
     </button>
 
     <div class="drawer-user-header">
-      <div class="drawer-avatar-wrap">
+      <div class="drawer-avatar-wrap" onclick="promptChangeUserAvatar()" style="cursor: pointer; position: relative;" title="اضغط لتغيير الصورة الشخصية">
         <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80" id="drawer-avatar" alt="User Avatar">
+        <div style="position: absolute; bottom: 0; right: 0; background: #0284c7; color: #fff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 10px; border: 1.5px solid #fff;">
+          <i class="fa-solid fa-camera"></i>
+        </div>
         <span class="drawer-rank-tag" id="side-user-rank">الأسطورة</span>
       </div>
       <div class="drawer-name-title">
@@ -188,6 +191,7 @@
     <div class="admin-layout">
       <nav class="admin-sidebar">
         <button class="admin-nav-item active" onclick="switchAdminSection('stats')">الإحصائيات</button>
+        <button class="admin-nav-item" onclick="switchAdminSection('site-settings')">إعدادات وهوية المتجر</button>
         <button class="admin-nav-item" onclick="switchAdminSection('users')">المستخدمين</button>
         <button class="admin-nav-item" onclick="switchAdminSection('upgrade-user')">رفع مستوى مستخدم</button>
         <button class="admin-nav-item" onclick="switchAdminSection('products')">المنتجات</button>
@@ -208,6 +212,23 @@
             <div class="stat-card"><span>إجمالي الإيداعات</span><p id="stat-total-deposits">$0.00</p></div>
           </div>
         </section>
+
+        <!-- قسم إعدادات المتجر وشعار الموقع -->
+        <section id="sec-site-settings" class="hidden">
+          <h4>تغيير لوجو وهوية المتجر</h4>
+          <form onsubmit="handleSiteSettingsUpdate(event)">
+            <div class="form-group">
+              <label>اسم المتجر:</label>
+              <input type="text" id="setting-site-name" placeholder="Mohannad kard" required>
+            </div>
+            <div class="form-group">
+              <label>رابط لوجو الموقع (الصورة الدائرية بالهيدر):</label>
+              <input type="text" id="setting-site-logo" placeholder="https://i.postimg.cc/..." required>
+            </div>
+            <button type="submit" class="btn-submit">حفظ التغييرات</button>
+          </form>
+        </section>
+
         <section id="sec-users" class="hidden"><div id="admin-users-list"></div></section>
         <section id="sec-upgrade-user" class="hidden">
           <h4>رفع مستوى مستخدم</h4>
