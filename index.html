@@ -125,7 +125,7 @@
       <div class="drawer-socials">
         <a href="#" class="social-circle-btn btn-facebook"><i class="fa-brands fa-facebook-f"></i></a>
         <a href="#" class="social-circle-btn btn-telegram"><i class="fa-brands fa-telegram"></i></a>
-        <a href="#" class="social-circle-btn btn-whatsapp"><i class="fa-brands fa-whatsapp"></i></a>
+        <a href="https://wa.me/963957455972" target="_blank" class="social-circle-btn btn-whatsapp"><i class="fa-brands fa-whatsapp"></i></a>
       </div>
     </div>
   </aside>
@@ -154,6 +154,32 @@
       <span>الإشعارات</span>
     </button>
   </nav>
+
+  <!-- نافذة إيداع وشحن الرصيد المباشرة -->
+  <div id="deposit-modal" class="modal-overlay hidden">
+    <div class="modal-card" style="text-align: center;">
+      <button class="modal-close" onclick="closeDepositModal()">✕</button>
+      <h3 style="color: #00d2ff; margin-bottom: 12px;"><i class="fa-solid fa-wallet"></i> شحن الرصيد</h3>
+      <p style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 16px;">
+        لشحن رصيد حسابك، يرجى تحويل المبلغ المطلوب عبر سيريتل كاش أو MTN كاش إلى الرقم التالي:
+      </p>
+
+      <div style="background: #162444; border: 1.5px dashed #00d2ff; border-radius: 12px; padding: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+        <span id="deposit-phone-number" style="font-size: 1.15rem; font-weight: 800; letter-spacing: 1px; color: #fff;" dir="ltr">0957455972</span>
+        <button onclick="copyDepositNumber()" style="background: #0284c7; border: none; color: #fff; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: bold;">
+          <i class="fa-regular fa-copy"></i> نسخ
+        </button>
+      </div>
+
+      <p style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 16px;">
+        بعد إتمام التحويل، اضغط على الزر أدناه لتأكيد العملية وإرسال الإشعار عبر الواتساب لتعبئة الرصيد فوراً.
+      </p>
+
+      <a href="https://wa.me/963957455972?text=مرحباً،%20قمت%20بتحويل%20مبلغ%20لشحن%20رصيدي%20في%20متجر%20مهند%20كارد" target="_blank" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: #25d366; color: #fff; text-decoration: none; padding: 12px; border-radius: 12px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);">
+        <i class="fa-brands fa-whatsapp" style="font-size: 1.2rem;"></i> تأكيد الشحن عبر واتساب
+      </a>
+    </div>
+  </div>
 
   <!-- مودال الحساب -->
   <div id="auth-modal" class="modal-overlay hidden">
