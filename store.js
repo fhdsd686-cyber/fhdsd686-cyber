@@ -1,9 +1,48 @@
-// --- منطق المتجر وعرض المنتجات ونظام طلب الخدمات بنمط Shawy Card ---
+// --- منطق المتجر وعرض المنتجات وتحديث هوية المستخدم والموقع ---
 
 document.addEventListener("DOMContentLoaded", () => {
+  loadSiteSettings();
   renderCategories();
   updateUserUI();
 });
+
+// تحميل هوية واسم ولوجو الموقع
+function loadSiteSettings() {
+  const settings = getDB("site_settings", {
+    name: "Mohannad kard",
+    logo: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80"
+  });
+
+  const logoEl = document.getElementById("site-logo");
+  const titleEl = document.getElementById("site-title");
+
+  if (logoEl && settings.logo) logoEl.src = settings.logo;
+  if (titleEl && settings.name) titleEl.innerText = settings.name;
+}
+
+// تغيير الصورة الشخصية للمستخدم مباشرة
+function promptChangeUserAvatar() {
+  const newUrl = prompt("ضع رابط صورتك الشخصية الجديدة (من Postimages أو أي رابط مباشر):");
+  if (!newUrl || !newUrl.trim()) return;
+
+  const users = getDB("users", []);
+  if (users.length === 0) {
+    users.push({
+      id: "u_1",
+      name: "Mohannad",
+      avatar: newUrl.trim(),
+      balanceUSD: 1415.613,
+      role: "الأسطورة",
+      ordersCount: 0
+    });
+  } else {
+    users[0].avatar = newUrl.trim();
+  }
+
+  setDB("users", users);
+  updateUserUI();
+  alert("تم تغيير صورتك الشخصية بنجاح!");
+}
 
 // 1. عرض الأقسام الرئيسية
 function renderCategories(filterText = "") {
@@ -121,7 +160,6 @@ function openCategory(catId, catName, catImage) {
   `;
 }
 
-// تحديث عرض السعر عند اختيار باقة
 function onPackageSelectChange() {
   const select = document.getElementById("srv-package-select");
   const display = document.getElementById("srv-price-display");
@@ -133,7 +171,6 @@ function onPackageSelectChange() {
   }
 }
 
-// تنفيذ الطلب وخصم الرصيد
 function handleServiceOrder(e, catId, catName) {
   e.preventDefault();
 
@@ -159,12 +196,10 @@ function handleServiceOrder(e, catId, catName) {
     return;
   }
 
-  // خصم المبلغ وزيادة عدد الطلبات
   currentUser.balanceUSD = Number((currentUser.balanceUSD - price).toFixed(3));
   currentUser.ordersCount = (currentUser.ordersCount || 0) + 1;
   setDB("users", users);
 
-  // تسجيل الطلب في السجل
   const orders = getDB("orders", []);
   orders.unshift({
     id: "ord_" + Date.now(),
@@ -178,12 +213,10 @@ function handleServiceOrder(e, catId, catName) {
   setDB("orders", orders);
 
   updateUserUI();
-
   alert(`✅ تم تنفيذ طلب الشحن بنجاح!\nالرقم: ${targetInput}\nالباقة: ${product.name}\nالمبلغ المخصوم: ${price} $`);
   backToCategories();
 }
 
-// 3. العودة لشبكة الأقسام
 function backToCategories() {
   document.getElementById("products-view").classList.add("hidden");
   document.getElementById("categories-container").classList.remove("hidden");
@@ -191,18 +224,19 @@ function backToCategories() {
   if (searchBox) searchBox.classList.remove("hidden");
 }
 
-// 4. تحديث الرصيد وبيانات المستخدم
 function updateUserUI() {
   const users = getDB("users", []);
-  const user = users[0] || { name: "Mohannad", balanceUSD: 1415.613, role: "الأسطورة" };
+  const user = users[0] || { name: "Mohannad", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80", balanceUSD: 1415.613, role: "الأسطورة" };
 
   const headerBal = document.getElementById("header-balance-usd");
   const drawerBal = document.getElementById("drawer-balance-text");
   const sideName = document.getElementById("side-user-name");
+  const drawerAvatar = document.getElementById("drawer-avatar");
 
   if (headerBal) headerBal.innerText = `${Number(user.balanceUSD || 0).toFixed(3)} $`;
   if (drawerBal) drawerBal.innerText = `${Number(user.balanceUSD || 0).toFixed(3)} $`;
   if (sideName) sideName.innerText = user.name || "Mohannad";
+  if (drawerAvatar && user.avatar) drawerAvatar.src = user.avatar;
 }
 
 function showStore() {
