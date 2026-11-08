@@ -1,4 +1,4 @@
-// --- منطق المتجر وعرض المنتجات وتحديث هوية المستخدم وسلايدر الإعلانات ---
+// --- منطق المتجر وعرض المنتجات وتحديث هوية المستخدم وإدارة الإيداع المباشر ---
 
 let bannerInterval = null;
 
@@ -62,7 +62,7 @@ function initBannerSlider(banners) {
     bannerInterval = setInterval(() => {
       currentIndex = (currentIndex + 1) % banners.length;
       showSlide(currentIndex);
-    }, 3500); // الانتقال كل 3.5 ثانية
+    }, 3500);
   }
 }
 
@@ -88,6 +88,28 @@ function promptChangeUserAvatar() {
   setDB("users", users);
   updateUserUI();
   alert("تم تغيير صورتك الشخصية بنجاح!");
+}
+
+// فتح نافذة الإيداع
+function openDepositModal() {
+  const modal = document.getElementById("deposit-modal");
+  if (modal) modal.classList.remove("hidden");
+}
+
+// إغلاق نافذة الإيداع
+function closeDepositModal() {
+  const modal = document.getElementById("deposit-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+// نسخ رقم هاتف الإيداع
+function copyDepositNumber() {
+  const phone = "0957455972";
+  navigator.clipboard.writeText(phone).then(() => {
+    alert("تم نسخ الرقم بنجاح: " + phone);
+  }).catch(() => {
+    prompt("انسخ الرقم يدوياً:", phone);
+  });
 }
 
 // 1. عرض الأقسام الرئيسية
@@ -303,10 +325,6 @@ function toggleSidebar(force) {
     drawer.classList.add("open");
     backdrop.classList.remove("hidden");
   }
-}
-
-function openDepositModal() {
-  alert("لإيداع الرصيد، يرجى التواصل مع الإدارة عبر زر الواتساب أو التلغرام في القائمة الجانبية.");
 }
 
 function openAuthModal() {
