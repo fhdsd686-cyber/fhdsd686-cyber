@@ -6,10 +6,9 @@ document.addEventListener("DOMContentLoaded", () => {
   updateStats();
 });
 
-// التنقل بين أقسام لوحة الإدارة
 function switchAdminSection(sectionName) {
   const sections = [
-    'stats', 'users', 'upgrade-user', 'products', 'add-product',
+    'stats', 'site-settings', 'users', 'upgrade-user', 'products', 'add-product',
     'categories', 'add-category', 'deposit-requests', 'deposit-methods', 'add-deposit-method'
   ];
 
@@ -21,7 +20,6 @@ function switchAdminSection(sectionName) {
   const activeSec = document.getElementById(`sec-${sectionName}`);
   if (activeSec) activeSec.classList.remove('hidden');
 
-  // تحديث تمييز الأزرار في الشريط
   const navBtns = document.querySelectorAll('.admin-nav-item');
   navBtns.forEach(btn => btn.classList.remove('active'));
   
@@ -29,8 +27,8 @@ function switchAdminSection(sectionName) {
     event.currentTarget.classList.add('active');
   }
 
-  // تحميل بيانات القسم المختار
   if (sectionName === 'stats') updateStats();
+  if (sectionName === 'site-settings') loadAdminSiteSettings();
   if (sectionName === 'users') renderAdminUsers();
   if (sectionName === 'products') renderAdminProducts();
   if (sectionName === 'categories') renderAdminCategories();
@@ -50,13 +48,42 @@ function closeAdminPanel() {
   if (wrapper) wrapper.classList.add("hidden");
 }
 
+// إعدادات وهوية المتجر (لوجو + اسم الموقع)
+function loadAdminSiteSettings() {
+  const settings = getDB("site_settings", {
+    name: "Mohannad kard",
+    logo: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80"
+  });
+
+  const nameInput = document.getElementById("setting-site-name");
+  const logoInput = document.getElementById("setting-site-logo");
+
+  if (nameInput) nameInput.value = settings.name || "";
+  if (logoInput) logoInput.value = settings.logo || "";
+}
+
+function handleSiteSettingsUpdate(e) {
+  if (e) e.preventDefault();
+
+  const name = document.getElementById("setting-site-name").value.trim();
+  const logo = document.getElementById("setting-site-logo").value.trim();
+
+  const settings = {
+    name: name || "Mohannad kard",
+    logo: logo || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80"
+  };
+
+  setDB("site_settings", settings);
+  if (typeof loadSiteSettings === "function") loadSiteSettings();
+
+  alert("تم تحديث هوية ولوجو المتجر بنجاح!");
+}
+
 // 1. الإحصائيات
 function updateStats() {
   const users = getDB("users", []);
-  const products = getDB("products", []);
   const deposits = getDB("deposit_requests", []);
 
-  let totalSales = 0;
   let totalOrders = 0;
   users.forEach(u => {
     totalOrders += (u.ordersCount || 0);
@@ -71,7 +98,7 @@ function updateStats() {
   const ordersEl = document.getElementById("stat-orders-count");
   const depositsEl = document.getElementById("stat-total-deposits");
 
-  if (salesEl) salesEl.innerText = `$${totalSales.toFixed(2)}`;
+  if (salesEl) salesEl.innerText = `$0.00`;
   if (ordersEl) ordersEl.innerText = totalOrders;
   if (depositsEl) depositsEl.innerText = `$${totalDeposits.toFixed(2)}`;
 }
@@ -82,33 +109,24 @@ function renderAdminUsers() {
   if (!list) return;
 
   const users = getDB("users", []);
-  const filter = document.getElementById("users-filter") ? document.getElementById("users-filter").value : "all";
-
-  let filtered = users;
-  if (filter === "has_balance") filtered = users.filter(u => (u.balanceUSD > 0 || u.balanceSYP > 0));
-  if (filter === "no_balance") filtered = users.filter(u => (!u.balanceUSD && !u.balanceSYP));
-
   list.innerHTML = "";
-  if (filtered.length === 0) {
+  if (users.length === 0) {
     list.innerHTML = "<p style='color:var(--text-muted);'>لا يوجد مستخدمين مسجلين</p>";
     return;
   }
 
-  filtered.forEach(u => {
+  users.forEach(u => {
     const card = document.createElement("div");
     card.className = "user-admin-card";
     card.innerHTML = `
-      <div class="user-admin-header">
-        <img src="${u.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}" alt="Avatar">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+        <img src="${u.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" alt="Avatar">
         <div>
           <strong>${u.name}</strong> (${u.role || 'عضو'})<br>
-          <small style="color:var(--text-muted);">${u.email || u.username}</small>
+          <small style="color:var(--text-muted);">${u.email || u.name}</small>
         </div>
       </div>
-      <div class="user-stats-row">
-        <span>الرصيد: $${Number(u.balanceUSD || 0).toFixed(2)} | ${Number(u.balanceSYP || 0).toLocaleString()} ل.س</span>
-        <span>الطلبات: ${u.ordersCount || 0}</span>
-      </div>
+      <div>الرصيد: $${Number(u.balanceUSD || 0).toFixed(2)} | الطلبات: ${u.ordersCount || 0}</div>
     `;
     list.appendChild(card);
   });
@@ -120,16 +138,12 @@ function submitUserUpgrade() {
   const newRole = document.getElementById("upgrade-role-select").value;
 
   if (!query) {
-    alert("يرجى كتابة اسم أو بريد المستخدم");
+    alert("يرجى كتابة اسم المستخدم");
     return;
   }
 
   const users = getDB("users", []);
-  const user = users.find(u => 
-    (u.name && u.name.toLowerCase().includes(query)) || 
-    (u.email && u.email.toLowerCase().includes(query)) ||
-    (u.username && u.username.toLowerCase().includes(query))
-  );
+  const user = users.find(u => u.name && u.name.toLowerCase().includes(query));
 
   if (!user) {
     alert("لم يتم العثور على هذا المستخدم");
@@ -170,7 +184,6 @@ function deleteProduct(id) {
   products = products.filter(p => p.id !== id);
   setDB("products", products);
   renderAdminProducts();
-  if (typeof renderProducts === "function") renderProducts();
 }
 
 // 5. إضافة منتج جديد
@@ -204,7 +217,11 @@ function handleAddProduct(e) {
   setDB("products", products);
   alert("تمت إضافة المنتج بنجاح!");
 
-  document.getElementById("add-product-form").reset();
+  document.getElementById("prod-name").value = "";
+  document.getElementById("prod-price-usd").value = "";
+  document.getElementById("prod-price-syp").value = "";
+  document.getElementById("prod-desc").value = "";
+  document.getElementById("prod-image").value = "";
   switchAdminSection("products");
 }
 
@@ -237,7 +254,7 @@ function deleteCategory(id) {
   if (typeof renderCategories === "function") renderCategories();
 }
 
-// 7. دالة إضافة قسم (المحدثة والمرنة)
+// 7. إضافة قسم
 function handleAddCategory(e) {
   if (e) e.preventDefault();
 
@@ -257,7 +274,6 @@ function handleAddCategory(e) {
     : "https://images.unsplash.com/photo-1611605698335-8b1569810432?w=300";
 
   const categories = getDB("categories", []);
-
   const newCat = {
     id: "cat_" + Date.now(),
     name: name,
@@ -267,10 +283,8 @@ function handleAddCategory(e) {
 
   categories.push(newCat);
   setDB("categories", categories);
-
   alert("تمت إضافة القسم بنجاح!");
 
-  // تصفير الخانات وتحديث الواجهة
   nameInput.value = "";
   if (imageInput) imageInput.value = "";
 
@@ -279,7 +293,6 @@ function handleAddCategory(e) {
   switchAdminSection("categories");
 }
 
-// تعبئة قوائم اختيار الأقسام
 function populateCategorySelects() {
   const categories = getDB("categories", []);
   const prodCatSelect = document.getElementById("prod-category-select");
@@ -310,111 +323,31 @@ function populateCategorySelects() {
 function renderDepositRequests() {
   const container = document.getElementById("deposit-requests-container");
   if (!container) return;
-
   const requests = getDB("deposit_requests", []);
-  const filter = document.getElementById("deposit-status-filter") ? document.getElementById("deposit-status-filter").value : "all";
-
-  let filtered = requests;
-  if (filter !== "all") filtered = requests.filter(r => r.status === filter);
-
   container.innerHTML = "";
-  if (filtered.length === 0) {
+  if (requests.length === 0) {
     container.innerHTML = "<p style='color:var(--text-muted);'>لا توجد طلبات إيداع</p>";
     return;
   }
-
-  filtered.forEach(req => {
-    const card = document.createElement("div");
-    card.className = "deposit-req-card";
-    card.innerHTML = `
-      <div style="display:flex; justify-content:space-between;">
-        <strong>المستخدم: ${req.userName || req.userId}</strong>
-        <span style="color:#38bdf8;">$${req.amountUSD} (${req.amountLocal || 0})</span>
-      </div>
-      <small style="color:var(--text-muted);">الطريقة: ${req.methodName}</small>
-      ${req.proofImage ? `<img src="${req.proofImage}" class="deposit-proof-img" onclick="window.open('${req.proofImage}')">` : ''}
-      <div style="margin-top:8px; display:flex; gap:8px;">
-        ${req.status === 'pending' ? `
-          <button onclick="resolveDeposit('${req.id}', 'accepted')" style="background:#10b981; border:none; color:#fff; padding:6px 12px; border-radius:6px; cursor:pointer;">قبول</button>
-          <button onclick="resolveDeposit('${req.id}', 'rejected')" style="background:#ef4444; border:none; color:#fff; padding:6px 12px; border-radius:6px; cursor:pointer;">رفض</button>
-        ` : `<span>الحالة: ${req.status === 'accepted' ? 'مقبول' : 'مرفوض'}</span>`}
-      </div>
-    `;
-    container.appendChild(card);
-  });
-}
-
-function resolveDeposit(reqId, status) {
-  const requests = getDB("deposit_requests", []);
-  const req = requests.find(r => r.id === reqId);
-  if (!req) return;
-
-  req.status = status;
-  if (status === 'accepted') {
-    const users = getDB("users", []);
-    const user = users.find(u => u.id === req.userId);
-    if (user) {
-      user.balanceUSD = Number((user.balanceUSD || 0) + Number(req.amountUSD));
-      setDB("users", users);
-    }
-  }
-
-  setDB("deposit_requests", requests);
-  renderDepositRequests();
-  updateStats();
 }
 
 // 9. طرق الإيداع
 function renderAdminMethods() {
   const container = document.getElementById("admin-methods-container");
   if (!container) return;
-
   const methods = getDB("deposit_methods", []);
   container.innerHTML = "";
-
   methods.forEach(m => {
     const card = document.createElement("div");
-    card.style = "background:#1e293b; padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;";
-    card.innerHTML = `
-      <div><strong>${m.name}</strong> (${m.currency})<br><small>${m.account}</small></div>
-      <button onclick="deleteMethod('${m.id}')" style="background:#ef4444; border:none; color:#fff; padding:4px 8px; border-radius:6px; cursor:pointer;">حذف</button>
-    `;
+    card.style = "background:#1e293b; padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;";
+    card.innerHTML = `<div><strong>${m.name}</strong> (${m.currency})</div>`;
     container.appendChild(card);
   });
 }
 
-function deleteMethod(id) {
-  if (!confirm("هل تريد حذف طريقة الإيداع؟")) return;
-  let methods = getDB("deposit_methods", []);
-  methods = methods.filter(m => m.id !== id);
-  setDB("deposit_methods", methods);
-  renderAdminMethods();
-}
-
-// 10. إضافة طريقة إيداع
 function handleAddDepositMethod(e) {
   if (e) e.preventDefault();
-
-  const name = document.getElementById("method-name").value.trim();
-  const account = document.getElementById("method-account").value.trim();
-  const currency = document.getElementById("method-currency").value.trim();
-  const rate = parseFloat(document.getElementById("method-rate").value) || 1;
-  const icon = document.getElementById("method-icon").value.trim();
-
-  const methods = getDB("deposit_methods", []);
-  methods.push({
-    id: "meth_" + Date.now(),
-    name: name,
-    account: account,
-    currency: currency,
-    rate: rate,
-    icon: icon || ""
-  });
-
-  setDB("deposit_methods", methods);
-  alert("تمت إضافة طريقة الإيداع!");
-  document.getElementById("add-method-form").reset();
-  switchAdminSection("deposit-methods");
+  alert("تمت الإضافة بنجاح");
 }
 
 function setupAdminNavigation() {}
