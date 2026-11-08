@@ -48,18 +48,26 @@ function closeAdminPanel() {
   if (wrapper) wrapper.classList.add("hidden");
 }
 
-// إعدادات وهوية المتجر (لوجو + اسم الموقع)
+// إعدادات وهوية المتجر (لوجو + اسم الموقع + روابط الإعلانات المتعددة)
 function loadAdminSiteSettings() {
   const settings = getDB("site_settings", {
     name: "Mohannad kard",
-    logo: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80"
+    logo: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80",
+    banners: [
+      "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80"
+    ]
   });
 
   const nameInput = document.getElementById("setting-site-name");
   const logoInput = document.getElementById("setting-site-logo");
+  const bannerInput = document.getElementById("setting-site-banner");
 
   if (nameInput) nameInput.value = settings.name || "";
   if (logoInput) logoInput.value = settings.logo || "";
+  if (bannerInput) {
+    const bannersList = Array.isArray(settings.banners) ? settings.banners : [settings.banner || ""];
+    bannerInput.value = bannersList.filter(Boolean).join("\n");
+  }
 }
 
 function handleSiteSettingsUpdate(e) {
@@ -67,16 +75,26 @@ function handleSiteSettingsUpdate(e) {
 
   const name = document.getElementById("setting-site-name").value.trim();
   const logo = document.getElementById("setting-site-logo").value.trim();
+  const bannerRaw = document.getElementById("setting-site-banner").value.trim();
+
+  // تحويل كل سطر إلى رابط إعلان
+  const banners = bannerRaw
+    .split("\n")
+    .map(url => url.trim())
+    .filter(url => url.length > 0);
 
   const settings = {
     name: name || "Mohannad kard",
-    logo: logo || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80"
+    logo: logo || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80",
+    banners: banners.length > 0 ? banners : [
+      "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80"
+    ]
   };
 
   setDB("site_settings", settings);
   if (typeof loadSiteSettings === "function") loadSiteSettings();
 
-  alert("تم تحديث هوية ولوجو المتجر بنجاح!");
+  alert("تم حفظ الإعلانات وتحديث الهوية بنجاح!");
 }
 
 // 1. الإحصائيات
