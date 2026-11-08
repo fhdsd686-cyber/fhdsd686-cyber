@@ -3,2496 +3,412 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>متجر الخدمات الرقمية</title>
-  
-  <!-- مكتبة الأيقونات Font Awesome -->
+  <title>Mohannad kard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <style>
-    :root {
-      --primary: #4f46e5;
-      --primary-hover: #4338ca;
-      --bg-dark: #0f172a;
-      --bg-card: #1e293b;
-      --bg-input: #334155;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --accent: #06b6d4;
-      --success: #10b981;
-      --danger: #ef4444;
-      --warning: #f59e0b;
-      --border-color: #334155;
-      --radius: 12px;
-      --transition: all 0.25s ease;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    }
-
-    body {
-      background-color: var(--bg-dark);
-      color: var(--text-main);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow-x: hidden;
-    }
-    /* شريط التنقل العلوي */
-    .navbar {
-      background-color: rgba(30, 41, 59, 0.85);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border-color);
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      padding: 0.85rem 1.5rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      transition: var(--transition);
-    }
-
-    .brand-logo {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      text-decoration: none;
-      color: var(--text-main);
-      font-size: 1.25rem;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-    }
-
-    .brand-logo i {
-      color: var(--primary);
-      font-size: 1.5rem;
-    }
-
-    .nav-actions {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-    /* الأزرار وتنسيقات عناصر الإدخال */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      padding: 0.55rem 1.15rem;
-      border-radius: var(--radius);
-      font-size: 0.9rem;
-      font-weight: 600;
-      border: 1px solid transparent;
-      cursor: pointer;
-      transition: var(--transition);
-      text-decoration: none;
-    }
-
-    .btn-primary {
-      background-color: var(--primary);
-      color: #ffffff;
-    }
-
-    .btn-primary:hover {
-      background-color: var(--primary-hover);
-      transform: translateY(-1px);
-    }
-
-    .btn-outline {
-      background-color: transparent;
-      border-color: var(--border-color);
-      color: var(--text-main);
-    }
-
-    .btn-outline:hover {
-      background-color: var(--bg-card);
-      border-color: var(--text-muted);
-    }
-
-    .btn-success {
-      background-color: var(--success);
-      color: #ffffff;
-    }
-
-    .btn-danger {
-      background-color: var(--danger);
-      color: #ffffff;
-    }
-
-    .btn-sm {
-      padding: 0.35rem 0.75rem;
-      font-size: 0.8rem;
-    }
-
-    .form-group {
-      margin-bottom: 1.15rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-    }
-
-    .form-label {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
-
-    .form-control {
-      width: 100%;
-      padding: 0.65rem 0.9rem;
-      background-color: var(--bg-input);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius);
-      color: var(--text-main);
-      font-size: 0.9rem;
-      outline: none;
-      transition: var(--transition);
-    }
-
-    .form-control:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.25);
-    }
-    /* الحاوية والواجهة الرئيسية */
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 1.5rem 1rem;
-      width: 100%;
-    }
-
-    /* البانر الترحيبي (Hero Section) */
-    .hero-banner {
-      background: linear-gradient(135deg, rgba(79, 70, 229, 0.2) 0%, rgba(6, 182, 212, 0.1) 100%);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius);
-      padding: 2.5rem 1.5rem;
-      text-align: center;
-      margin-bottom: 2rem;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .hero-title {
-      font-size: 2rem;
-      font-weight: 800;
-      margin-bottom: 0.75rem;
-      background: linear-gradient(to right, #ffffff, var(--accent));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .hero-desc {
-      color: var(--text-muted);
-      font-size: 1rem;
-      max-width: 600px;
-      margin: 0 auto 1.5rem;
-      line-height: 1.6;
-    }
-
-    /* شريط تصفية التصنيفات (Categories Filter) */
-    .categories-bar {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      overflow-x: auto;
-      padding-bottom: 0.5rem;
-      margin-bottom: 1.75rem;
-      scrollbar-width: none;
-    }
-
-    .categories-bar::-webkit-scrollbar {
-      display: none;
-    }
-
-    .category-chip {
-      background-color: var(--bg-card);
-      border: 1px solid var(--border-color);
-      color: var(--text-muted);
-      padding: 0.45rem 1.1rem;
-      border-radius: 9999px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: var(--transition);
-    }
-
-    .category-chip:hover,
-    .category-chip.active {
-      background-color: var(--primary);
-      border-color: var(--primary);
-      color: #ffffff;
-    }
-    /* شبكة المنتجات (Products Grid) */
-    .products-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 3rem;
-    }
-
-    /* بطاقة المنتج (Product Card) */
-    .product-card {
-      background-color: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      transition: var(--transition);
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-
-    .product-card:hover {
-      transform: translateY(-4px);
-      border-color: var(--primary);
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.25);
-    }
-
-    .product-img-wrapper {
-      width: 100%;
-      height: 180px;
-      background-color: var(--bg-input);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .product-img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: var(--transition);
-    }
-
-    .product-card:hover .product-img {
-      transform: scale(1.05);
-    }
-
-    .product-badge {
-      position: absolute;
-      top: 0.75rem;
-      right: 0.75rem;
-      background-color: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(4px);
-      padding: 0.25rem 0.6rem;
-      border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--accent);
-      border: 1px solid var(--border-color);
-    }
-
-    .product-info {
-      padding: 1.25rem;
-      display: flex;
-      flex-direction: column;
-      flex-grow: 1;
-    }
-
-    .product-title {
-      font-size: 1.1rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-      color: var(--text-main);
-    }
-
-    .product-desc {
-      color: var(--text-muted);
-      font-size: 0.85rem;
-      line-height: 1.5;
-      margin-bottom: 1rem;
-      flex-grow: 1;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .product-meta {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-top: 0.75rem;
-      border-top: 1px solid var(--border-color);
-      margin-top: auto;
-    }
-
-    .product-price {
-      font-size: 1.2rem;
-      font-weight: 800;
-      color: var(--success);
-    }
-    /* لوحة تحكم الأدمن (Admin Dashboard) */
-    .admin-container {
-      background-color: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius);
-      margin-bottom: 2rem;
-      overflow: hidden;
-      display: none;
-    }
-
-    .admin-header {
-      padding: 1.25rem 1.5rem;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: rgba(15, 23, 42, 0.4);
-    }
-
-    .admin-nav {
-      display: flex;
-      gap: 0.5rem;
-      border-bottom: 1px solid var(--border-color);
-      padding: 0.5rem 1.5rem;
-      overflow-x: auto;
-      background: rgba(15, 23, 42, 0.2);
-    }
-
-    .admin-nav-btn {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      padding: 0.5rem 1rem;
-      font-size: 0.9rem;
-      font-weight: 600;
-      border-radius: var(--radius);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      transition: var(--transition);
-      white-space: nowrap;
-    }
-
-    .admin-nav-btn:hover,
-    .admin-nav-btn.active {
-      color: var(--text-main);
-      background-color: var(--bg-input);
-    }
-
-    .admin-nav-btn.active {
-      color: var(--primary);
-    }
-
-    .admin-content {
-      padding: 1.5rem;
-    }
-
-    .admin-tab {
-      display: none;
-    }
-
-    .admin-tab.active {
-      display: block;
-    }
-    /* شبكة بطاقات الإحصائيات (Stats Grid) */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .stat-card {
-      background-color: var(--bg-input);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius);
-      padding: 1.25rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .stat-card-title {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      font-weight: 600;
-    }
-
-    .stat-card-value {
-      font-size: 1.75rem;
-      font-weight: 800;
-      color: var(--text-main);
-    }
-
-    /* الجداول العامة للبيانات (Data Tables) */
-    .table-container {
-      width: 100%;
-      overflow-x: auto;
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius);
-      background-color: var(--bg-input);
-    }
-
-    .custom-table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: right;
-      font-size: 0.9rem;
-    }
-
-    .custom-table th,
-    .custom-table td {
-      padding: 0.85rem 1rem;
-      border-bottom: 1px solid var(--border-color);
-      white-space: nowrap;
-    }
-
-    .custom-table th {
-      background-color: rgba(15, 23, 42, 0.4);
-      color: var(--text-muted);
-      font-weight: 700;
-    }
-
-    .custom-table tr:hover td {
-      background-color: rgba(255, 255, 255, 0.02);
-    }
-
-    .badge-status {
-      display: inline-block;
-      padding: 0.25rem 0.6rem;
-      border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 700;
-    }
-
-    .badge-pending {
-      background-color: rgba(245, 158, 11, 0.15);
-      color: var(--warning);
-      border: 1px solid var(--warning);
-    }
-
-    .badge-completed {
-      background-color: rgba(16, 185, 129, 0.15);
-      color: var(--success);
-      border: 1px solid var(--success);
-    }
-
-    .badge-rejected {
-      background-color: rgba(239, 68, 68, 0.15);
-      color: var(--danger);
-      border: 1px solid var(--danger);
-    }
-    /* النوافذ المنبثقة (Modals) */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: rgba(15, 23, 42, 0.75);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 2000;
-      padding: 1rem;
-    }
-
-    .modal-overlay.active {
-      display: flex;
-    }
-
-    .modal-box {
-      background-color: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius);
-      width: 100%;
-      max-width: 480px;
-      max-height: 90vh;
-      overflow-y: auto;
-      padding: 1.75rem;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-      position: relative;
-    }
-
-    .modal-title {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: 1.25rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    /* إشعارات التنبيه السريعة (Toast Notifications) */
-    .toast-container {
-      position: fixed;
-      bottom: 1.5rem;
-      left: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      z-index: 9999;
-      pointer-events: none;
-    }
-
-    .toast {
-      background-color: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius);
-      padding: 0.85rem 1.25rem;
-      color: var(--text-main);
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      font-size: 0.9rem;
-      min-width: 250px;
-      animation: slideIn 0.3s ease;
-      pointer-events: auto;
-    }
-
-    @keyframes slideIn {
-      from {
-        transform: translateY(20px);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
-    }
-    /* تحسينات الاستجابة للشاشات الصغيرة */
-    @media (max-width: 640px) {
-      .hero-title {
-        font-size: 1.5rem;
-      }
-      .products-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="theme-dark">
 
-  <!-- شريط التنقل العلوي (Navbar) -->
-  <nav class="navbar">
-    <a href="#" class="brand-logo" onclick="location.reload(); return false;">
-      <i class="fa-solid fa-store"></i>
-      <span>متجر الخدمات</span>
-    </a>
+  <!-- إعلان متحرك أو شريط تنبيهات علوي -->
+  <div id="announcement-bar" class="announcement-bar hidden">
+    <div class="announcement-content">
+      <i class="fa-solid fa-bullhorn"></i>
+      <span id="announcement-text">أهلاً بكم في Mohannad kard - أفضل العروض والخدمات الفورية</span>
+    </div>
+    <button class="close-announcement" onclick="closeAnnouncement()">&times;</button>
+  </div>
 
-    <div class="nav-actions">
-      <!-- أزرار وواجهة المستخدم الضيف -->
-      <div id="guestActions" style="display: flex; gap: 0.5rem;">
-        <button class="btn btn-outline btn-sm" onclick="openModal('authModal')">
-          <i class="fa-solid fa-right-to-bracket"></i>
-          <span>دخول / تسجيل</span>
-        </button>
-      </div>
-
-      <!-- واجهة المستخدم المسجل -->
-      <div id="userActions" style="display: none; align-items: center; gap: 0.75rem;">
-        <div style="display: flex; align-items: center; gap: 0.4rem; background: var(--bg-card); padding: 0.35rem 0.75rem; border-radius: 9999px; border: 1px solid var(--border-color); font-size: 0.85rem;">
-          <i class="fa-solid fa-wallet" style="color: var(--accent);"></i>
-          <span style="color: var(--text-muted);">الرصيد:</span>
-          <strong id="navUserBalance" style="color: var(--success);">0.00</strong>
-          <span style="font-size: 0.75rem;">$</span>
-          <button class="btn btn-primary btn-sm" style="padding: 0.15rem 0.5rem; margin-right: 0.25rem; font-size: 0.75rem;" onclick="openModal('depositModal')">
-            <i class="fa-solid fa-plus"></i> شحن
-          </button>
-        </div>
-
-        <button id="adminPanelBtn" class="btn btn-outline btn-sm" style="display: none;" onclick="toggleAdminView()">
-          <i class="fa-solid fa-shield-halved"></i>
-          <span>لوحة التحكم</span>
-        </button>
-
-        <button class="btn btn-danger btn-sm" onclick="handleLogout()" title="تسجيل الخروج">
-          <i class="fa-solid fa-arrow-right-from-bracket"></i>
-        </button>
+  <!-- الشريط العلوي (Header) -->
+  <header class="main-header">
+    <div class="header-right">
+      <button class="btn-icon" id="menu-toggle-btn" onclick="toggleSidebar()">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <div class="site-branding">
+        <img id="site-logo" src="https://via.placeholder.com/40" alt="Logo" class="site-logo-img">
+        <span id="site-title" class="site-title-text">Mohannad kard</span>
       </div>
     </div>
-  </nav>
-  <!-- الحاوية الرئيسية للمحتوى -->
-  <main class="container">
 
-    <!-- البانر الترحيبي (Hero Section) -->
-    <section class="hero-banner">
-      <h1 class="hero-title">أهلاً بك في متجر الخدمات الرقمية</h1>
-      <p class="hero-desc">وجهتك المثالية للحصول على الاشتراكات والبطاقات والخدمات التقنية المتميزة بأسرع وقت وأفضل الأسعار وبشكل آلي ومباشر.</p>
-      <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
-        <span style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--accent);">
-          <i class="fa-solid fa-bolt"></i> تسليم فوري وتلقائي
-        </span>
-        <span style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--success); margin-right: 1rem;">
-          <i class="fa-solid fa-shield-check"></i> ضمان وحماية كاملة
-        </span>
-      </div>
-    </section>
-
-    <!-- شريط تصفية وتصنيفات المنتجات -->
-    <section class="categories-bar" id="categoriesBar">
-      <button class="category-chip active" onclick="filterByCategory('all')">
-        <i class="fa-solid fa-border-all"></i> الكل
+    <div class="header-left">
+      <!-- أزرار العملة والتحكم -->
+      <button class="currency-badge" onclick="openCurrencyModal()">
+        <span id="header-balance-usd">$0.00</span> | <span id="header-balance-syp">0 ل.س</span>
+        <i class="fa-solid fa-coins"></i>
       </button>
-      <!-- سيتم توليد أزرار التصنيفات ديناميكياً هنا عبر الجافاسكريبت -->
+      <button class="btn-icon" title="تغيير المظهر" onclick="toggleTheme()">
+        <i class="fa-solid fa-moon" id="theme-icon"></i>
+      </button>
+      <button class="btn-primary-sm" id="auth-header-btn" onclick="openAuthModal()">
+        <i class="fa-solid fa-user"></i> دخول
+      </button>
+    </div>
+  </header>
+
+  <!-- الصفحة الرئيسية للمتجر -->
+  <main class="store-container" id="store-view">
+    <!-- البانر الترويجي الكبير مثل الفيديو -->
+    <section class="banner-section">
+      <div class="promo-banner">
+        <img id="promo-banner-img" src="https://via.placeholder.com/800x300/1e293b/38bdf8?text=Mohannad+kard+Offers" alt="Banner">
+      </div>
     </section>
-    <!-- شبكة عرض المنتجات للمستخدمين -->
-    <section>
-      <div class="products-grid" id="productsGrid">
-        <!-- مؤشر تحميل مبدئي أثناء جلب المنتجات من Supabase -->
-        <div id="productsLoading" style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
-          <i class="fa-solid fa-spinner fa-spin fa-2x" style="color: var(--primary); margin-bottom: 0.75rem;"></i>
-          <p>جاري تحميل المنتجات والخدمات...</p>
+
+    <!-- شريط البحث السريع عن الأقسام -->
+    <div class="search-box-wrap">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" id="category-search" placeholder="ابحث عن قسم أو خدمة..." oninput="filterCategories()">
+    </div>
+
+    <!-- شبكة بطاقات الأقسام (تصميم نيون وفخم) -->
+    <section class="categories-grid" id="categories-container">
+      <!-- يتم توليد الأقسام تلقائياً عبر JavaScript -->
+    </section>
+
+    <!-- صفحة المنتجات التابعة للقسم المختار -->
+    <section class="products-section hidden" id="products-view">
+      <div class="section-top">
+        <button class="btn-back" onclick="backToCategories()">
+          <i class="fa-solid fa-arrow-right"></i> رجوع للأقسام
+        </button>
+        <h2 id="current-category-title">المنتجات</h2>
+      </div>
+      <div class="search-box-wrap">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="product-search" placeholder="ابحث عن منتج..." oninput="filterProducts()">
+      </div>
+      <div class="products-grid" id="products-container">
+        <!-- يتم توليد المنتجات هنا -->
+      </div>
+    </section>
+  </main>
+
+  <!-- القائمة الجانبية للمستخدم والمدير -->
+  <aside class="sidebar-drawer" id="sidebar-drawer">
+    <div class="sidebar-header">
+      <div class="user-sidebar-profile" id="user-profile-summary">
+        <img src="https://via.placeholder.com/60" id="side-user-avatar" class="user-avatar" alt="User">
+        <h4 id="side-user-name">زائر</h4>
+        <span id="side-user-rank" class="badge-rank">مستخدم جديد</span>
+      </div>
+      <button class="close-sidebar-btn" onclick="toggleSidebar()">&times;</button>
+    </div>
+
+    <div class="sidebar-menu">
+      <a href="#" onclick="showStore(); toggleSidebar();"><i class="fa-solid fa-house"></i> الرئيسية</a>
+      <a href="#" id="admin-panel-link" class="hidden" onclick="openAdminPanel(); toggleSidebar();"><i class="fa-solid fa-shield-halved"></i> لوحة الإدارة</a>
+      <a href="#" onclick="openDepositModal(); toggleSidebar();"><i class="fa-solid fa-wallet"></i> إضافة رصيد</a>
+      <a href="#" onclick="toggleTheme();"><i class="fa-solid fa-circle-half-stroke"></i> تبديل المظهر</a>
+      <a href="#" id="logout-link" class="hidden" onclick="logoutUser()"><i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج</a>
+    </div>
+  </aside>
+
+  <!-- نافذة تسجيل الدخول / إنشاء حساب -->
+  <div class="modal-overlay hidden" id="auth-modal">
+    <div class="modal-card">
+      <button class="modal-close" onclick="closeAuthModal()">&times;</button>
+      <h3 id="auth-title">تسجيل الدخول</h3>
+      
+      <form id="auth-form" onsubmit="handleAuthSubmit(event)">
+        <div class="form-group" id="group-name" style="display: none;">
+          <label>اسم المستخدم</label>
+          <input type="text" id="auth-username" placeholder="اكتب اسم الحساب">
         </div>
-      </div>
+        <div class="form-group">
+          <label>البريد الإلكتروني أو اسم المستخدم</label>
+          <input type="text" id="auth-identifier" required placeholder="example@mail.com أو الاسم">
+        </div>
+        <div class="form-group">
+          <label>كلمة المرور</label>
+          <input type="password" id="auth-password" required placeholder="كلمة المرور">
+        </div>
+        <button type="submit" class="btn-submit" id="auth-submit-btn">دخول</button>
+      </form>
 
-      <!-- رسالة تظهر عندما لا توجد منتجات مطابقة -->
-      <div id="noProductsMsg" style="display: none; text-align: center; padding: 3rem 1rem; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 3rem;">
-        <i class="fa-solid fa-box-open fa-3x" style="color: var(--text-muted); margin-bottom: 1rem;"></i>
-        <h3 style="margin-bottom: 0.5rem;">لا توجد منتجات متوفرة حالياً</h3>
-        <p style="color: var(--text-muted); font-size: 0.9rem;">يرجى تجربة تصنيف آخر أو العودة لاحقاً.</p>
+      <div class="auth-switch">
+        <span id="auth-switch-text">ليس لديك حساب؟</span>
+        <button type="button" class="btn-text" id="auth-toggle-mode" onclick="toggleAuthMode()">إنشاء حساب جديد</button>
       </div>
-    </section>
-    <!-- لوحة تحكم الأدمن (تظهر فقط للحساب المحدد كأدمن) -->
-    <section class="admin-container" id="adminContainer">
-      <div class="admin-header">
-        <h2 style="font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
-          <i class="fa-solid fa-gauge-high" style="color: var(--primary);"></i>
-          <span>لوحة إدارة النظام</span>
-        </h2>
-        <span class="badge-status badge-completed">مسؤول</span>
-      </div>
+    </div>
+  </div>
 
-      <!-- أزرار التنقل بين تبويبات لوحة التحكم -->
-      <div class="admin-nav">
-        <button class="admin-nav-btn active" onclick="switchAdminTab('stats', this)">
-          <i class="fa-solid fa-chart-pie"></i> الإحصائيات
-        </button>
-        <button class="admin-nav-btn" onclick="switchAdminTab('products', this)">
-          <i class="fa-solid fa-boxes-stacked"></i> إدارة المنتجات
-        </button>
-        <button class="admin-nav-btn" onclick="switchAdminTab('categories', this)">
-          <i class="fa-solid fa-tags"></i> التصنيفات
-        </button>
-        <button class="admin-nav-btn" onclick="switchAdminTab('orders', this)">
-          <i class="fa-solid fa-receipt"></i> الطلبات
-        </button>
-        <button class="admin-nav-btn" onclick="switchAdminTab('deposits', this)">
-          <i class="fa-solid fa-money-bill-transfer"></i> شحن الرصيد
-        </button>
-        <button class="admin-nav-btn" onclick="switchAdminTab('paymentMethods', this)">
-          <i class="fa-solid fa-credit-card"></i> طرق الدفع
-        </button>
-        <button class="admin-nav-btn" onclick="switchAdminTab('users', this)">
-          <i class="fa-solid fa-users"></i> المستخدمين
-        </button>
-      </div>
+  <!-- لوحة الإدارة الشاملة (10 أقسام) -->
+  <div class="admin-wrapper hidden" id="admin-wrapper">
+    <div class="admin-header">
+      <h3><i class="fa-solid fa-gauge-high"></i> لوحة إدارة النظام - Mohannad kard</h3>
+      <button class="btn-danger-sm" onclick="closeAdminPanel()"><i class="fa-solid fa-xmark"></i> خروج من الإدارة</button>
+    </div>
 
-      <div class="admin-content">
-        <!-- 1. تبويب الإحصائيات (Stats Tab) -->
-        <div class="admin-tab active" id="tab-stats">
+    <div class="admin-layout">
+      <!-- الشريط الجانبي للأقسام العشرة -->
+      <nav class="admin-sidebar">
+        <button class="admin-nav-item active" onclick="switchAdminSection('stats')"><i class="fa-solid fa-chart-line"></i> الإحصائيات</button>
+        <button class="admin-nav-item" onclick="switchAdminSection('users')"><i class="fa-solid fa-users"></i> المستخدمين</button>
+        <button class="admin-nav-item" onclick="switchAdminSection('upgrade-user')"><i class="fa-solid fa-user-shield"></i> رفع مستوى مستخدم</button>
+        <button class="admin-nav-item" onclick="switchAdminSection('products')"><i class="fa-solid fa-box-open"></i> المنتجات</button>
+        <button class="admin-nav-item" onclick="switchAdminSection('add-product')"><i class="fa-solid fa-circle-plus"></i> إضافة منتج</button>
+        <button class="admin-nav-item" onclick="switchAdminSection('categories')"><i class="fa-solid fa-layer-group"></i> الأقسام الحالية</button>
+        <button class="admin-nav-item" onclick="switchAdminSection('add-category')"><i class="fa-solid fa-folder-plus"></i> إضافة قسم</button>
+        <button class="admin-nav-item" onclick="switchAdminSection('deposit-requests')"><i class="fa-solid fa-money-bill-transfer"></i> طلبات الإيداع</button>
+        <button class="admin-nav-item" onclick="switchAdminSection('deposit-methods')"><i class="fa-solid fa-credit-card"></i> طرق الإيداع</button>
+        <button class="admin-nav-item" onclick="switchAdminSection('add-deposit-method')"><i class="fa-solid fa-plus"></i> إضافة طريقة إيداع</button>
+        <button class="admin-nav-item" onclick="switchAdminSection('site-settings')"><i class="fa-solid fa-sliders"></i> إعدادات وإعلانات الموقع</button>
+      </nav>
+
+      <!-- محتوى الأقسام -->
+      <section class="admin-content-area" id="admin-content">
+        <!-- 1. قسم الإحصائيات -->
+        <div class="admin-section" id="sec-stats">
+          <h4>الإحصائيات العامة</h4>
+          <div class="filter-row">
+            <label>تحديد التاريخ:</label>
+            <input type="date" id="stats-date-filter" onchange="updateStats()">
+          </div>
           <div class="stats-grid">
             <div class="stat-card">
-              <span class="stat-card-title"><i class="fa-solid fa-users"></i> إجمالي المستخدمين</span>
-              <span class="stat-card-value" id="statUsersCount">0</span>
+              <h5>المبيعات</h5>
+              <p id="stat-sales">$0.00</p>
             </div>
             <div class="stat-card">
-              <span class="stat-card-title"><i class="fa-solid fa-cart-shopping"></i> إجمالي الطلبات</span>
-              <span class="stat-card-value" id="statOrdersCount">0</span>
+              <h5>عدد الطلبات</h5>
+              <p id="stat-orders-count">0</p>
             </div>
             <div class="stat-card">
-              <span class="stat-card-title"><i class="fa-solid fa-clock"></i> طلبات الشحن المعلقة</span>
-              <span class="stat-card-value" id="statPendingDeposits" style="color: var(--warning);">0</span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-card-title"><i class="fa-solid fa-dollar-sign"></i> إجمالي الأرباح والمبيعات</span>
-              <span class="stat-card-value" id="statTotalRevenue" style="color: var(--success);">$0.00</span>
+              <h5>إجمالي الإيداعات</h5>
+              <p id="stat-total-deposits">$0.00</p>
             </div>
           </div>
         </div>
 
-        <!-- 2. تبويب إدارة المنتجات (Products Tab) -->
-        <div class="admin-tab" id="tab-products">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 style="font-size: 1rem;">قائمة المنتجات والخدمات</h3>
-            <button class="btn btn-primary btn-sm" onclick="openProductModal()">
-              <i class="fa-solid fa-plus"></i> إضافة منتج جديد
-            </button>
+        <!-- 2. قسم المستخدمين -->
+        <div class="admin-section hidden" id="sec-users">
+          <h4>إدارة المستخدمين</h4>
+          <div class="filter-row">
+            <select id="users-filter" onchange="renderAdminUsers()">
+              <option value="all">الكل</option>
+              <option value="has_balance">من لديهم رصيد</option>
+              <option value="no_balance">ليس لديهم رصيد</option>
+            </select>
           </div>
-          <div class="table-container">
-            <table class="custom-table">
+          <div class="users-cards-list" id="admin-users-list">
+            <!-- كروت المستخدمين -->
+          </div>
+        </div>
+
+        <!-- 3. قسم رفع مستوى مستخدم -->
+        <div class="admin-section hidden" id="sec-upgrade-user">
+          <h4>رفع مستوى مستخدم</h4>
+          <div class="form-container-card">
+            <div class="form-group">
+              <label>بحث عن المستخدم (الاسم أو البريد):</label>
+              <input type="text" id="upgrade-search-input" placeholder="اكتب اسم أو بريد المستخدم...">
+            </div>
+            <div class="form-group">
+              <label>اختر المستوى:</label>
+              <select id="upgrade-role-select">
+                <option value="مضيف">مضيف</option>
+                <option value="وكيل">وكيل</option>
+              </select>
+            </div>
+            <button class="btn-submit" onclick="submitUserUpgrade()">رفع المستوى</button>
+          </div>
+        </div>
+
+        <!-- 4. قسم المنتجات -->
+        <div class="admin-section hidden" id="sec-products">
+          <h4>المنتجات الحالية</h4>
+          <div class="table-responsive">
+            <table class="data-table">
               <thead>
                 <tr>
                   <th>الصورة</th>
-                  <th>اسم المنتج</th>
-                  <th>التصنيف</th>
-                  <th>السعر</th>
-                  <th>الكمية المتاحة</th>
-                  <th>الحالة</th>
-                  <th>الإجراءات</th>
+                  <th>الاسم</th>
+                  <th>القسم</th>
+                  <th>السعر $</th>
+                  <th>السعر سوري</th>
+                  <th>التحكم</th>
                 </tr>
               </thead>
-              <tbody id="adminProductsTableBody">
-                <tr>
-                  <td colspan="7" style="text-align: center; color: var(--text-muted);">جاري تحميل المنتجات...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <!-- 3. تبويب إدارة التصنيفات (Categories Tab) -->
-        <div class="admin-tab" id="tab-categories">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 style="font-size: 1rem;">قائمة التصنيفات</h3>
-            <button class="btn btn-primary btn-sm" onclick="openCategoryModal()">
-              <i class="fa-solid fa-plus"></i> إضافة تصنيف جديد
-            </button>
-          </div>
-          <div class="table-container">
-            <table class="custom-table">
-              <thead>
-                <tr>
-                  <th>اسم التصنيف</th>
-                  <th>الأيقونة</th>
-                  <th>عدد المنتجات</th>
-                  <th>الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody id="adminCategoriesTableBody">
-                <tr>
-                  <td colspan="4" style="text-align: center; color: var(--text-muted);">جاري تحميل التصنيفات...</td>
-                </tr>
-              </tbody>
+              <tbody id="admin-products-table"></tbody>
             </table>
           </div>
         </div>
 
-        <!-- 4. تبويب إدارة الطلبات (Orders Tab) -->
-        <div class="admin-tab" id="tab-orders">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 style="font-size: 1rem;">سجل طلبات الشراء</h3>
-            <button class="btn btn-outline btn-sm" onclick="loadAdminOrders()">
-              <i class="fa-solid fa-rotate"></i> تحديث
-            </button>
-          </div>
-          <div class="table-container">
-            <table class="custom-table">
-              <thead>
-                <tr>
-                  <th>رقم الطلب</th>
-                  <th>العميل</th>
-                  <th>المنتج</th>
-                  <th>السعر</th>
-                  <th>التاريخ</th>
-                  <th>الحالة</th>
-                  <th>تفاصيل / تسليم</th>
-                </tr>
-              </thead>
-              <tbody id="adminOrdersTableBody">
-                <tr>
-                  <td colspan="7" style="text-align: center; color: var(--text-muted);">جاري تحميل الطلبات...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <!-- 5. تبويب مراجعة طلبات شحن الرصيد (Deposits Tab) -->
-        <div class="admin-tab" id="tab-deposits">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 style="font-size: 1rem;">طلبات شحن الرصيد المعلقة والمنفذة</h3>
-            <button class="btn btn-outline btn-sm" onclick="loadAdminDeposits()">
-              <i class="fa-solid fa-rotate"></i> تحديث
-            </button>
-          </div>
-          <div class="table-container">
-            <table class="custom-table">
-              <thead>
-                <tr>
-                  <th>المستخدم</th>
-                  <th>المبلغ</th>
-                  <th>طريقة الدفع</th>
-                  <th>رقم التحويل / الإشعار</th>
-                  <th>التاريخ</th>
-                  <th>الحالة</th>
-                  <th>الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody id="adminDepositsTableBody">
-                <tr>
-                  <td colspan="7" style="text-align: center; color: var(--text-muted);">جاري تحميل طلبات الشحن...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- 6. تبويب إدارة وسائل وطرق الدفع (Payment Methods Tab) -->
-        <div class="admin-tab" id="tab-paymentMethods">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 style="font-size: 1rem;">وسائل الدفع المتاحة للعملاء</h3>
-            <button class="btn btn-primary btn-sm" onclick="openPaymentMethodModal()">
-              <i class="fa-solid fa-plus"></i> إضافة وسيلة دفع
-            </button>
-          </div>
-          <div class="table-container">
-            <table class="custom-table">
-              <thead>
-                <tr>
-                  <th>اسم الوسيلة</th>
-                  <th>بيانات التحويل</th>
-                  <th>الحالة</th>
-                  <th>الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody id="adminPaymentMethodsTableBody">
-                <tr>
-                  <td colspan="4" style="text-align: center; color: var(--text-muted);">جاري تحميل وسائل الدفع...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <!-- 7. تبويب إدارة حسابات المستخدمين (Users Tab) -->
-        <div class="admin-tab" id="tab-users">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 style="font-size: 1rem;">قائمة المستخدمين والأرصدة</h3>
-            <button class="btn btn-outline btn-sm" onclick="loadAdminUsers()">
-              <i class="fa-solid fa-rotate"></i> تحديث
-            </button>
-          </div>
-          <div class="table-container">
-            <table class="custom-table">
-              <thead>
-                <tr>
-                  <th>معرف المستخدم</th>
-                  <th>البريد الإلكتروني</th>
-                  <th>الرصيد الحالي</th>
-                  <th>تاريخ الانضمام</th>
-                  <th>تعديل الرصيد</th>
-                </tr>
-              </thead>
-              <tbody id="adminUsersTableBody">
-                <tr>
-                  <td colspan="5" style="text-align: center; color: var(--text-muted);">جاري تحميل المستخدمين...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-      </div><!-- نهاية admin-content -->
-    </section><!-- نهاية admin-container -->
-
-  </main><!-- نهاية main container -->
-  <!-- نافذة تسجيل الدخول وإنشاء حساب (Auth Modal) -->
-  <div class="modal-overlay" id="authModal">
-    <div class="modal-box">
-      <div class="modal-title">
-        <span id="authModalTitle"><i class="fa-solid fa-right-to-bracket"></i> تسجيل الدخول</span>
-        <button class="btn btn-outline btn-sm" onclick="closeModal('authModal')">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-
-      <form id="authForm" onsubmit="handleAuthSubmit(event)">
-        <div class="form-group">
-          <label class="form-label" for="authEmail">البريد الإلكتروني</label>
-          <input type="email" id="authEmail" class="form-control" placeholder="name@example.com" required>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="authPassword">كلمة المرور</label>
-          <input type="password" id="authPassword" class="form-control" placeholder="••••••••" required minlength="6">
-        </div>
-
-        <button type="submit" class="btn btn-primary" id="authSubmitBtn" style="width: 100%; margin-top: 1rem;">
-          تسجيل الدخول
-        </button>
-      </form>
-
-      <div style="text-align: center; margin-top: 1.25rem; font-size: 0.85rem; color: var(--text-muted);">
-        <span id="authToggleText">ليس لديك حساب؟</span>
-        <a href="javascript:void(0)" id="authToggleLink" onclick="toggleAuthMode()" style="color: var(--accent); text-decoration: none; font-weight: 600; margin-right: 0.35rem;">
-          إنشاء حساب جديد
-        </a>
-      </div>
-    </div>
-  </div>
-  <!-- نافذة شحن الرصيد للمستخدم (Deposit Modal) -->
-  <div class="modal-overlay" id="depositModal">
-    <div class="modal-box">
-      <div class="modal-title">
-        <span><i class="fa-solid fa-wallet" style="color: var(--accent);"></i> شحن الرصيد</span>
-        <button class="btn btn-outline btn-sm" onclick="closeModal('depositModal')">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="userDepositMethodSelect">اختر وسيلة الدفع</label>
-        <select id="userDepositMethodSelect" class="form-control" onchange="handlePaymentMethodChange()">
-          <option value="">-- اختر طريقة الدفع المناسبة --</option>
-        </select>
-      </div>
-
-      <!-- تفاصيل وسيلة الدفع ومعلومات التحويل -->
-      <div id="methodPaymentDetailsBox" style="display: none; background: var(--bg-input); padding: 1rem; border-radius: var(--radius); margin-bottom: 1.25rem; font-size: 0.85rem; border: 1px solid var(--border-color);">
-        <div style="margin-bottom: 6px;"><strong style="color: var(--text-muted);">بيانات المستلم:</strong> <span id="methodAccountDisplay" style="color: var(--accent); font-weight: 700;"></span></div>
-        <div style="margin-bottom: 6px;"><strong style="color: var(--text-muted);">التعليمات:</strong> <span id="methodInstructionsDisplay"></span></div>
-        <div id="methodQrContainer" style="text-align: center; margin-top: 10px; display: none;">
-          <img id="methodQrImg" src="" alt="QR Code" style="max-width: 150px; border-radius: 8px; border: 1px solid var(--border-color);">
-        </div>
-      </div>
-
-      <form id="depositForm" onsubmit="handleDepositSubmit(event)">
-        <div class="form-group">
-          <label class="form-label" for="depositAmount">المبلغ المراد شحنه ($)</label>
-          <input type="number" id="depositAmount" class="form-control" placeholder="10.00" step="0.01" min="1" required>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="depositTxId">رقم المعاملة / كود الحوالة أو الرابط</label>
-          <input type="text" id="depositTxId" class="form-control" placeholder="رقم التحويل أو كود العملية" required>
-        </div>
-
-        <button type="submit" class="btn btn-success" id="depositSubmitBtn" style="width: 100%; margin-top: 0.5rem;">
-          <i class="fa-solid fa-paper-plane"></i> إرسال طلب الشحن
-        </button>
-      </form>
-    </div>
-  </div>
-  <!-- نافذة إضافة وتعديل منتج للأدمن (Product Modal) -->
-  <div class="modal-overlay" id="productModal">
-    <div class="modal-box">
-      <div class="modal-title">
-        <span id="productModalTitle"><i class="fa-solid fa-box"></i> إضافة منتج جديد</span>
-        <button class="btn btn-outline btn-sm" onclick="closeModal('productModal')">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-
-      <form id="productForm" onsubmit="handleProductSubmit(event)">
-        <input type="hidden" id="prodFormId">
-
-        <div class="form-group">
-          <label class="form-label" for="prodTitle">اسم المنتج / الخدمة</label>
-          <input type="text" id="prodTitle" class="form-control" placeholder="مثال: اشتراك نتفليكس شهري" required>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="prodCategory">التصنيف</label>
-          <select id="prodCategory" class="form-control" required>
-            <option value="">-- اختر التصنيف --</option>
-          </select>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-          <div class="form-group">
-            <label class="form-label" for="prodPrice">السعر ($)</label>
-            <input type="number" id="prodPrice" class="form-control" placeholder="9.99" step="0.01" min="0" required>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="prodStock">الكمية المتاحة</label>
-            <input type="number" id="prodStock" class="form-control" placeholder="10" min="0" required>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="prodImageUrl">رابط الصورة (URL)</label>
-          <input type="url" id="prodImageUrl" class="form-control" placeholder="https://example.com/image.jpg">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="prodDescription">وصف المنتج</label>
-          <textarea id="prodDescription" class="form-control" rows="3" placeholder="اكتب تفاصيل وميزات الخدمة هنا..."></textarea>
-        </div>
-
-        <button type="submit" class="btn btn-primary" id="prodSaveBtn" style="width: 100%; margin-top: 0.5rem;">
-          <i class="fa-solid fa-floppy-disk"></i> حفظ المنتج
-        </button>
-      </form>
-    </div>
-  </div>
-  <!-- نافذة إضافة تصنيف جديد للأدمن (Category Modal) -->
-  <div class="modal-overlay" id="categoryModal">
-    <div class="modal-box">
-      <div class="modal-title">
-        <span><i class="fa-solid fa-tags"></i> إضافة تصنيف جديد</span>
-        <button class="btn btn-outline btn-sm" onclick="closeModal('categoryModal')">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-
-      <form id="categoryForm" onsubmit="handleCategorySubmit(event)">
-        <div class="form-group">
-          <label class="form-label" for="catNameInput">اسم التصنيف</label>
-          <input type="text" id="catNameInput" class="form-control" placeholder="مثال: حسابات بريميوم" required>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="catIconInput">فئة أيقونة Font Awesome</label>
-          <input type="text" id="catIconInput" class="form-control" placeholder="fa-film" value="fa-tag">
-          <small style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.25rem;">اكتب كود الأيقونة فقط بدون علامات (مثل: fa-gem أو fa-gamepad)</small>
-        </div>
-
-        <button type="submit" class="btn btn-primary" id="catSaveBtn" style="width: 100%; margin-top: 0.5rem;">
-          <i class="fa-solid fa-check"></i> حفظ التصنيف
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- نافذة إضافة وتعديل وسيلة دفع للأدمن (Payment Method Modal) -->
-  <div class="modal-overlay" id="paymentMethodModal">
-    <div class="modal-box">
-      <div class="modal-title">
-        <span id="paymentMethodModalTitle"><i class="fa-solid fa-credit-card"></i> إضافة وسيلة دفع</span>
-        <button class="btn btn-outline btn-sm" onclick="closeModal('paymentMethodModal')">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-
-      <form id="paymentMethodForm" onsubmit="handlePaymentMethodSubmit(event)">
-        <input type="hidden" id="pmFormId">
-
-        <div class="form-group">
-          <label class="form-label" for="pmName">اسم الوسيلة (مثال: USDT TRC20, بايير, آسيا حوالة)</label>
-          <input type="text" id="pmName" class="form-control" placeholder="اسم طريقة الدفع" required>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="pmAccount">رقم المحفظة / رقم الحساب المستلم</label>
-          <input type="text" id="pmAccount" class="form-control" placeholder="العنوان أو الرقم الذي يحول له العميل" required>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="pmInstructions">تعليمات التحويل للعميل</label>
-          <textarea id="pmInstructions" class="form-control" rows="2" placeholder="اكتب ملاحظات للمشتري مثل إرسال الإشعار بعد التحويل..."></textarea>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="pmQrUrl">رابط صورة الباركود QR (اختياري)</label>
-          <input type="url" id="pmQrUrl" class="form-control" placeholder="https://example.com/qr.png">
-        </div>
-
-        <button type="submit" class="btn btn-primary" id="pmSaveBtn" style="width: 100%; margin-top: 0.5rem;">
-          <i class="fa-solid fa-floppy-disk"></i> حفظ وسيلة الدفع
-        </button>
-      </form>
-    </div>
-  </div>
-  <!-- نافذة تفاصيل الطلب وتسليم الخدمة للأدمن (Order Details Modal) -->
-  <div class="modal-overlay" id="orderDetailsModal">
-    <div class="modal-box">
-      <div class="modal-title">
-        <span><i class="fa-solid fa-receipt"></i> تفاصيل وتسليم الطلب</span>
-        <button class="btn btn-outline btn-sm" onclick="closeModal('orderDetailsModal')">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-
-      <div style="background: var(--bg-input); padding: 1rem; border-radius: var(--radius); margin-bottom: 1.25rem; font-size: 0.85rem; border: 1px solid var(--border-color);">
-        <div style="margin-bottom: 6px;"><strong style="color: var(--text-muted);">رقم الطلب:</strong> <span id="modalOrderId" style="color: var(--accent);"></span></div>
-        <div style="margin-bottom: 6px;"><strong style="color: var(--text-muted);">العميل:</strong> <span id="modalOrderUser"></span></div>
-        <div style="margin-bottom: 6px;"><strong style="color: var(--text-muted);">المنتج:</strong> <span id="modalOrderProduct"></span></div>
-        <div style="margin-bottom: 6px;"><strong style="color: var(--text-muted);">السعر:</strong> <span id="modalOrderPrice" style="color: var(--success); font-weight: 700;"></span></div>
-        <div><strong style="color: var(--text-muted);">الحالة الحالية:</strong> <span id="modalOrderStatusBadge"></span></div>
-      </div>
-
-      <form id="orderDeliveryForm" onsubmit="handleOrderDeliverySubmit(event)">
-        <input type="hidden" id="deliveryOrderId">
-
-        <div class="form-group">
-          <label class="form-label" for="deliveryDataInput">بيانات التسليم (أكواد التفعيل، الحساب، الروابط)</label>
-          <textarea id="deliveryDataInput" class="form-control" rows="4" placeholder="اكتب هنا الكود أو بيانات الحساب المسلمة للعميل..."></textarea>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="deliveryStatusSelect">تحديث حالة الطلب</label>
-          <select id="deliveryStatusSelect" class="form-control">
-            <option value="pending">قيد الانتظار (Pending)</option>
-            <option value="completed">مكتمل وتم التسليم (Completed)</option>
-            <option value="cancelled">ملغي وتم إرجاع الرصيد (Cancelled)</option>
-          </select>
-        </div>
-
-        <button type="submit" class="btn btn-primary" id="orderDeliveryBtn" style="width: 100%; margin-top: 0.5rem;">
-          <i class="fa-solid fa-check-double"></i> تحديث وحفظ الطلب
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- نافذة تعديل رصيد المستخدم للأدمن (User Balance Modal) -->
-  <div class="modal-overlay" id="userBalanceModal">
-    <div class="modal-box">
-      <div class="modal-title">
-        <span><i class="fa-solid fa-coins"></i> تعديل رصيد العميل</span>
-        <button class="btn btn-outline btn-sm" onclick="closeModal('userBalanceModal')">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-
-      <div style="background: var(--bg-input); padding: 0.85rem; border-radius: var(--radius); margin-bottom: 1rem; font-size: 0.85rem; border: 1px solid var(--border-color);">
-        <div><strong style="color: var(--text-muted);">المستخدم:</strong> <span id="balanceModalUserEmail" style="color: var(--accent);"></span></div>
-      </div>
-
-      <form id="userBalanceForm" onsubmit="handleUserBalanceSubmit(event)">
-        <input type="hidden" id="balanceModalUserId">
-
-        <div class="form-group">
-          <label class="form-label" for="balanceModalNewAmount">الرصيد الجديد ($)</label>
-          <input type="number" id="balanceModalNewAmount" class="form-control" step="0.01" min="0" required>
-        </div>
-
-        <button type="submit" class="btn btn-success" id="balanceModalSaveBtn" style="width: 100%; margin-top: 0.5rem;">
-          <i class="fa-solid fa-floppy-disk"></i> تحديث الرصيد
-        </button>
-      </form>
-    </div>
-  </div>
-  <!-- حاوية إشعارات التنبيه السريعة (Toast Container) -->
-  <div class="toast-container" id="toastContainer"></div>
-
-  <!-- تضمين مكتبة Supabase JS الرسمية -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <script>
-    // --- 1. إعدادات والاتصال بـ Supabase ---
-    const SUPABASE_URL = 'https://teqekqerigunjyqbdvhx.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_vv2oaACOb8kCfA3pNQcy1w_IoCUiSSA';
-
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    // الحساب المخصص كأدمن رئيسي للنظام
-    const SUPER_ADMIN_EMAIL = 'fhdsd686@gmail.com';
-
-    // متغيرات الحالة العامة للنظام
-    let currentUser = null;
-    let currentProfile = null;
-    let isSignUpMode = false;
-    let activeCategoryFilter = 'all';
-    let cachedProducts = [];
-    let cachedCategories = [];
-    let cachedPaymentMethods = [];
-    // --- 2. دوال المساعدة العامة (Utility Functions) ---
-
-    // دالة إظهار التنبيهات السريعة للمستخدم
-    function showToast(message, type = 'info') {
-      const container = document.getElementById('toastContainer');
-      const toast = document.createElement('div');
-      toast.className = 'toast';
-
-      let iconClass = 'fa-info-circle';
-      let iconColor = 'var(--accent)';
-
-      if (type === 'success') {
-        iconClass = 'fa-circle-check';
-        iconColor = 'var(--success)';
-      } else if (type === 'error') {
-        iconClass = 'fa-circle-exclamation';
-        iconColor = 'var(--danger)';
-      } else if (type === 'warning') {
-        iconClass = 'fa-triangle-exclamation';
-        iconColor = 'var(--warning)';
-      }
-
-      toast.innerHTML = `
-        <i class="fa-solid ${iconClass}" style="color: ${iconColor}; font-size: 1.15rem;"></i>
-        <span>${message}</span>
-      `;
-
-      container.appendChild(toast);
-
-      setTimeout(() => {
-        toast.style.transition = 'all 0.3s ease';
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(15px)';
-        setTimeout(() => toast.remove(), 300);
-      }, 3500);
-    }
-
-    // دوال التحكم بالنوافذ المنبثقة (Modals)
-    function openModal(modalId) {
-      const modal = document.getElementById(modalId);
-      if (modal) modal.classList.add('active');
-    }
-
-    function closeModal(modalId) {
-      const modal = document.getElementById(modalId);
-      if (modal) modal.classList.remove('active');
-    }
-
-    // إغلاق النافذة عند الضغط على الخلفية المعتمة
-    window.addEventListener('click', (e) => {
-      if (e.target.classList.contains('modal-overlay')) {
-        e.target.classList.remove('active');
-      }
-    });
-
-    // دالة تنسيق المبالغ المالية
-    function formatMoney(amount) {
-      const num = parseFloat(amount) || 0;
-      return num.toFixed(2);
-    }
-    // --- 3. إدارة المستخدمين والمصادقة (Authentication) ---
-
-    // التبديل بين واجهة الدخول وواجهة إنشاء الحساب
-    function toggleAuthMode() {
-      isSignUpMode = !isSignUpMode;
-      const title = document.getElementById('authModalTitle');
-      const submitBtn = document.getElementById('authSubmitBtn');
-      const toggleText = document.getElementById('authToggleText');
-      const toggleLink = document.getElementById('authToggleLink');
-
-      if (isSignUpMode) {
-        title.innerHTML = '<i class="fa-solid fa-user-plus"></i> إنشاء حساب جديد';
-        submitBtn.textContent = 'إنشاء حساب';
-        toggleText.textContent = 'لديك حساب بالفعل؟';
-        toggleLink.textContent = 'تسجيل الدخول';
-      } else {
-        title.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> تسجيل الدخول';
-        submitBtn.textContent = 'تسجيل الدخول';
-        toggleText.textContent = 'ليس لديك حساب؟';
-        toggleLink.textContent = 'إنشاء حساب جديد';
-      }
-    }
-
-    // إرسال نموذج المصادقة (دخول أو تسجيل جديد)
-    async function handleAuthSubmit(event) {
-      event.preventDefault();
-      const email = document.getElementById('authEmail').value.trim();
-      const password = document.getElementById('authPassword').value;
-      const submitBtn = document.getElementById('authSubmitBtn');
-
-      if (!email || !password) {
-        showToast('يرجى ملء جميع الحقول', 'warning');
-        return;
-      }
-
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري المعالجة...';
-
-      try {
-        if (isSignUpMode) {
-          const { data, error } = await supabaseClient.auth.signUp({ email, password });
-          if (error) throw error;
-          showToast('تم إنشاء الحساب بنجاح! تم تسجيل دخولك.', 'success');
-        } else {
-          const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-          if (error) throw error;
-          showToast('تم تسجيل الدخول بنجاح.', 'success');
-        }
-        closeModal('authModal');
-        document.getElementById('authForm').reset();
-      } catch (err) {
-        showToast(err.message || 'حدث خطأ أثناء المصادقة', 'error');
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = isSignUpMode ? 'إنشاء حساب' : 'تسجيل الدخول';
-      }
-    }
-
-    // تسجيل الخروج
-    async function handleLogout() {
-      try {
-        const { error } = await supabaseClient.auth.signOut();
-        if (error) throw error;
-        showToast('تم تسجيل الخروج بنجاح.', 'info');
-      } catch (err) {
-        showToast(err.message || 'تعذر تسجيل الخروج', 'error');
-      }
-    }
-    // مراقبة وتحديث حالة تسجيل الدخول وتغييرات الجلسة
-    supabaseClient.auth.onAuthStateChange(async (event, session) => {
-      if (session && session.user) {
-        currentUser = session.user;
-        await fetchUserProfile(currentUser.id, currentUser.email);
-        updateAuthUI(true);
-      } else {
-        currentUser = null;
-        currentProfile = null;
-        updateAuthUI(false);
-      }
-    });
-
-    // جلب ملف المستخدم أو إنشاؤه تلقائياً إذا لم يكن موجوداً
-    async function fetchUserProfile(userId, userEmail) {
-      try {
-        let { data, error } = await supabaseClient
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
-
-        if (error && error.code === 'PGRST116') {
-          // الحساب غير موجود في جدول profiles، يتم إنشاؤه
-          const isSuper = userEmail.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
-          const { data: newProfile, error: insertError } = await supabaseClient
-            .from('profiles')
-            .insert([{ id: userId, email: userEmail, balance: 0.00, is_admin: isSuper }])
-            .select()
-            .single();
-
-          if (insertError) throw insertError;
-          data = newProfile;
-        } else if (error) {
-          throw error;
-        }
-
-        currentProfile = data;
-        updateUserDisplay();
-      } catch (err) {
-        console.error('Error fetching user profile:', err);
-      }
-    }
-
-    // تحديث عناصر واجهة المستخدم حسب حالة الدخول
-    function updateAuthUI(isLoggedIn) {
-      const guestActions = document.getElementById('guestActions');
-      const userActions = document.getElementById('userActions');
-      const adminBtn = document.getElementById('adminPanelBtn');
-
-      if (isLoggedIn) {
-        guestActions.style.display = 'none';
-        userActions.style.display = 'flex';
-      } else {
-        guestActions.style.display = 'flex';
-        userActions.style.display = 'none';
-        adminBtn.style.display = 'none';
-        document.getElementById('adminContainer').style.display = 'none';
-      }
-    }
-
-    // تحديث عرض الرصيد وإظهار زر لوحة الإدارة إذا كان الحساب أدمن
-    function updateUserDisplay() {
-      if (!currentProfile) return;
-
-      const balanceEl = document.getElementById('navUserBalance');
-      if (balanceEl) {
-        balanceEl.textContent = formatMoney(currentProfile.balance);
-      }
-
-      const adminBtn = document.getElementById('adminPanelBtn');
-      const isSuper = currentProfile.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
-      if (currentProfile.is_admin || isSuper) {
-        adminBtn.style.display = 'inline-flex';
-      } else {
-        adminBtn.style.display = 'none';
-      }
-    }
-    // --- 4. إدارة وعرض التصنيفات (Categories Logic) ---
-
-    // جلب التصنيفات من قاعدة البيانات
-    async function loadCategories() {
-      try {
-        const { data, error } = await supabaseClient
-          .from('categories')
-          .select('*')
-          .order('name', { ascending: true });
-
-        if (error) throw error;
-        cachedCategories = data || [];
-        renderCategoryFilterBar();
-        populateCategorySelectDropdown();
-      } catch (err) {
-        console.error('Error loading categories:', err);
-      }
-    }
-
-    // عرض أزرار التصنيفات في شريط الفلترة العلوي
-    function renderCategoryFilterBar() {
-      const container = document.getElementById('categoriesBar');
-      if (!container) return;
-
-      let html = `
-        <button class="category-chip ${activeCategoryFilter === 'all' ? 'active' : ''}" onclick="filterByCategory('all')">
-          <i class="fa-solid fa-border-all"></i> الكل
-        </button>
-      `;
-
-      cachedCategories.forEach(cat => {
-        const isActive = activeCategoryFilter === cat.id ? 'active' : '';
-        const iconClass = cat.icon || 'fa-tag';
-        html += `
-          <button class="category-chip ${isActive}" onclick="filterByCategory('${cat.id}')">
-            <i class="fa-solid ${iconClass}"></i> ${cat.name}
-          </button>
-        `;
-      });
-
-      container.innerHTML = html;
-    }
-
-    // تصفية المنتجات حسب التصنيف المحدد
-    function filterByCategory(categoryId) {
-      activeCategoryFilter = categoryId;
-      renderCategoryFilterBar();
-      renderProductsGrid();
-    }
-
-    // تعبئة قائمة التصنيفات داخل نافذة إضافة/تعديل المنتجات للأدمن
-    function populateCategorySelectDropdown() {
-      const select = document.getElementById('prodCategory');
-      if (!select) return;
-
-      select.innerHTML = '<option value="">-- اختر التصنيف --</option>';
-      cachedCategories.forEach(cat => {
-        const opt = document.createElement('option');
-        opt.value = cat.id;
-        opt.textContent = cat.name;
-        select.appendChild(opt);
-      });
-    }
-    // --- 5. إدارة وعرض المنتجات (Products Logic) ---
-
-    // جلب المنتجات من قاعدة البيانات
-    async function loadProducts() {
-      const loadingEl = document.getElementById('productsLoading');
-      if (loadingEl) loadingEl.style.display = 'block';
-
-      try {
-        const { data, error } = await supabaseClient
-          .from('products')
-          .select('*, categories(name)')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        cachedProducts = data || [];
-        renderProductsGrid();
-      } catch (err) {
-        console.error('Error loading products:', err);
-        showToast('تعذر تحميل قائمة المنتجات', 'error');
-      } finally {
-        if (loadingEl) loadingEl.style.display = 'none';
-      }
-    }
-
-    // عرض بطاقات المنتجات في الواجهة الرئيسية
-    function renderProductsGrid() {
-      const grid = document.getElementById('productsGrid');
-      const emptyMsg = document.getElementById('noProductsMsg');
-      if (!grid) return;
-
-      // تصفية حسب التصنيف النشط
-      let filtered = cachedProducts;
-      if (activeCategoryFilter !== 'all') {
-        filtered = cachedProducts.filter(p => p.category_id === activeCategoryFilter);
-      }
-
-      if (filtered.length === 0) {
-        grid.innerHTML = '';
-        if (emptyMsg) emptyMsg.style.display = 'block';
-        return;
-      }
-
-      if (emptyMsg) emptyMsg.style.display = 'none';
-
-      grid.innerHTML = filtered.map(product => {
-        const categoryName = product.categories ? product.categories.name : 'عام';
-        const isOutOfStock = product.stock <= 0;
-        const defaultImage = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=60';
-        const imageUrl = product.image_url || defaultImage;
-
-        return `
-          <div class="product-card">
-            <div class="product-img-wrapper">
-              <img src="${imageUrl}" alt="${product.title}" class="product-img" onerror="this.src='${defaultImage}'">
-              <span class="product-badge">${categoryName}</span>
+        <!-- 5. قسم إضافة منتج -->
+        <div class="admin-section hidden" id="sec-add-product">
+          <h4>إضافة منتج جديد</h4>
+          <form id="add-product-form" onsubmit="handleAddProduct(event)">
+            <div class="form-group">
+              <label>اختر القسم:</label>
+              <select id="prod-category-select" required></select>
             </div>
-            <div class="product-info">
-              <h3 class="product-title">${product.title}</h3>
-              <p class="product-desc">${product.description || 'لا يوجد وصف متاح لهذا المنتج.'}</p>
-              <div class="product-meta">
-                <div>
-                  <span class="product-price">$${formatMoney(product.price)}</span>
-                  <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">
-                    المتوفر: <strong>${product.stock}</strong>
-                  </div>
-                </div>
-                <button 
-                  class="btn ${isOutOfStock ? 'btn-outline' : 'btn-primary'} btn-sm" 
-                  ${isOutOfStock ? 'disabled' : ''} 
-                  onclick="handleBuyProduct('${product.id}')">
-                  <i class="fa-solid ${isOutOfStock ? 'fa-ban' : 'fa-cart-plus'}"></i>
-                  <span>${isOutOfStock ? 'نفد' : 'شراء'}</span>
-                </button>
+            <div class="form-group">
+              <label>اسم المنتج:</label>
+              <input type="text" id="prod-name" required placeholder="اسم الخدمة أو المنتج">
+            </div>
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>السعر بالدولار ($):</label>
+                <input type="number" step="0.01" id="prod-price-usd" required placeholder="0.00">
+              </div>
+              <div class="form-group">
+                <label>السعر بالسوري (ل.س):</label>
+                <input type="number" id="prod-price-syp" required placeholder="0">
               </div>
             </div>
+            <div class="form-group">
+              <label>وصف المنتج (اختياري):</label>
+              <textarea id="prod-desc" rows="3" placeholder="اكتب وصفاً للمنتج بـ $ وسوري"></textarea>
+            </div>
+            <div class="form-group">
+              <label>رابط صورة المنتج:</label>
+              <input type="url" id="prod-image" required placeholder="https://example.com/image.png">
+            </div>
+            <button type="submit" class="btn-submit">إضافة المنتج</button>
+          </form>
+        </div>
+
+        <!-- 6. قسم الأقسام الحالية -->
+        <div class="admin-section hidden" id="sec-categories">
+          <h4>الأقسام الحالية</h4>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>الصورة</th>
+                  <th>اسم القسم</th>
+                  <th>النوع</th>
+                  <th>التحكم</th>
+                </tr>
+              </thead>
+              <tbody id="admin-categories-table"></tbody>
+            </table>
           </div>
-        `;
-      }).join('');
-    }
-    // --- 6. منطق الشراء وإنشاء الطلبات (Purchase Logic) ---
-
-    // تنفيذ عملية شراء المنتج
-    async function handleBuyProduct(productId) {
-      if (!currentUser) {
-        showToast('يرجى تسجيل الدخول أولاً لإتمام عملية الشراء', 'warning');
-        openModal('authModal');
-        return;
-      }
-
-      const product = cachedProducts.find(p => p.id === productId);
-      if (!product) {
-        showToast('المنتج غير موجود', 'error');
-        return;
-      }
-
-      if (product.stock <= 0) {
-        showToast('عذراً، نفدت الكمية المتاحة من هذا المنتج', 'error');
-        return;
-      }
-
-      const currentBalance = parseFloat(currentProfile?.balance || 0);
-      const productPrice = parseFloat(product.price);
-
-      if (currentBalance < productPrice) {
-        showToast('رصيدك غير كافٍ لإتمام عملية الشراء. يرجى شحن الرصيد أولاً.', 'warning');
-        openModal('depositModal');
-        return;
-      }
-
-      const confirmBuy = confirm(`هل أنت متأكد من شراء "${product.title}" بقيمة $${formatMoney(productPrice)}؟`);
-      if (!confirmBuy) return;
-
-      try {
-        const newBalance = currentBalance - productPrice;
-
-        // 1. تحديث رصيد المستخدم
-        const { error: balanceError } = await supabaseClient
-          .from('profiles')
-          .update({ balance: newBalance })
-          .eq('id', currentUser.id);
-
-        if (balanceError) throw balanceError;
-
-        // 2. تحديث كمية المنتج المتاحة
-        const { error: stockError } = await supabaseClient
-          .from('products')
-          .update({ stock: product.stock - 1 })
-          .eq('id', product.id);
-
-        if (stockError) throw stockError;
-
-        // 3. إنشاء سجل الطلب الجديد
-        const { error: orderError } = await supabaseClient
-          .from('orders')
-          .insert([{
-            user_id: currentUser.id,
-            product_id: product.id,
-            price: productPrice,
-            status: 'pending',
-            delivery_data: ''
-          }]);
-
-        if (orderError) throw orderError;
-
-        // تحديث المتغيرات محلياً
-        currentProfile.balance = newBalance;
-        product.stock -= 1;
-
-        updateUserDisplay();
-        renderProductsGrid();
-
-        showToast('تمت عملية الشراء بنجاح! سيتم تسليم الخدمة قريباً.', 'success');
-      } catch (err) {
-        console.error('Error processing purchase:', err);
-        showToast('حدث خطأ أثناء معالجة الطلب، يرجى المحاولة لاحقاً', 'error');
-      }
-    }
-    // --- 7. منطق شحن الرصيد وطرق الدفع (Deposits Logic) ---
-
-    // جلب وسائل الدفع المتاحة
-    async function loadPaymentMethods() {
-      try {
-        const { data, error } = await supabaseClient
-          .from('payment_methods')
-          .select('*')
-          .order('name', { ascending: true });
-
-        if (error) throw error;
-        cachedPaymentMethods = data || [];
-        populatePaymentMethodSelect();
-      } catch (err) {
-        console.error('Error loading payment methods:', err);
-      }
-    }
-
-    // تعبئة خيارات الدفع داخل نافذة شحن الرصيد
-    function populatePaymentMethodSelect() {
-      const select = document.getElementById('userDepositMethodSelect');
-      if (!select) return;
-
-      select.innerHTML = '<option value="">-- اختر طريقة الدفع المناسبة --</option>';
-      cachedPaymentMethods.forEach(pm => {
-        const opt = document.createElement('option');
-        opt.value = pm.id;
-        opt.textContent = pm.name;
-        select.appendChild(opt);
-      });
-    }
-
-    // عرض تفاصيل وسيلة الدفع عند اختيارها
-    function handlePaymentMethodChange() {
-      const select = document.getElementById('userDepositMethodSelect');
-      const detailsBox = document.getElementById('methodPaymentDetailsBox');
-      const accountDisplay = document.getElementById('methodAccountDisplay');
-      const instructionsDisplay = document.getElementById('methodInstructionsDisplay');
-      const qrContainer = document.getElementById('methodQrContainer');
-      const qrImg = document.getElementById('methodQrImg');
-
-      const selectedMethod = cachedPaymentMethods.find(m => m.id === select.value);
-
-      if (selectedMethod) {
-        accountDisplay.textContent = selectedMethod.account_info || 'غير متوفر';
-        instructionsDisplay.textContent = selectedMethod.instructions || 'يرجى إرسال المبلغ ثم إدخال رقم المعاملة.';
-        
-        if (selectedMethod.qr_url) {
-          qrImg.src = selectedMethod.qr_url;
-          qrContainer.style.display = 'block';
-        } else {
-          qrContainer.style.display = 'none';
-        }
-
-        detailsBox.style.display = 'block';
-      } else {
-        detailsBox.style.display = 'none';
-      }
-    }
-
-    // إرسال طلب الشحن من المستخدم
-    async function handleDepositSubmit(event) {
-      event.preventDefault();
-
-      if (!currentUser) {
-        showToast('يرجى تسجيل الدخول أولاً', 'warning');
-        return;
-      }
-
-      const methodId = document.getElementById('userDepositMethodSelect').value;
-      const amount = parseFloat(document.getElementById('depositAmount').value);
-      const txId = document.getElementById('depositTxId').value.trim();
-      const submitBtn = document.getElementById('depositSubmitBtn');
-
-      if (!methodId) {
-        showToast('يرجى اختيار وسيلة الدفع', 'warning');
-        return;
-      }
-
-      if (!amount || amount <= 0 || !txId) {
-        showToast('يرجى التأكد من صحة البيانات المدخلة', 'warning');
-        return;
-      }
-
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري إرسال الطلب...';
-
-      try {
-        const { error } = await supabaseClient
-          .from('deposits')
-          .insert([{
-            user_id: currentUser.id,
-            payment_method_id: methodId,
-            amount: amount,
-            transaction_id: txId,
-            status: 'pending'
-          }]);
-
-        if (error) throw error;
-
-        showToast('تم إرسال طلب الشحن بنجاح! ستتم مراجعته وإضافة الرصيد قريباً.', 'success');
-        closeModal('depositModal');
-        document.getElementById('depositForm').reset();
-        document.getElementById('methodPaymentDetailsBox').style.display = 'none';
-      } catch (err) {
-        console.error('Error submitting deposit:', err);
-        showToast('تعذر إرسال طلب الشحن، يرجى المحاولة لاحقاً', 'error');
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> إرسال طلب الشحن';
-      }
-    }
-    // --- 8. منطق لوحة تحكم الأدمن (Admin Dashboard Logic) ---
-
-    // التبديل بين عرض المتجر ولوحة الإدارة
-    function toggleAdminView() {
-      const adminContainer = document.getElementById('adminContainer');
-      const isHidden = adminContainer.style.display === 'none' || !adminContainer.style.display;
-
-      if (isHidden) {
-        adminContainer.style.display = 'block';
-        adminContainer.scrollIntoView({ behavior: 'smooth' });
-        loadAdminStats();
-      } else {
-        adminContainer.style.display = 'none';
-      }
-    }
-
-    // التنقل بين تبويبات لوحة التحكم
-    function switchAdminTab(tabKey, btnElement) {
-      document.querySelectorAll('.admin-nav-btn').forEach(btn => btn.classList.remove('active'));
-      document.querySelectorAll('.admin-tab').forEach(tab => tab.classList.remove('active'));
-
-      if (btnElement) btnElement.classList.add('active');
-      const activeTab = document.getElementById(`tab-${tabKey}`);
-      if (activeTab) activeTab.classList.add('active');
-
-      if (tabKey === 'stats') loadAdminStats();
-      if (tabKey === 'products') loadAdminProducts();
-      if (tabKey === 'categories') loadAdminCategories();
-      if (tabKey === 'orders') loadAdminOrders();
-      if (tabKey === 'deposits') loadAdminDeposits();
-      if (tabKey === 'paymentMethods') loadAdminPaymentMethods();
-      if (tabKey === 'users') loadAdminUsers();
-    }
-
-    // تحميل وتحديث بطاقات الإحصائيات
-    async function loadAdminStats() {
-      try {
-        const { count: usersCount } = await supabaseClient
-          .from('profiles')
-          .select('*', { count: 'exact', head: true });
-
-        const { data: orders, count: ordersCount } = await supabaseClient
-          .from('orders')
-          .select('price');
-
-        const { count: pendingCount } = await supabaseClient
-          .from('deposits')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'pending');
-
-        const totalRevenue = (orders || []).reduce((sum, ord) => sum + (parseFloat(ord.price) || 0), 0);
-
-        document.getElementById('statUsersCount').textContent = usersCount || 0;
-        document.getElementById('statOrdersCount').textContent = ordersCount || 0;
-        document.getElementById('statPendingDeposits').textContent = pendingCount || 0;
-        document.getElementById('statTotalRevenue').textContent = `$${formatMoney(totalRevenue)}`;
-      } catch (err) {
-        console.error('Error loading stats:', err);
-      }
-    }
-    // --- 9. إدارة المنتجات في لوحة التحكم (Admin Products Management) ---
-
-    // تحميل وعرض المنتجات في جدول لوحة التحكم
-    async function loadAdminProducts() {
-      const tbody = document.getElementById('adminProductsTableBody');
-      if (!tbody) return;
-
-      try {
-        const { data, error } = await supabaseClient
-          .from('products')
-          .select('*, categories(name)')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        cachedProducts = data || [];
-
-        if (cachedProducts.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">لا توجد منتجات مسجلة حالياً.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = cachedProducts.map(prod => {
-          const catName = prod.categories ? prod.categories.name : 'غير محدد';
-          const defaultImg = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=60';
-          const isAvailable = prod.stock > 0;
-
-          return `
-            <tr>
-              <td>
-                <img src="${prod.image_url || defaultImg}" alt="${prod.title}" style="width: 40px; height: 40px; border-radius: 6px; object-fit: cover;" onerror="this.src='${defaultImg}'">
-              </td>
-              <td><strong>${prod.title}</strong></td>
-              <td><span class="badge-status" style="background: rgba(99, 102, 241, 0.1); color: var(--primary);">${catName}</span></td>
-              <td>$${formatMoney(prod.price)}</td>
-              <td>${prod.stock}</td>
-              <td>
-                <span class="badge-status ${isAvailable ? 'badge-completed' : 'badge-rejected'}">
-                  ${isAvailable ? 'متوفر' : 'نفد'}
-                </span>
-              </td>
-              <td>
-                <button class="btn btn-outline btn-sm" onclick="editProduct('${prod.id}')" title="تعديل">
-                  <i class="fa-solid fa-pen-to-square"></i>
-                </button>
-                <button class="btn btn-danger btn-sm" onclick="deleteProduct('${prod.id}')" title="حذف">
-                  <i class="fa-solid fa-trash-can"></i>
-                </button>
-              </td>
-            </tr>
-          `;
-        }).join('');
-      } catch (err) {
-        console.error('Error loading admin products:', err);
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger);">فشل تحميل المنتجات.</td></tr>';
-      }
-    }
-
-    // فتح نافذة المنتج (إضافة أو تجهيزها للتعديل)
-    function openProductModal() {
-      document.getElementById('productForm').reset();
-      document.getElementById('prodFormId').value = '';
-      document.getElementById('productModalTitle').innerHTML = '<i class="fa-solid fa-box"></i> إضافة منتج جديد';
-      populateCategorySelectDropdown();
-      openModal('productModal');
-    }
-
-    // تجهيز بيانات منتج موجود للتعديل
-    function editProduct(productId) {
-      const prod = cachedProducts.find(p => p.id === productId);
-      if (!prod) return;
-
-      document.getElementById('prodFormId').value = prod.id;
-      document.getElementById('prodTitle').value = prod.title;
-      document.getElementById('prodCategory').value = prod.category_id || '';
-      document.getElementById('prodPrice').value = prod.price;
-      document.getElementById('prodStock').value = prod.stock;
-      document.getElementById('prodImageUrl').value = prod.image_url || '';
-      document.getElementById('prodDescription').value = prod.description || '';
-
-      document.getElementById('productModalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> تعديل منتج';
-      openModal('productModal');
-    }
-
-    // حفظ المنتج (إضافة جديد أو تعديل الحالي)
-    async function handleProductSubmit(event) {
-      event.preventDefault();
-      const formId = document.getElementById('prodFormId').value;
-      const title = document.getElementById('prodTitle').value.trim();
-      const category_id = document.getElementById('prodCategory').value;
-      const price = parseFloat(document.getElementById('prodPrice').value);
-      const stock = parseInt(document.getElementById('prodStock').value, 10);
-      const image_url = document.getElementById('prodImageUrl').value.trim();
-      const description = document.getElementById('prodDescription').value.trim();
-      const btn = document.getElementById('prodSaveBtn');
-
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ...';
-
-      const payload = { title, category_id, price, stock, image_url, description };
-
-      try {
-        if (formId) {
-          const { error } = await supabaseClient.from('products').update(payload).eq('id', formId);
-          if (error) throw error;
-          showToast('تم تحديث بيانات المنتج بنجاح', 'success');
-        } else {
-          const { error } = await supabaseClient.from('products').insert([payload]);
-          if (error) throw error;
-          showToast('تم إضافة المنتج بنجاح', 'success');
-        }
-
-        closeModal('productModal');
-        await loadAdminProducts();
-        await loadProducts();
-      } catch (err) {
-        console.error('Error saving product:', err);
-        showToast('تعذر حفظ بيانات المنتج', 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> حفظ المنتج';
-      }
-    }
-
-    // حذف منتج
-    async function deleteProduct(productId) {
-      if (!confirm('هل أنت متأكد من رغبتك في حذف هذا المنتج نهائياً؟')) return;
-
-      try {
-        const { error } = await supabaseClient.from('products').delete().eq('id', productId);
-        if (error) throw error;
-        showToast('تم حذف المنتج بنجاح', 'info');
-        await loadAdminProducts();
-        await loadProducts();
-      } catch (err) {
-        console.error('Error deleting product:', err);
-        showToast('تعذر حذف المنتج، قد يكون مرتبطاً بطلبات سابقة', 'error');
-      }
-    }
-    // --- 10. إدارة التصنيفات في لوحة التحكم (Admin Categories Management) ---
-
-    // تحميل وعرض التصنيفات في جدول لوحة الأدمن
-    async function loadAdminCategories() {
-      const tbody = document.getElementById('adminCategoriesTableBody');
-      if (!tbody) return;
-
-      try {
-        const { data: categories, error } = await supabaseClient
-          .from('categories')
-          .select('*, products(id)')
-          .order('name', { ascending: true });
-
-        if (error) throw error;
-
-        if (!categories || categories.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">لا توجد تصنيفات حالياً.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = categories.map(cat => {
-          const productCount = cat.products ? cat.products.length : 0;
-          const iconClass = cat.icon || 'fa-tag';
-
-          return `
-            <tr>
-              <td><strong>${cat.name}</strong></td>
-              <td><i class="fa-solid ${iconClass}" style="color: var(--accent);"></i> <span style="font-size: 0.8rem; color: var(--text-muted);">${iconClass}</span></td>
-              <td>${productCount} منتج</td>
-              <td>
-                <button class="btn btn-danger btn-sm" onclick="deleteCategory('${cat.id}')" title="حذف">
-                  <i class="fa-solid fa-trash-can"></i>
-                </button>
-              </td>
-            </tr>
-          `;
-        }).join('');
-      } catch (err) {
-        console.error('Error loading admin categories:', err);
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--danger);">تعذر تحميل التصنيفات.</td></tr>';
-      }
-    }
-
-    // فتح نافذة إضافة تصنيف جديد
-    function openCategoryModal() {
-      document.getElementById('categoryForm').reset();
-      openModal('categoryModal');
-    }
-
-    // حفظ التصنيف الجديد
-    async function handleCategorySubmit(event) {
-      event.preventDefault();
-      const name = document.getElementById('catNameInput').value.trim();
-      const icon = document.getElementById('catIconInput').value.trim() || 'fa-tag';
-      const btn = document.getElementById('catSaveBtn');
-
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ...';
-
-      try {
-        const { error } = await supabaseClient
-          .from('categories')
-          .insert([{ name, icon }]);
-
-        if (error) throw error;
-
-        showToast('تمت إضافة التصنيف بنجاح', 'success');
-        closeModal('categoryModal');
-        await loadCategories();
-        await loadAdminCategories();
-      } catch (err) {
-        console.error('Error saving category:', err);
-        showToast('تعذر حفظ التصنيف', 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-check"></i> حفظ التصنيف';
-      }
-    }
-
-    // حذف تصنيف
-    async function deleteCategory(categoryId) {
-      if (!confirm('هل أنت متأكد من حذف هذا التصنيف؟')) return;
-
-      try {
-        const { error } = await supabaseClient
-          .from('categories')
-          .delete()
-          .eq('id', categoryId);
-
-        if (error) throw error;
-
-        showToast('تم حذف التصنيف بنجاح', 'info');
-        await loadCategories();
-        await loadAdminCategories();
-      } catch (err) {
-        console.error('Error deleting category:', err);
-        showToast('تعذر حذف التصنيف، تأكد من عدم ارتباطه بمنتجات قائمة', 'error');
-      }
-    }
-    // --- 11. إدارة الطلبات في لوحة التحكم (Admin Orders Management) ---
-
-    let cachedAdminOrders = [];
-
-    // جلب وعرض قائمة الطلبات في جدول الإدارة
-    async function loadAdminOrders() {
-      const tbody = document.getElementById('adminOrdersTableBody');
-      if (!tbody) return;
-
-      try {
-        const { data: orders, error } = await supabaseClient
-          .from('orders')
-          .select('*, profiles(email), products(title)')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        cachedAdminOrders = orders || [];
-
-        if (cachedAdminOrders.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">لا توجد طلبات مسجلة حتى الآن.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = cachedAdminOrders.map(order => {
-          const userEmail = order.profiles ? order.profiles.email : 'مستخدم محذوف';
-          const productTitle = order.products ? order.products.title : 'منتج غير محدد';
-          const dateStr = new Date(order.created_at).toLocaleDateString('ar-EG');
-
-          let statusBadge = '<span class="badge-status badge-pending">قيد الانتظار</span>';
-          if (order.status === 'completed') {
-            statusBadge = '<span class="badge-status badge-completed">مكتمل</span>';
-          } else if (order.status === 'cancelled') {
-            statusBadge = '<span class="badge-status badge-rejected">ملغي</span>';
-          }
-
-          return `
-            <tr>
-              <td><code style="font-size: 0.75rem;">${order.id.slice(0, 8)}...</code></td>
-              <td>${userEmail}</td>
-              <td><strong>${productTitle}</strong></td>
-              <td>$${formatMoney(order.price)}</td>
-              <td>${dateStr}</td>
-              <td>${statusBadge}</td>
-              <td>
-                <button class="btn btn-outline btn-sm" onclick="openOrderDeliveryModal('${order.id}')">
-                  <i class="fa-solid fa-truck-ramp-box"></i> إدارة
-                </button>
-              </td>
-            </tr>
-          `;
-        }).join('');
-      } catch (err) {
-        console.error('Error loading admin orders:', err);
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger);">فشل تحميل الطلبات.</td></tr>';
-      }
-    }
-
-    // فتح نافذة تفاصيل الطلب وتسليم البيانات للعميل
-    function openOrderDeliveryModal(orderId) {
-      const order = cachedAdminOrders.find(o => o.id === orderId);
-      if (!order) return;
-
-      document.getElementById('deliveryOrderId').value = order.id;
-      document.getElementById('modalOrderId').textContent = order.id;
-      document.getElementById('modalOrderUser').textContent = order.profiles?.email || 'غير معروف';
-      document.getElementById('modalOrderProduct').textContent = order.products?.title || 'غير محدد';
-      document.getElementById('modalOrderPrice').textContent = `$${formatMoney(order.price)}`;
-      document.getElementById('modalOrderStatusBadge').textContent = order.status;
-      document.getElementById('deliveryDataInput').value = order.delivery_data || '';
-      document.getElementById('deliveryStatusSelect').value = order.status;
-
-      openModal('orderDetailsModal');
-    }
-
-    // حفظ تحديث حالة الطلب وبيانات التسليم
-    async function handleOrderDeliverySubmit(event) {
-      event.preventDefault();
-      const orderId = document.getElementById('deliveryOrderId').value;
-      const deliveryData = document.getElementById('deliveryDataInput').value.trim();
-      const status = document.getElementById('deliveryStatusSelect').value;
-      const btn = document.getElementById('orderDeliveryBtn');
-
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري التحديث...';
-
-      try {
-        const { error } = await supabaseClient
-          .from('orders')
-          .update({ delivery_data: deliveryData, status: status })
-          .eq('id', orderId);
-
-        if (error) throw error;
-
-        showToast('تم تحديث حالة الطلب وبيانات التسليم بنجاح', 'success');
-        closeModal('orderDetailsModal');
-        await loadAdminOrders();
-      } catch (err) {
-        console.error('Error updating order:', err);
-        showToast('تعذر تحديث الطلب', 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-check-double"></i> تحديث وحفظ الطلب';
-      }
-    }
-    // --- 12. إدارة طلبات شحن الرصيد في لوحة التحكم (Admin Deposits Management) ---
-
-    // جلب وعرض طلبات شحن الرصيد في جدول الإدارة
-    async function loadAdminDeposits() {
-      const tbody = document.getElementById('adminDepositsTableBody');
-      if (!tbody) return;
-
-      try {
-        const { data: deposits, error } = await supabaseClient
-          .from('deposits')
-          .select('*, profiles(email, balance), payment_methods(name)')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        if (!deposits || deposits.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">لا توجد طلبات شحن مسجلة.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = deposits.map(dep => {
-          const userEmail = dep.profiles ? dep.profiles.email : 'مستخدم محذوف';
-          const methodName = dep.payment_methods ? dep.payment_methods.name : 'طريقة محذوفة';
-          const dateStr = new Date(dep.created_at).toLocaleDateString('ar-EG');
-          const isPending = dep.status === 'pending';
-
-          let statusBadge = '<span class="badge-status badge-pending">قيد المراجعة</span>';
-          if (dep.status === 'approved') {
-            statusBadge = '<span class="badge-status badge-completed">مقبول ومضاف</span>';
-          } else if (dep.status === 'rejected') {
-            statusBadge = '<span class="badge-status badge-rejected">مرفوض</span>';
-          }
-
-          let actionButtons = '-';
-          if (isPending) {
-            actionButtons = `
-              <button class="btn btn-success btn-sm" onclick="approveDeposit('${dep.id}', '${dep.user_id}', ${dep.amount}, ${dep.profiles?.balance || 0})" title="قبول وشحن الرصيد">
-                <i class="fa-solid fa-check"></i> قبول
-              </button>
-              <button class="btn btn-danger btn-sm" onclick="rejectDeposit('${dep.id}')" title="رفض الطلب">
-                <i class="fa-solid fa-xmark"></i> رفض
-              </button>
-            `;
-          }
-
-          return `
-            <tr>
-              <td>${userEmail}</td>
-              <td><strong style="color: var(--success);">$${formatMoney(dep.amount)}</strong></td>
-              <td>${methodName}</td>
-              <td><code style="font-size: 0.8rem; background: var(--bg-input); padding: 2px 6px; border-radius: 4px;">${dep.transaction_id}</code></td>
-              <td>${dateStr}</td>
-              <td>${statusBadge}</td>
-              <td>${actionButtons}</td>
-            </tr>
-          `;
-        }).join('');
-      } catch (err) {
-        console.error('Error loading admin deposits:', err);
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--danger);">فشل تحميل طلبات الشحن.</td></tr>';
-      }
-    }
-
-    // قبول طلب الشحن وتحديث رصيد العميل مباشرة
-    async function approveDeposit(depositId, userId, amount, currentBal) {
-      if (!confirm(`هل أنت متأكد من قبول شحن مبلغ $${formatMoney(amount)} لهذا المستخدم؟`)) return;
-
-      try {
-        const newBalance = parseFloat(currentBal) + parseFloat(amount);
-
-        // 1. تحديث رصيد المستخدم
-        const { error: userError } = await supabaseClient
-          .from('profiles')
-          .update({ balance: newBalance })
-          .eq('id', userId);
-
-        if (userError) throw userError;
-
-        // 2. تحديث حالة طلب الشحن إلى معتمد
-        const { error: depError } = await supabaseClient
-          .from('deposits')
-          .update({ status: 'approved' })
-          .eq('id', depositId);
-
-        if (depError) throw depError;
-
-        showToast('تم قبول الطلب وإضافة الرصيد لحساب المستخدم بنجاح', 'success');
-        await loadAdminDeposits();
-        await loadAdminStats();
-      } catch (err) {
-        console.error('Error approving deposit:', err);
-        showToast('تعذر قبول طلب الشحن', 'error');
-      }
-    }
-
-    // رفض طلب الشحن
-    async function rejectDeposit(depositId) {
-      if (!confirm('هل أنت متأكد من رفض هذا الطلب؟')) return;
-
-      try {
-        const { error } = await supabaseClient
-          .from('deposits')
-          .update({ status: 'rejected' })
-          .eq('id', depositId);
-
-        if (error) throw error;
-
-        showToast('تم رفض طلب الشحن بنجاح', 'info');
-        await loadAdminDeposits();
-        await loadAdminStats();
-      } catch (err) {
-        console.error('Error rejecting deposit:', err);
-        showToast('تعذر رفض الطلب', 'error');
-      }
-    }
-    // --- 13. إدارة وسائل الدفع في لوحة التحكم (Admin Payment Methods Management) ---
-
-    // جلب وعرض وسائل الدفع في جدول لوحة الأدمن
-    async function loadAdminPaymentMethods() {
-      const tbody = document.getElementById('adminPaymentMethodsTableBody');
-      if (!tbody) return;
-
-      try {
-        const { data: methods, error } = await supabaseClient
-          .from('payment_methods')
-          .select('*')
-          .order('name', { ascending: true });
-
-        if (error) throw error;
-        cachedPaymentMethods = methods || [];
-
-        if (cachedPaymentMethods.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">لا توجد وسائل دفع مضافة.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = cachedPaymentMethods.map(pm => {
-          const qrBadge = pm.qr_url 
-            ? '<span class="badge-status badge-completed">مرفق</span>' 
-            : '<span class="badge-status" style="background: rgba(148, 163, 184, 0.1); color: var(--text-muted);">لا يوجد</span>';
-
-          return `
-            <tr>
-              <td><strong>${pm.name}</strong></td>
-              <td><code style="font-size: 0.8rem; background: var(--bg-input); padding: 2px 6px; border-radius: 4px;">${pm.account_info}</code></td>
-              <td><small style="color: var(--text-muted);">${pm.instructions || '-'}</small></td>
-              <td>${qrBadge}</td>
-              <td>
-                <button class="btn btn-outline btn-sm" onclick="editPaymentMethod('${pm.id}')" title="تعديل">
-                  <i class="fa-solid fa-pen-to-square"></i>
-                </button>
-                <button class="btn btn-danger btn-sm" onclick="deletePaymentMethod('${pm.id}')" title="حذف">
-                  <i class="fa-solid fa-trash-can"></i>
-                </button>
-              </td>
-            </tr>
-          `;
-        }).join('');
-      } catch (err) {
-        console.error('Error loading admin payment methods:', err);
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--danger);">فشل تحميل وسائل الدفع.</td></tr>';
-      }
-    }
-
-    // فتح نافذة وسيلة الدفع لإضافة طريقة جديدة
-    function openPaymentMethodModal() {
-      document.getElementById('paymentMethodForm').reset();
-      document.getElementById('pmFormId').value = '';
-      document.getElementById('paymentMethodModalTitle').innerHTML = '<i class="fa-solid fa-credit-card"></i> إضافة وسيلة دفع';
-      openModal('paymentMethodModal');
-    }
-
-    // تجهيز بيانات وسيلة دفع قائمة للتعديل
-    function editPaymentMethod(methodId) {
-      const pm = cachedPaymentMethods.find(m => m.id === methodId);
-      if (!pm) return;
-
-      document.getElementById('pmFormId').value = pm.id;
-      document.getElementById('pmName').value = pm.name;
-      document.getElementById('pmAccount').value = pm.account_info;
-      document.getElementById('pmInstructions').value = pm.instructions || '';
-      document.getElementById('pmQrUrl').value = pm.qr_url || '';
-
-      document.getElementById('paymentMethodModalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> تعديل وسيلة الدفع';
-      openModal('paymentMethodModal');
-    }
-
-    // حفظ وسيلة الدفع (إضافة أو تعديل)
-    async function handlePaymentMethodSubmit(event) {
-      event.preventDefault();
-      const formId = document.getElementById('pmFormId').value;
-      const name = document.getElementById('pmName').value.trim();
-      const account_info = document.getElementById('pmAccount').value.trim();
-      const instructions = document.getElementById('pmInstructions').value.trim();
-      const qr_url = document.getElementById('pmQrUrl').value.trim();
-      const btn = document.getElementById('pmSaveBtn');
-
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ...';
-
-      const payload = { name, account_info, instructions, qr_url };
-
-      try {
-        if (formId) {
-          const { error } = await supabaseClient.from('payment_methods').update(payload).eq('id', formId);
-          if (error) throw error;
-          showToast('تم تحديث وسيلة الدفع بنجاح', 'success');
-        } else {
-          const { error } = await supabaseClient.from('payment_methods').insert([payload]);
-          if (error) throw error;
-          showToast('تمت إضافة وسيلة الدفع بنجاح', 'success');
-        }
-
-        closeModal('paymentMethodModal');
-        await loadPaymentMethods();
-        await loadAdminPaymentMethods();
-      } catch (err) {
-        console.error('Error saving payment method:', err);
-        showToast('تعذر حفظ وسيلة الدفع', 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> حفظ وسيلة الدفع';
-      }
-    }
-
-    // حذف وسيلة دفع
-    async function deletePaymentMethod(methodId) {
-      if (!confirm('هل أنت متأكد من رغبتك في حذف وسيلة الدفع هذه؟')) return;
-
-      try {
-        const { error } = await supabaseClient
-          .from('payment_methods')
-          .delete()
-          .eq('id', methodId);
-
-        if (error) throw error;
-
-        showToast('تم حذف وسيلة الدفع بنجاح', 'info');
-        await loadPaymentMethods();
-        await loadAdminPaymentMethods();
-      } catch (err) {
-        console.error('Error deleting payment method:', err);
-        showToast('تعذر حذف وسيلة الدفع', 'error');
-      }
-    }
-    // --- 14. إدارة المستخدمين والأرصدة في لوحة التحكم (Admin Users Management) ---
-
-    let cachedAdminUsers = [];
-
-    // جلب وعرض قائمة المستخدمين في جدول لوحة الأدمن
-    async function loadAdminUsers() {
-      const tbody = document.getElementById('adminUsersTableBody');
-      if (!tbody) return;
-
-      try {
-        const { data: users, error } = await supabaseClient
-          .from('profiles')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        cachedAdminUsers = users || [];
-
-        if (cachedAdminUsers.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">لا يوجد مستخدمون مسجلون.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = cachedAdminUsers.map(u => {
-          const dateStr = u.created_at ? new Date(u.created_at).toLocaleDateString('ar-EG') : '-';
-          const isAdminBadge = u.is_admin ? '<span class="badge-status badge-completed" style="margin-right: 5px;">أدمن</span>' : '';
-
-          return `
-            <tr>
-              <td><code style="font-size: 0.75rem;">${u.id.slice(0, 8)}...</code></td>
-              <td>${u.email} ${isAdminBadge}</td>
-              <td><strong style="color: var(--success);">$${formatMoney(u.balance)}</strong></td>
-              <td>${dateStr}</td>
-              <td>
-                <button class="btn btn-outline btn-sm" onclick="openUserBalanceModal('${u.id}')" title="تعديل الرصيد">
-                  <i class="fa-solid fa-coins"></i> تعديل الرصيد
-                </button>
-              </td>
-            </tr>
-          `;
-        }).join('');
-      } catch (err) {
-        console.error('Error loading admin users:', err);
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--danger);">فشل تحميل قائمة المستخدمين.</td></tr>';
-      }
-    }
-
-    // فتح نافذة تعديل رصيد المستخدم
-    function openUserBalanceModal(userId) {
-      const user = cachedAdminUsers.find(u => u.id === userId);
-      if (!user) return;
-
-      document.getElementById('balanceModalUserId').value = user.id;
-      document.getElementById('balanceModalUserEmail').textContent = user.email;
-      document.getElementById('balanceModalNewAmount').value = parseFloat(user.balance || 0).toFixed(2);
-
-      openModal('userBalanceModal');
-    }
-
-    // حفظ الرصيد الجديد للمستخدم
-    async function handleUserBalanceSubmit(event) {
-      event.preventDefault();
-      const userId = document.getElementById('balanceModalUserId').value;
-      const newBalance = parseFloat(document.getElementById('balanceModalNewAmount').value);
-      const btn = document.getElementById('balanceModalSaveBtn');
-
-      if (isNaN(newBalance) || newBalance < 0) {
-        showToast('يرجى إدخال مبلغ صحيح', 'warning');
-        return;
-      }
-
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري التحديث...';
-
-      try {
-        const { error } = await supabaseClient
-          .from('profiles')
-          .update({ balance: newBalance })
-          .eq('id', userId);
-
-        if (error) throw error;
-
-        // إذا تم تعديل رصيد الحساب المسجل به حالياً
-        if (currentUser && currentUser.id === userId && currentProfile) {
-          currentProfile.balance = newBalance;
-          updateUserDisplay();
-        }
-
-        showToast('تم تحديث رصيد المستخدم بنجاح', 'success');
-        closeModal('userBalanceModal');
-        await loadAdminUsers();
-      } catch (err) {
-        console.error('Error updating user balance:', err);
-        showToast('تعذر تحديث رصيد المستخدم', 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> تحديث الرصيد';
-      }
-    }
-    // --- 15. التهيئة الأولية للتطبيق (App Initialization) ---
-
-    // دالة بدء تشغيل النظام وتحميل البيانات الأساسية
-    async function initApp() {
-      try {
-        // التحقق من الجلسة الحالية للمستخدم إن وجدت
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        if (session && session.user) {
-          currentUser = session.user;
-          await fetchUserProfile(currentUser.id, currentUser.email);
-          updateAuthUI(true);
-        } else {
-          updateAuthUI(false);
-        }
-
-        // تحميل التصنيفات وطرق الدفع والمنتجات للمتجر
-        await Promise.all([
-          loadCategories(),
-          loadPaymentMethods(),
-          loadProducts()
-        ]);
-      } catch (err) {
-        console.error('Initialization error:', err);
-        showToast('حدث خطأ أثناء تحميل بعض البيانات الأساسية', 'error');
-      }
-    }
-
-    // تشغيل التهيئة فور اكتمال تحميل عناصر الصفحة
-    document.addEventListener('DOMContentLoaded', () => {
-      initApp();
-    });
-  </script>
+        </div>
+
+        <!-- 7. قسم إضافة قسم -->
+        <div class="admin-section hidden" id="sec-add-category">
+          <h4>إضافة قسم جديد</h4>
+          <form id="add-category-form" onsubmit="handleAddCategory(event)">
+            <div class="form-group">
+              <label>اسم القسم:</label>
+              <input type="text" id="cat-name" required placeholder="مثال: قسم الألعاب">
+            </div>
+            <div class="form-group">
+              <label>قسم رئيسي أم فرعي؟</label>
+              <select id="cat-parent-select">
+                <option value="main">قسم رئيسي</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>وصف القسم (اختياري):</label>
+              <textarea id="cat-desc" rows="2" placeholder="وصف توضيحي للقسم"></textarea>
+            </div>
+            <div class="form-group">
+              <label>رابط صورة القسم:</label>
+              <input type="url" id="cat-image" required placeholder="https://example.com/cat.png">
+            </div>
+            <button type="submit" class="btn-submit">إضافة قسم</button>
+          </form>
+        </div>
+
+        <!-- 8. قسم طلبات الإيداع -->
+        <div class="admin-section hidden" id="sec-deposit-requests">
+          <h4>طلبات الإيداع</h4>
+          <div class="filter-row">
+            <select id="deposit-status-filter" onchange="renderDepositRequests()">
+              <option value="all">الكل</option>
+              <option value="pending">الانتظار</option>
+              <option value="accepted">مقبول</option>
+              <option value="rejected">مرفوض</option>
+            </select>
+          </div>
+          <div class="deposit-requests-list" id="deposit-requests-container"></div>
+        </div>
+
+        <!-- 9. قسم طرق الإيداع -->
+        <div class="admin-section hidden" id="sec-deposit-methods">
+          <h4>طرق الإيداع الحالية</h4>
+          <div class="deposit-methods-grid" id="admin-methods-container"></div>
+        </div>
+
+        <!-- 10. قسم إضافة طريقة إيداع -->
+        <div class="admin-section hidden" id="sec-add-deposit-method">
+          <h4>إضافة طريقة إيداع جديدة (7 خانات)</h4>
+          <form id="add-method-form" onsubmit="handleAddDepositMethod(event)">
+            <div class="form-group">
+              <label>1. اسم طريقة الإيداع:</label>
+              <input type="text" id="method-name" required placeholder="مثال: شام كاش سوري / شام كاش دولار">
+            </div>
+            <div class="form-group">
+              <label>2. عنوان المحفظة أو رقم الحساب:</label>
+              <input type="text" id="method-account" required placeholder="رقم الحساب أو عنوان المحفظة">
+            </div>
+            <div class="form-group">
+              <label>3. اسم العملة:</label>
+              <input type="text" id="method-currency" required placeholder="مثال: USDT / SYP / USD">
+            </div>
+            <div class="form-group">
+              <label>4. سعر الصرف مقابل الدولار:</label>
+              <input type="number" step="0.0001" id="method-rate" required placeholder="مثال: 1 لـ USDT أو 15000 لـ SYP">
+            </div>
+            <div class="form-group">
+              <label>5. تعليمات الإيداع:</label>
+              <textarea id="method-instructions" rows="3" placeholder="اشرح للعميل خطوات التحويل"></textarea>
+            </div>
+            <div class="form-group">
+              <label>6. رابط صورة باركود QR المحفظة:</label>
+              <input type="url" id="method-qr" placeholder="https://example.com/qr.png">
+            </div>
+            <div class="form-group">
+              <label>7. رابط صورة طريقة الإيداع (شعار الأيقونة):</label>
+              <input type="url" id="method-icon" required placeholder="https://example.com/shamcash.png">
+            </div>
+            <button type="submit" class="btn-submit">إضافة طريقة الإيداع</button>
+          </form>
+        </div>
+
+        <!-- 11. إعدادات الموقع وتغيير الاسم والصورة والإعلانات -->
+        <div class="admin-section hidden" id="sec-site-settings">
+          <h4>إعدادات الموقع وتخصيص المظهر</h4>
+          <div class="form-container-card">
+            <div class="form-group">
+              <label>اسم الموقع:</label>
+              <input type="text" id="setting-site-name" value="Mohannad kard">
+            </div>
+            <div class="form-group">
+              <label>رابط صورة/شعار الموقع:</label>
+              <input type="url" id="setting-site-logo" placeholder="رابط صورة الشعار">
+            </div>
+            <button class="btn-primary-sm" onclick="saveSiteBranding()">حفظ معلومات الموقع</button>
+            <hr>
+            <h5>نشر إعلان داخل الموقع</h5>
+            <div class="form-group">
+              <label>نص الإعلان:</label>
+              <input type="text" id="setting-ad-text" placeholder="اكتب نص الإعلان الترويجي...">
+            </div>
+            <div class="form-group">
+              <label>تفعيل شريط الإعلان:</label>
+              <input type="checkbox" id="setting-ad-active"> إظهار الإعلان بالأعلى
+            </div>
+            <button class="btn-submit" onclick="saveAnnouncement()">نشر الإعلان</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- شريط الملاحة السفلي للجوال (مثل الفيديو) -->
+  <nav class="bottom-mobile-nav">
+    <button class="nav-item active" onclick="showStore()"><i class="fa-solid fa-house"></i><span>الرئيسية</span></button>
+    <button class="nav-item" onclick="openDepositModal()"><i class="fa-solid fa-wallet"></i><span>شحن</span></button>
+    <button class="nav-item" onclick="toggleSidebar()"><i class="fa-solid fa-user"></i><span>حسابي</span></button>
+  </nav>
+
+  <!-- ملفات الجافاسكريبت مقسمة بالترتيب الصحيح لمنع أي أخطاء تداخل -->
+  <script src="data.js"></script>
+  <script src="auth.js"></script>
+  <script src="store.js"></script>
+  <script src="admin.js"></script>
 </body>
 </html>
