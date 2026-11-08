@@ -1,4 +1,6 @@
-// --- منطق المتجر وعرض المنتجات وتحديث هوية المستخدم والموقع ---
+// --- منطق المتجر وعرض المنتجات وتحديث هوية المستخدم وسلايدر الإعلانات ---
+
+let bannerInterval = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   loadSiteSettings();
@@ -6,11 +8,17 @@ document.addEventListener("DOMContentLoaded", () => {
   updateUserUI();
 });
 
-// تحميل هوية واسم ولوجو الموقع
+// تحميل هوية واسم ولوجو وإعلانات الموقع
 function loadSiteSettings() {
+  const defaultBanners = [
+    "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80"
+  ];
+
   const settings = getDB("site_settings", {
     name: "Mohannad kard",
-    logo: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80"
+    logo: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80",
+    banners: defaultBanners
   });
 
   const logoEl = document.getElementById("site-logo");
@@ -18,9 +26,47 @@ function loadSiteSettings() {
 
   if (logoEl && settings.logo) logoEl.src = settings.logo;
   if (titleEl && settings.name) titleEl.innerText = settings.name;
+
+  // تشغيل سلايدر الإعلانات المتعددة
+  initBannerSlider(settings.banners || defaultBanners);
 }
 
-// تغيير الصورة الشخصية للمستخدم مباشرة
+// سلايدر الإعلانات التلقائي
+function initBannerSlider(banners) {
+  const bannerCard = document.querySelector(".banner-card");
+  if (!bannerCard || !banners || banners.length === 0) return;
+
+  let currentIndex = 0;
+  const imgEl = bannerCard.querySelector("img");
+  const dotsContainer = bannerCard.querySelector(".banner-dots");
+
+  if (dotsContainer) {
+    dotsContainer.innerHTML = banners.map((_, i) => 
+      `<span class="b-dot ${i === 0 ? 'active' : ''}"></span>`
+    ).join("");
+  }
+
+  function showSlide(index) {
+    currentIndex = index;
+    if (imgEl) imgEl.src = banners[currentIndex];
+    const dots = bannerCard.querySelectorAll(".b-dot");
+    dots.forEach((dot, i) => {
+      dot.classList.toggle("active", i === currentIndex);
+    });
+  }
+
+  showSlide(0);
+
+  if (bannerInterval) clearInterval(bannerInterval);
+  if (banners.length > 1) {
+    bannerInterval = setInterval(() => {
+      currentIndex = (currentIndex + 1) % banners.length;
+      showSlide(currentIndex);
+    }, 3500); // الانتقال كل 3.5 ثانية
+  }
+}
+
+// تغيير الصورة الشخصية للمستخدم بالنقر المباشر
 function promptChangeUserAvatar() {
   const newUrl = prompt("ضع رابط صورتك الشخصية الجديدة (من Postimages أو أي رابط مباشر):");
   if (!newUrl || !newUrl.trim()) return;
