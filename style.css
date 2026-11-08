@@ -1,376 +1,710 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Mohannad kard</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
+:root {
+  --bg-main: #060b17;
+  --bg-card: #0c1527;
+  --bg-drawer: #ffffff;
+  --primary-blue: #0284c7;
+  --accent-cyan: #00d2ff;
+  --accent-neon: #38bdf8;
+  --text-main: #f8fafc;
+  --text-drawer: #1e293b;
+  --text-muted: #94a3b8;
+  --border-glass: rgba(56, 189, 248, 0.2);
+  --danger: #ef4444;
+  --success: #10b981;
+}
 
-  <!-- الهيدر العلوي بنمط Shawy Card -->
-  <header class="main-header">
-    <div class="header-right">
-      <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80" id="site-logo" class="site-logo-img" alt="Logo">
-      <span class="site-title-text" id="site-title">Mohannad kard</span>
-    </div>
-    
-    <div class="header-left">
-      <span class="vip-badge-tag" id="header-user-rank">VIP 4</span>
-      <div class="balance-pill" onclick="openDepositModal()">
-        <i class="fa-solid fa-circle-plus"></i>
-        <span id="header-balance-usd">1415.613 $</span>
-      </div>
-      <button class="header-menu-btn" onclick="toggleSidebar()">
-        <i class="fa-solid fa-bars"></i>
-      </button>
-    </div>
-  </header>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Cairo", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
 
-  <!-- الحاوية الرئيسية للمتجر -->
-  <main class="store-container">
-    
-    <!-- البانر الترويجي ثلاثي الأبعاد -->
-    <div class="banner-card">
-      <img src="https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80" alt="Banner">
-      <div class="banner-dots">
-        <span class="b-dot active"></span>
-        <span class="b-dot"></span>
-        <span class="b-dot"></span>
-      </div>
-    </div>
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  direction: rtl;
+  min-height: 100vh;
+  padding-bottom: 85px;
+  overflow-x: hidden;
+}
 
-    <!-- شريط البحث البيضاوي المخصص -->
-    <div class="search-pill-box">
-      <i class="fa-solid fa-magnifying-glass"></i>
-      <input type="text" id="category-search" placeholder="ابحث عن قسم..." oninput="filterCategories()">
-    </div>
+.hidden {
+  display: none !important;
+}
 
-    <!-- شبكة الأقسام بنمط 3 أعمدة (Shawy Style) -->
-    <div class="categories-app-grid" id="categories-container">
-      <!-- يتم توليد الأقسام تلقائياً عبر store.js -->
-    </div>
+.main-header {
+  background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
 
-    <!-- عرض المنتجات عند اختيار قسم -->
-    <div id="products-view" class="hidden">
-      <div class="section-top">
-        <button class="btn-back-pill" onclick="backToCategories()">
-          <i class="fa-solid fa-arrow-right"></i> رجوع للأقسام
-        </button>
-        <h3 id="current-category-title" style="font-size: 1rem;">المنتجات</h3>
-      </div>
-      <div class="products-compact-grid" id="products-container"></div>
-    </div>
+.header-right, .header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
-  </main>
+.site-logo-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid #fff;
+}
 
-  <!-- خلفية معتمة للقائمة الجانبية -->
-  <div id="drawer-backdrop" class="drawer-backdrop hidden" onclick="toggleSidebar()"></div>
+.site-title-text {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: #fff;
+}
 
-  <!-- القائمة الجانبية المنبثقة (Drawer) بنمط تطبيق شحن الهواتف -->
-  <aside class="shawy-side-drawer" id="sidebar-drawer">
-    <button class="drawer-close-btn" onclick="toggleSidebar()">
-      <i class="fa-solid fa-xmark"></i>
-    </button>
+.vip-badge-tag {
+  background: linear-gradient(135deg, #0284c7, #00f2fe);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
 
-    <div class="drawer-user-header">
-      <div class="drawer-avatar-wrap">
-        <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80" id="drawer-avatar" alt="User Avatar">
-        <span class="drawer-rank-tag" id="side-user-rank">الأسطورة</span>
-      </div>
-      <div class="drawer-name-title">
-        <span id="side-user-name">Mohannad</span> 🇸🇾
-      </div>
-      <div class="drawer-balance-val" id="drawer-balance-text">1415.613 $</div>
+.balance-pill {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 20px;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
 
-      <div class="drawer-action-icons">
-        <button class="drawer-icon-btn" onclick="openDepositModal()" title="إيداع"><i class="fa-solid fa-dollar-sign"></i></button>
-        <button class="drawer-icon-btn" onclick="openAuthModal()" title="حسابي"><i class="fa-regular fa-user"></i></button>
-        <button class="drawer-icon-btn" onclick="logoutUser()" title="خروج"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
-      </div>
-    </div>
+.header-menu-btn {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
 
-    <div class="drawer-links-menu">
-      <div class="drawer-nav-row" onclick="showStore()">
-        <div class="drawer-nav-left"><i class="fa-solid fa-house c-green"></i> <span>الرئيسية</span></div>
-      </div>
-      <div class="drawer-nav-row hidden" id="admin-panel-link" onclick="openAdminPanel()">
-        <div class="drawer-nav-left"><i class="fa-solid fa-gear c-orange"></i> <span>لوحة التحكم</span></div>
-      </div>
-      <div class="drawer-nav-row">
-        <div class="drawer-nav-left"><i class="fa-solid fa-crown c-gold"></i> <span>المستويات</span></div>
-      </div>
-      <div class="drawer-nav-row">
-        <div class="drawer-nav-left"><i class="fa-solid fa-shield-halved c-gold"></i> <span>الحماية</span></div>
-      </div>
-      <div class="drawer-nav-row">
-        <div class="drawer-nav-left"><i class="fa-solid fa-mobile-screen c-blue"></i> <span>الجلسات</span></div>
-      </div>
-      <div class="drawer-nav-row">
-        <div class="drawer-nav-left"><i class="fa-regular fa-heart c-red"></i> <span>مفضلتي</span></div>
-      </div>
-      <div class="drawer-nav-row">
-        <div class="drawer-nav-left"><i class="fa-regular fa-bell c-gold"></i> <span>الإشعارات</span></div>
-      </div>
-      <div class="drawer-nav-row">
-        <div class="drawer-nav-left"><i class="fa-solid fa-circle-check c-blue"></i> <span>توثيق الهوية</span></div>
-      </div>
-      <div class="drawer-nav-row" onclick="openDepositModal()">
-        <div class="drawer-nav-left"><i class="fa-solid fa-circle-plus c-green"></i> <span>إضافة رصيد</span></div>
-      </div>
-      <div class="drawer-nav-row">
-        <div class="drawer-nav-left"><i class="fa-solid fa-table-cells-large c-purple"></i> <span>محفظتي</span></div>
-      </div>
-      <div class="drawer-nav-row">
-        <div class="drawer-nav-left"><i class="fa-solid fa-clipboard-list c-blue"></i> <span>طلباتي</span></div>
-      </div>
-      <div class="drawer-nav-row">
-        <div class="drawer-nav-left"><i class="fa-solid fa-wallet c-green"></i> <span>دفعاتي</span></div>
-      </div>
-      <div class="drawer-nav-row">
-        <div class="drawer-nav-left"><i class="fa-solid fa-link c-purple"></i> <span>API</span></div>
-      </div>
-      <div class="drawer-nav-row">
-        <div class="drawer-nav-left"><i class="fa-solid fa-users c-orange"></i> <span>وكلاؤنا</span></div>
-      </div>
-      <div class="drawer-nav-row">
-        <div class="drawer-nav-left"><i class="fa-solid fa-circle-info c-muted"></i> <span>من نحن؟</span></div>
-      </div>
+.store-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 14px;
+}
 
-      <div class="drawer-theme-toggle">
-        <span style="font-size: 0.85rem; font-weight: bold;">الوضع المظلم</span>
-        <i class="fa-solid fa-moon" id="theme-icon" onclick="toggleTheme()" style="font-size: 1.2rem; cursor: pointer;"></i>
-      </div>
+.banner-card {
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 6px 20px rgba(0, 162, 255, 0.25);
+  margin-bottom: 16px;
+  border: 1.5px solid rgba(56, 189, 248, 0.3);
+}
 
-      <div class="drawer-socials">
-        <a href="#" class="social-circle-btn btn-facebook"><i class="fa-brands fa-facebook-f"></i></a>
-        <a href="#" class="social-circle-btn btn-telegram"><i class="fa-brands fa-telegram"></i></a>
-        <a href="#" class="social-circle-btn btn-whatsapp"><i class="fa-brands fa-whatsapp"></i></a>
-      </div>
-    </div>
-  </aside>
+.banner-card img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  display: block;
+}
 
-  <!-- الشريط السفلي العائم (Floating Bottom Navigation) -->
-  <nav class="bottom-floating-bar">
-    <button class="bottom-tab-btn" onclick="openDepositModal()">
-      <i class="fa-solid fa-circle-arrow-up"></i>
-      <span>إيداع</span>
-    </button>
-    <button class="bottom-tab-btn" onclick="openDepositModal()">
-      <i class="fa-solid fa-wallet"></i>
-      <span>المحفظة</span>
-    </button>
-    <button class="bottom-tab-btn home-center" onclick="showStore()">
-      <div class="home-circle-icon">
-        <i class="fa-solid fa-house"></i>
-      </div>
-    </button>
-    <button class="bottom-tab-btn">
-      <i class="fa-solid fa-cart-shopping"></i>
-      <span>الطلبات</span>
-    </button>
-    <button class="bottom-tab-btn">
-      <i class="fa-regular fa-bell"></i>
-      <span>الإشعارات</span>
-    </button>
-  </nav>
+.banner-dots {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+}
 
-  <!-- مودال تسجيل الدخول والحساب -->
-  <div id="auth-modal" class="modal-overlay hidden">
-    <div class="modal-card">
-      <button class="modal-close" onclick="closeAuthModal()">✕</button>
-      <h3 id="auth-title">تسجيل الدخول</h3>
-      <form onsubmit="handleAuthSubmit(event)">
-        <div class="form-group" id="group-name" style="display: none;">
-          <label>اسم المستخدم</label>
-          <input type="text" id="auth-username" placeholder="اسمك">
-        </div>
-        <div class="form-group">
-          <label>اسم المستخدم أو البريد الإلكتروني</label>
-          <input type="text" id="auth-identifier" required placeholder="fhdsd686@gmail.com">
-        </div>
-        <div class="form-group">
-          <label>كلمة المرور</label>
-          <input type="password" id="auth-password" required placeholder="••••••••">
-        </div>
-        <button type="submit" class="btn-submit" id="auth-submit-btn">دخول</button>
-      </form>
-      <div style="margin-top:12px; text-align:center; font-size:0.8rem;">
-        <span id="auth-switch-text">ليس لديك حساب؟</span>
-        <button type="button" style="background:none; border:none; color:#38bdf8; cursor:pointer;" id="auth-toggle-mode" onclick="toggleAuthMode()">إنشاء حساب جديد</button>
-      </div>
-    </div>
-  </div>
+.b-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+}
 
-  <!-- لوحة الإدارة المتكاملة (الأقسام الـ 10) -->
-  <div id="admin-wrapper" class="admin-wrapper hidden">
-    <div class="admin-header">
-      <h3 style="font-size: 1rem;"><i class="fa-solid fa-shield"></i> لوحة إدارة النظام - Mohannad kard</h3>
-      <button class="btn-back-pill" style="background:#ef4444; border:none; color:#fff;" onclick="closeAdminPanel()">
-        ✕ خروج من الإدارة
-      </button>
-    </div>
+.b-dot.active {
+  background: #fff;
+  width: 18px;
+  border-radius: 10px;
+}
 
-    <div class="admin-layout">
-      <!-- شريط الأقسام الأفقي -->
-      <nav class="admin-sidebar">
-        <button class="admin-nav-item active" onclick="switchAdminSection('stats')"><i class="fa-solid fa-chart-line"></i> الإحصائيات</button>
-        <button class="admin-nav-item" onclick="switchAdminSection('users')"><i class="fa-solid fa-users"></i> المستخدمين</button>
-        <button class="admin-nav-item" onclick="switchAdminSection('upgrade-user')"><i class="fa-solid fa-user-shield"></i> رفع مستوى مستخدم</button>
-        <button class="admin-nav-item" onclick="switchAdminSection('products')"><i class="fa-solid fa-boxes-stacked"></i> المنتجات</button>
-        <button class="admin-nav-item" onclick="switchAdminSection('add-product')"><i class="fa-solid fa-square-plus"></i> إضافة منتج</button>
-        <button class="admin-nav-item" onclick="switchAdminSection('categories')"><i class="fa-solid fa-layer-group"></i> الأقسام الحالية</button>
-        <button class="admin-nav-item" onclick="switchAdminSection('add-category')"><i class="fa-solid fa-folder-plus"></i> إضافة قسم</button>
-        <button class="admin-nav-item" onclick="switchAdminSection('deposit-requests')"><i class="fa-solid fa-money-bill-transfer"></i> طلبات الإيداع</button>
-        <button class="admin-nav-item" onclick="switchAdminSection('deposit-methods')"><i class="fa-solid fa-credit-card"></i> طرق الإيداع</button>
-        <button class="admin-nav-item" onclick="switchAdminSection('add-deposit-method')"><i class="fa-solid fa-plus-circle"></i> إضافة طريقة إيداع</button>
-      </nav>
+.search-pill-box {
+  position: relative;
+  margin-bottom: 20px;
+}
 
-      <div class="admin-content-area">
-        <!-- 1. الإحصائيات -->
-        <section id="sec-stats">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h4>الإحصائيات العامة</h4>
-            <div>
-              <label style="font-size:0.8rem;">تحديد التاريخ: </label>
-              <input type="date" id="stats-date-filter" onchange="updateStats()" style="background:#1e293b; color:#fff; border:1px solid #334155; padding:4px 8px; border-radius:6px;">
-            </div>
-          </div>
-          <div class="stats-grid">
-            <div class="stat-card"><span>المبيعات</span><p id="stat-sales">$0.00</p></div>
-            <div class="stat-card"><span>عدد الطلبات</span><p id="stat-orders-count">0</p></div>
-            <div class="stat-card"><span>إجمالي الإيداعات</span><p id="stat-total-deposits">$0.00</p></div>
-          </div>
-        </section>
+.search-pill-box input {
+  width: 100%;
+  background: #ffffff;
+  color: #111827;
+  border: 1.5px solid #0284c7;
+  border-radius: 30px;
+  padding: 12px 42px 12px 16px;
+  font-size: 0.9rem;
+  outline: none;
+}
 
-        <!-- 2. المستخدمين -->
-        <section id="sec-users" class="hidden">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <h4>قائمة المستخدمين</h4>
-            <select id="users-filter" onchange="renderAdminUsers()" style="background:#1e293b; color:#fff; padding:6px; border-radius:8px;">
-              <option value="all">الكل</option>
-              <option value="has_balance">من لديه رصيد</option>
-              <option value="no_balance">من ليس لديه رصيد</option>
-            </select>
-          </div>
-          <div id="admin-users-list"></div>
-        </section>
+.search-pill-box i {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  font-size: 1.1rem;
+}
 
-        <!-- 3. ترقية مستخدم -->
-        <section id="sec-upgrade-user" class="hidden">
-          <h4>رفع مستوى مستخدم</h4>
-          <div style="margin-top:12px; background:#0c1527; padding:16px; border-radius:12px; border:1px solid var(--border-glass);">
-            <div class="form-group">
-              <label>البحث بالاسم أو البريد الإلكتروني:</label>
-              <input type="text" id="upgrade-search-input" placeholder="اكتب اسم أو بريد المستخدم">
-            </div>
-            <div class="form-group">
-              <label>المستوى الجديد:</label>
-              <select id="upgrade-role-select">
-                <option value="VIP 1">VIP 1</option>
-                <option value="VIP 2">VIP 2</option>
-                <option value="VIP 3">VIP 3</option>
-                <option value="VIP 4">VIP 4</option>
-                <option value="الأسطورة">الأسطورة</option>
-                <option value="وكيل معتمد">وكيل معتمد</option>
-                <option value="مضيف">مضيف</option>
-              </select>
-            </div>
-            <button class="btn-submit" onclick="submitUserUpgrade()">تأكيد الترقية</button>
-          </div>
-        </section>
+.categories-app-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px 10px;
+}
 
-        <!-- 4. المنتجات -->
-        <section id="sec-products" class="hidden">
-          <h4>المنتجات الحالية</h4>
-          <table class="data-table">
-            <thead><tr><th>صورة</th><th>الاسم</th><th>القسم</th><th>$</th><th>ل.س</th><th>إجراء</th></tr></thead>
-            <tbody id="admin-products-table"></tbody>
-          </table>
-        </section>
+.cat-app-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
 
-        <!-- 5. إضافة منتج -->
-        <section id="sec-add-product" class="hidden">
-          <h4>إضافة منتج جديد</h4>
-          <form id="add-product-form" onsubmit="handleAddProduct(event)" style="margin-top:12px;">
-            <div class="form-group"><label>اختر القسم:</label><select id="prod-category-select"></select></div>
-            <div class="form-group"><label>اسم المنتج:</label><input type="text" id="prod-name" required></div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-              <div class="form-group"><label>السعر ($):</label><input type="number" step="0.01" id="prod-price-usd" required></div>
-              <div class="form-group"><label>السعر (ل.س):</label><input type="number" id="prod-price-syp" required></div>
-            </div>
-            <div class="form-group"><label>الوصف:</label><textarea id="prod-desc"></textarea></div>
-            <div class="form-group"><label>رابط الصورة:</label><input type="url" id="prod-image" required></div>
-            <button type="submit" class="btn-submit">حفظ وإضافة المنتج</button>
-          </form>
-        </section>
+.cat-app-avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 20px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, #101c38 0%, #050a14 100%);
+  border: 1.5px solid #00d2ff;
+  box-shadow: 0 0 16px rgba(0, 210, 255, 0.35);
+  overflow: hidden;
+}
 
-        <!-- 6. الأقسام الحالية -->
-        <section id="sec-categories" class="hidden">
-          <h4>الأقسام الحالية</h4>
-          <table class="data-table">
-            <thead><tr><th>صورة</th><th>اسم القسم</th><th>النوع</th><th>إجراء</th></tr></thead>
-            <tbody id="admin-categories-table"></tbody>
-          </table>
-        </section>
+.cat-app-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
-        <!-- 7. إضافة قسم -->
-        <section id="sec-add-category" class="hidden">
-          <h4>إضافة قسم جديد</h4>
-          <form id="add-category-form" onsubmit="handleAddCategory(event)" style="margin-top:12px;">
-            <div class="form-group"><label>اسم القسم:</label><input type="text" id="cat-name" required></div>
-            <div class="form-group"><label>قسم رئيسي أم فرعي؟</label><select id="cat-parent-select"></select></div>
-            <div class="form-group"><label>وصف القسم:</label><input type="text" id="cat-desc"></div>
-            <div class="form-group"><label>رابط صورة القسم:</label><input type="url" id="cat-image" required></div>
-            <button type="submit" class="btn-submit">إضافة قسم</button>
-          </form>
-        </section>
+.cat-app-label {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 95px;
+}
 
-        <!-- 8. طلبات الإيداع -->
-        <section id="sec-deposit-requests" class="hidden">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <h4>طلبات الإيداع</h4>
-            <select id="deposit-status-filter" onchange="renderDepositRequests()" style="background:#1e293b; color:#fff; padding:6px; border-radius:8px;">
-              <option value="all">الكل</option>
-              <option value="pending">قيد الانتظار</option>
-              <option value="accepted">المقبولة</option>
-              <option value="rejected">المرفوضة</option>
-            </select>
-          </div>
-          <div id="deposit-requests-container"></div>
-        </section>
+.section-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
 
-        <!-- 9. طرق الإيداع -->
-        <section id="sec-deposit-methods" class="hidden">
-          <h4>طرق الإيداع المفعلة</h4>
-          <div id="admin-methods-container" style="display:grid; grid-template-columns:1fr; gap:10px; margin-top:12px;"></div>
-        </section>
+.btn-back-pill {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  color: var(--text-main);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
 
-        <!-- 10. إضافة طريقة إيداع -->
-        <section id="sec-add-deposit-method" class="hidden">
-          <h4>إضافة طريقة إيداع (7 خانات)</h4>
-          <form id="add-method-form" onsubmit="handleAddDepositMethod(event)" style="margin-top:12px;">
-            <div class="form-group"><label>اسم الطريقة:</label><input type="text" id="method-name" required placeholder="مثال: شام كاش"></div>
-            <div class="form-group"><label>رقم الحساب / العنوان:</label><input type="text" id="method-account" required></div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-              <div class="form-group"><label>العملة:</label><input type="text" id="method-currency" required placeholder="USD أو SYP"></div>
-              <div class="form-group"><label>سعر الصرف للدولار:</label><input type="number" step="any" id="method-rate" required placeholder="1"></div>
-            </div>
-            <div class="form-group"><label>تعليمات التحويل:</label><textarea id="method-instructions"></textarea></div>
-            <div class="form-group"><label>رابط صورة QR كود:</label><input type="url" id="method-qr"></div>
-            <div class="form-group"><label>رابط أيقونة الطريقة:</label><input type="url" id="method-icon"></div>
-            <button type="submit" class="btn-submit">حفظ طريقة الإيداع</button>
-          </form>
-        </section>
-      </div>
-    </div>
-  </div>
+.products-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
 
-  <!-- ملفات الجافاسكريبت -->
-  <script src="data.js"></script>
-  <script src="auth.js"></script>
-  <script src="store.js"></script>
-  <script src="admin.js"></script>
-</body>
-</html>
+.prod-item-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: 14px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.prod-item-card img {
+  width: 100%;
+  height: 100px;
+  border-radius: 10px;
+  object-fit: cover;
+  margin-bottom: 8px;
+}
+
+.prod-item-card h4 {
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.prod-item-card p {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  flex-grow: 1;
+  margin-bottom: 8px;
+}
+
+.prod-item-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 6px;
+}
+
+.price-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.p-usd {
+  color: var(--accent-cyan);
+  font-weight: bold;
+  font-size: 0.85rem;
+}
+
+.p-syp {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.btn-buy-app {
+  background: var(--primary-blue);
+  color: #fff;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 998;
+}
+
+.shawy-side-drawer {
+  position: fixed;
+  top: 0;
+  right: -320px;
+  width: 300px;
+  height: 100vh;
+  background: var(--bg-drawer);
+  color: var(--text-drawer);
+  z-index: 999;
+  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  padding: 20px 16px;
+  box-shadow: -4px 0 25px rgba(0, 0, 0, 0.4);
+}
+
+.shawy-side-drawer.open {
+  right: 0;
+}
+
+.drawer-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  color: #64748b;
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  cursor: pointer;
+}
+
+.drawer-user-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.drawer-avatar-wrap {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.drawer-avatar-wrap img {
+  width: 75px;
+  height: 75px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #0284c7;
+}
+
+.drawer-rank-tag {
+  background: linear-gradient(135deg, #0284c7, #00f2fe);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 10px;
+  border-radius: 12px;
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.drawer-name-title {
+  margin-top: 6px;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.drawer-balance-val {
+  color: #0284c7;
+  font-weight: 800;
+  font-size: 0.95rem;
+  margin-top: 2px;
+}
+
+.drawer-action-icons {
+  display: flex;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.drawer-icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #0284c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.drawer-links-menu {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.drawer-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 8px;
+  color: #1e293b;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.drawer-nav-row:hover {
+  background: #f8fafc;
+}
+
+.drawer-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.drawer-nav-left i {
+  font-size: 1.1rem;
+  width: 20px;
+  text-align: center;
+}
+
+.c-green { color: #10b981; }
+.c-orange { color: #f97316; }
+.c-gold { color: #eab308; }
+.c-blue { color: #3b82f6; }
+.c-purple { color: #a855f7; }
+.c-red { color: #ef4444; }
+
+.drawer-theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 8px;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 12px;
+}
+
+.drawer-socials {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.social-circle-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1rem;
+  text-decoration: none;
+}
+
+.btn-whatsapp { background: #25d366; }
+.btn-telegram { background: #0088cc; }
+.btn-facebook { background: #1877f2; }
+
+.bottom-floating-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: #071124;
+  border-top: 1.5px solid rgba(56, 189, 248, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  z-index: 100;
+}
+
+.bottom-tab-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  gap: 3px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.bottom-tab-btn.home-center {
+  transform: translateY(-8px);
+}
+
+.home-circle-icon {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #0284c7, #00f2fe);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 16px;
+}
+
+.modal-card {
+  background: #0c1527;
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 380px;
+  padding: 20px;
+  position: relative;
+  color: #fff;
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%;
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 10px;
+  border-radius: 8px;
+  outline: none;
+}
+
+.btn-submit {
+  width: 100%;
+  background: #0284c7;
+  color: #fff;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.admin-wrapper {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-main);
+  z-index: 1500;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-header {
+  background: #0c1527;
+  border-bottom: 1px solid var(--border-glass);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.admin-sidebar {
+  width: 100%;
+  min-height: 54px;
+  max-height: 60px;
+  flex-direction: row;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  background: #0c1527;
+  border-bottom: 1px solid var(--border-glass);
+  padding: 6px;
+  gap: 8px;
+  display: flex;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-nav-item {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #1e293b;
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.admin-nav-item.active {
+  background: #0284c7;
+}
+
+.admin-content-area {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.stat-card {
+  background: #0c1527;
+  border: 1px solid var(--border-glass);
+  padding: 16px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.stat-card p {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #38bdf8;
+  margin-top: 6px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+  font-size: 0.85rem;
+  margin-top: 12px;
+}
+
+.data-table th, .data-table td {
+  padding: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.data-table th {
+  background: #1e293b;
+  color: #38bdf8;
+}
+
+.user-admin-card, .deposit-req-card {
+  background: #0c1527;
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.deposit-proof-img {
+  max-width: 140px;
+  border-radius: 8px;
+  cursor: pointer;
+}
