@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=105">
+  <link rel="stylesheet" href="style.css?v=106">
 
   <style>
     /* تنسيقات مباشرة إجبارية لضمان عمل النوافذ وتفادي كاش المتصفح */
@@ -14,6 +14,7 @@
     #deposit-modal.hidden,
     #auth-modal.hidden,
     #logout-confirm-modal.hidden,
+    #maintenance-modal.hidden,
     #drawer-backdrop.hidden,
     #products-view.hidden {
       display: none !important;
@@ -34,6 +35,31 @@
       justify-content: center !important;
       z-index: 99999 !important;
       padding: 16px;
+    }
+
+    /* نافذة وضع الصيانة للزوار */
+    .maintenance-card {
+      width: 100%;
+      max-width: 350px;
+      background: #0d1726;
+      border: 1.5px solid #f59e0b;
+      border-radius: 24px;
+      padding: 30px 20px;
+      text-align: center;
+      color: #fff;
+      box-shadow: 0 15px 40px rgba(245, 158, 11, 0.25);
+      animation: authPop 0.25s ease-out;
+    }
+
+    .maintenance-icon {
+      font-size: 3rem;
+      color: #f59e0b;
+      margin-bottom: 14px;
+      animation: spinGear 4s linear infinite;
+    }
+
+    @keyframes spinGear {
+      100% { transform: rotate(360deg); }
     }
 
     /* بطاقة الدخول وإنشاء الحساب */
@@ -201,7 +227,7 @@
       cursor: pointer;
     }
 
-    /* نافذة الخروج المخصصة بنمط Shawy Card */
+    /* نافذة الخروج */
     .shawy-logout-card {
       width: 100%;
       max-width: 330px;
@@ -438,6 +464,21 @@
     </div>
   </div>
 
+  <!-- نافذة وضع الصيانة للزوار -->
+  <div id="maintenance-modal" class="modal-overlay hidden">
+    <div class="maintenance-card">
+      <i class="fa-solid fa-screwdriver-wrench maintenance-icon"></i>
+      <h3 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; color: #f59e0b;">الموقع قيد الصيانة</h3>
+      <p style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.6; margin-bottom: 20px;">
+        نقوم حالياً ببعض أعمال التحديث والصيانة وتطوير الخدمات لتقديم تجربة أفضل.<br>
+        سنعود للعمل قريباً جداً!
+      </p>
+      <a href="https://wa.me/963957455972?text=مرحباً،%20أستفسر%20عن%20موعد%20انتهاء%20صيانة%20المتجر" target="_blank" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #25d366; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; font-size: 0.85rem;">
+        <i class="fa-brands fa-whatsapp"></i> تواصل مع الدعم الفني
+      </a>
+    </div>
+  </div>
+
   <!-- نافذة تسجيل الدخول وإنشاء الحساب بنمط Shawy Card الحديث -->
   <div id="auth-modal" class="modal-overlay hidden">
     <div class="shawy-auth-card">
@@ -513,13 +554,19 @@
     </div>
   </div>
 
-  <!-- لوحة الإدارة -->
+  <!-- لوحة الإدارة (مزودة بزر وضع الصيانة في الأعلى) -->
   <div id="admin-wrapper" class="admin-wrapper hidden">
     <div class="admin-header">
       <h3 style="font-size: 1rem;"><i class="fa-solid fa-shield"></i> لوحة إدارة النظام - Mohannad kard</h3>
-      <button class="btn-back-pill" style="background:#ef4444; border:none; color:#fff;" onclick="closeAdminPanel()">
-        ✕ خروج من الإدارة
-      </button>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <!-- زر الصيانة الفوري -->
+        <button id="admin-maintenance-btn" class="btn-back-pill" style="background:#10b981; border:none; color:#fff; font-weight: bold;" onclick="toggleMaintenanceMode()">
+          <i class="fa-solid fa-power-off"></i> وضع الصيانة: معطل
+        </button>
+        <button class="btn-back-pill" style="background:#ef4444; border:none; color:#fff;" onclick="closeAdminPanel()">
+          ✕ خروج من الإدارة
+        </button>
+      </div>
     </div>
 
     <div class="admin-layout">
@@ -619,10 +666,10 @@
     </div>
   </div>
 
-  <!-- استدعاء ملفات السكربت برقم إصدار v=105 لكسر الكاش فوراً -->
-  <script src="data.js?v=105"></script>
-  <script src="auth.js?v=105"></script>
-  <script src="store.js?v=105"></script>
-  <script src="admin.js?v=105"></script>
+  <!-- استدعاء ملفات السكربت برقم إصدار v=106 لكسر الكاش فوراً -->
+  <script src="data.js?v=106"></script>
+  <script src="auth.js?v=106"></script>
+  <script src="store.js?v=106"></script>
+  <script src="admin.js?v=106"></script>
 </body>
 </html>
