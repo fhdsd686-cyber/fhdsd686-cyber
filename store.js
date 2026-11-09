@@ -90,13 +90,12 @@ function promptChangeUserAvatar() {
   alert("تم تغيير صورتك الشخصية بنجاح!");
 }
 
-// فتح نافذة الإيداع
+// فتح وإغلاق نافذة الإيداع
 function openDepositModal() {
   const modal = document.getElementById("deposit-modal");
   if (modal) modal.classList.remove("hidden");
 }
 
-// إغلاق نافذة الإيداع
 function closeDepositModal() {
   const modal = document.getElementById("deposit-modal");
   if (modal) modal.classList.add("hidden");
@@ -156,7 +155,7 @@ function filterCategories() {
   }
 }
 
-// 2. فتح القسم ونظام واجهة الطلب (Shawy Card Service Order)
+// 2. فتح القسم ونظام واجهة الطلب
 function openCategory(catId, catName, catImage) {
   document.getElementById("categories-container").classList.add("hidden");
   const searchBox = document.querySelector(".search-pill-box");
@@ -327,9 +326,13 @@ function toggleSidebar(force) {
   }
 }
 
+// فتح نافذة الدخول / إنشاء الحساب المنبثقة
 function openAuthModal() {
   const modal = document.getElementById("auth-modal");
-  if (modal) modal.classList.remove("hidden");
+  if (modal) {
+    modal.classList.remove("hidden");
+    if (typeof setAuthMode === "function") setAuthMode(false);
+  }
 }
 
 function closeAuthModal() {
@@ -337,8 +340,15 @@ function closeAuthModal() {
   if (modal) modal.classList.add("hidden");
 }
 
+// فتح نافذة تأكيد تسجيل الخروج الحديثة
 function logoutUser() {
-  alert("تم تسجيل الخروج");
+  const modal = document.getElementById("logout-confirm-modal");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeLogoutModal() {
+  const modal = document.getElementById("logout-confirm-modal");
+  if (modal) modal.classList.add("hidden");
 }
 
 function toggleTheme() {
