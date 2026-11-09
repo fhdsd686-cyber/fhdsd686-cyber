@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=99">
+  <link rel="stylesheet" href="style.css?v=100">
 
   <style>
     /* تنسيقات مباشرة إجبارية لحل مشكلة الكاش وظهور النوافذ بشكل صحيح */
@@ -201,7 +201,7 @@
       cursor: pointer;
     }
 
-    /* نافذة الخروج */
+    /* نافذة الخروج المخصصة بنمط Shawy Card */
     .shawy-logout-card {
       width: 100%;
       max-width: 330px;
@@ -248,6 +248,7 @@
       font-size: 0.95rem;
       font-weight: 800;
       cursor: pointer;
+      box-shadow: 0 4px 14px rgba(225, 29, 72, 0.35);
     }
 
     .btn-logout-cancel {
@@ -618,9 +619,10 @@
     </div>
   </div>
 
-  <script src="data.js"></script>
-  <script src="auth.js"></script>
-  <script src="store.js"></script>
-  <script src="admin.js"></script>
+  <!-- استدعاء السكربتات برقم إصدار إجباري لتجاوز كاش المتصفح -->
+  <script src="data.js?v=100"></script>
+  <script src="auth.js?v=100"></script>
+  <script src="store.js?v=100"></script>
+  <script src="admin.js?v=100"></script>
 </body>
 </html>
