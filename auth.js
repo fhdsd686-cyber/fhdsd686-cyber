@@ -1,23 +1,54 @@
-// --- إدارة الحسابات، تسجيل الدخول، إنشاء الحساب، وتأكيد الخروج ---
+// --- إدارة الحسابات، تسجيل الدخول، إنشاء الحساب، وتأكيد الخروج مع نظام القفل الإجباري ---
 
 let isSignUpMode = false;
 
-// فتح نافذة الدخول / إنشاء الحساب
-function openAuthModal() {
-  const modal = document.getElementById("auth-modal");
-  if (modal) {
-    modal.classList.remove("hidden");
-    setAuthMode(false); // البداية بتسجيل الدخول
+// فحص أمني إجباري: منع الزائر من رؤية الخدمات قبل تسجيل الدخول أو إنشاء الحساب
+function checkAuthGate() {
+  const users = getDB("users", []);
+  const hasValidUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
+  
+  const authModal = document.getElementById("auth-modal");
+  const closeBtn = document.querySelector(".auth-top-close");
+
+  if (!hasValidUser) {
+    if (authModal) authModal.classList.remove("hidden");
+    if (closeBtn) closeBtn.style.display = "none"; // إخفاء زر الإغلاق لإجباره على الدخول
+    setAuthMode(false);
+  } else {
+    if (authModal) authModal.classList.add("hidden");
+    if (closeBtn) closeBtn.style.display = "flex";
   }
 }
 
-// إغلاق نافذة الدخول
+// فتح نافذة الدخول يدوياً
+function openAuthModal() {
+  const modal = document.getElementById("auth-modal");
+  const closeBtn = document.querySelector(".auth-top-close");
+  const users = getDB("users", []);
+  const hasValidUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
+
+  if (modal) {
+    modal.classList.remove("hidden");
+    if (closeBtn) closeBtn.style.display = hasValidUser ? "flex" : "none";
+    setAuthMode(false);
+  }
+}
+
+// محاولة إغلاق نافذة الدخول (ممنوعة إذا لم يكن مسجلاً)
 function closeAuthModal() {
+  const users = getDB("users", []);
+  const hasValidUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
+  
+  if (!hasValidUser) {
+    alert("يرجى تسجيل الدخول أو إنشاء حساب أولاً للوصول إلى الخدمات والمتجر!");
+    return;
+  }
+
   const modal = document.getElementById("auth-modal");
   if (modal) modal.classList.add("hidden");
 }
 
-// التبديل بين تسجيل الدخول وإنشاء حساب جديد
+// التبديل بين تسجيل الدخول وإنشاء حساب
 function toggleAuthMode() {
   setAuthMode(!isSignUpMode);
 }
@@ -55,7 +86,7 @@ function setAuthMode(signUp) {
   }
 }
 
-// معالجة نموذج الدخول / إنشاء الحساب
+// معالجة نموذج الدخول وإنشاء الحساب
 function handleAuthSubmit(e) {
   e.preventDefault();
 
@@ -91,16 +122,19 @@ function handleAuthSubmit(e) {
       avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"
     };
 
-    // وضع المستخدم الجديد كأول مستخدم نشط
     users.unshift(newUser);
     setDB("users", users);
     
     alert(`🎉 أهلاً بك يا ${fullname}! تم إنشاء حسابك بنجاح.`);
-    closeAuthModal();
+    
+    const closeBtn = document.querySelector(".auth-top-close");
+    if (closeBtn) closeBtn.style.display = "flex";
+    const authModal = document.getElementById("auth-modal");
+    if (authModal) authModal.classList.add("hidden");
+    
     if (typeof updateUserUI === "function") updateUserUI();
   } else {
     // 2. تسجيل الدخول
-    // التحقق التلقائي إذا كتب Mohannad لأول مرة
     if (identifier.toLowerCase() === "mohannad" && !users.some(u => u.name.toLowerCase() === "mohannad")) {
       const adminUser = {
         id: "u_admin",
@@ -115,7 +149,12 @@ function handleAuthSubmit(e) {
       users.unshift(adminUser);
       setDB("users", users);
       alert(`مرحباً بعودتك يا Mohannad! تم تفعيل لوحة الإدارة.`);
-      closeAuthModal();
+      
+      const closeBtn = document.querySelector(".auth-top-close");
+      if (closeBtn) closeBtn.style.display = "flex";
+      const authModal = document.getElementById("auth-modal");
+      if (authModal) authModal.classList.add("hidden");
+
       if (typeof updateUserUI === "function") updateUserUI();
       return;
     }
@@ -129,7 +168,6 @@ function handleAuthSubmit(e) {
       return;
     }
 
-    // ترقية المستخدم المسجل ليصبح النشط حالياً
     const index = users.indexOf(user);
     if (index > 0) {
       users.splice(index, 1);
@@ -138,16 +176,20 @@ function handleAuthSubmit(e) {
     }
 
     alert(`مرحباً بعودتك يا ${user.name}!`);
-    closeAuthModal();
+
+    const closeBtn = document.querySelector(".auth-top-close");
+    if (closeBtn) closeBtn.style.display = "flex";
+    const authModal = document.getElementById("auth-modal");
+    if (authModal) authModal.classList.add("hidden");
+
     if (typeof updateUserUI === "function") updateUserUI();
   }
 }
 
-// --- نافذة تأكيد تسجيل الخروج ---
+// نافذة تأكيد تسجيل الخروج
 function logoutUser() {
   const users = getDB("users", []);
-  // إذا كان زائر أصلاً وليس لديه حساب مسجل، نفتح له نافذة الدخول مباشرة
-  if (!users || users.length === 0 || (users[0] && users[0].role === "عضو")) {
+  if (!users || users.length === 0 || !users[0].name || users[0].name === "زائر") {
     openAuthModal();
     return;
   }
@@ -164,12 +206,9 @@ function closeLogoutModal() {
 function confirmLogoutAction() {
   closeLogoutModal();
   
-  // تحويل المستخدم إلى زائر
   let users = getDB("users", []);
   if (users.length > 0) {
-    // تصفير الجلسة الحالية وإبقاء الحسابات محفوظة
     const guestUser = { name: "زائر", balanceUSD: 0, role: "عضو", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80" };
-    // إذا كان أول مستخدم هو الأدمن أو عضو مسجل نزيحه من الصدارة
     users = users.filter(u => u.name !== "زائر");
     users.unshift(guestUser);
     setDB("users", users);
@@ -179,5 +218,5 @@ function confirmLogoutAction() {
   if (typeof toggleSidebar === "function") toggleSidebar(false);
 
   alert("تم تسجيل الخروج بنجاح.");
-  openAuthModal();
+  checkAuthGate();
 }
