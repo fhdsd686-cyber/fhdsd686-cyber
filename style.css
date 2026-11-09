@@ -24,8 +24,18 @@ body {
   padding-bottom: 90px;
 }
 
-.hidden {
+/* إخفاء إجباري لجميع العناصر غير النشطة لمنع نزولها أسفل الصفحة */
+.hidden,
+#admin-wrapper.hidden,
+#deposit-modal.hidden,
+#auth-modal.hidden,
+#logout-confirm-modal.hidden,
+#drawer-backdrop.hidden,
+#products-view.hidden {
   display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 /* الهيدر العلوي */
@@ -98,14 +108,14 @@ body {
   padding: 4px;
 }
 
-/* الحاوية الأساسية */
+/* الحاوية الأساسية للمتجر */
 .store-container {
   padding: 14px;
   max-width: 600px;
   margin: 0 auto;
 }
 
-/* البانر الترويجي */
+/* البانر الترويجي وسلايدر الإعلانات */
 .banner-card {
   position: relative;
   width: 100%;
@@ -137,6 +147,7 @@ body {
   height: 6px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.5);
+  transition: all 0.3s ease;
 }
 
 .b-dot.active {
@@ -145,7 +156,7 @@ body {
   border-radius: 4px;
 }
 
-/* شريط البحث */
+/* شريط البحث البيضاوي */
 .search-pill-box {
   background: #ffffff;
   border-radius: 25px;
@@ -170,7 +181,7 @@ body {
   color: #070d18;
 }
 
-/* شبكة الأقسام (3 أعمدة Shawy Card) */
+/* شبكة الأقسام بنمط 3 أعمدة */
 .categories-app-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -212,7 +223,7 @@ body {
   line-height: 1.3;
 }
 
-/* واجهة طلب الخدمة المباشرة */
+/* واجهة طلب الخدمة المباشرة (نمط Shawy Card) */
 .service-order-wrapper {
   display: flex;
   flex-direction: column;
@@ -546,23 +557,27 @@ body {
   box-shadow: 0 0 15px rgba(0, 210, 255, 0.5);
 }
 
-/* لوحة الإدارة والمودال */
+/* خلفية النوافذ المنبثقة العامة */
 .modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(3, 7, 18, 0.85) !important;
+  backdrop-filter: blur(6px);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 99999 !important;
   padding: 16px;
 }
 
 .modal-card {
-  background: #0c1527;
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  border-radius: 16px;
-  padding: 20px;
+  background: #0d172a;
+  border: 1.5px solid #00d2ff;
+  box-shadow: 0 10px 30px rgba(0, 210, 255, 0.25);
+  border-radius: 20px;
+  padding: 24px;
   width: 100%;
   max-width: 380px;
   position: relative;
@@ -570,8 +585,8 @@ body {
 
 .modal-close {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: 14px;
+  left: 14px;
   background: none;
   border: none;
   color: #fff;
@@ -579,13 +594,245 @@ body {
   cursor: pointer;
 }
 
-.admin-wrapper {
-  position: fixed;
-  inset: 0;
-  background: #070d18;
-  z-index: 150;
-  overflow-y: auto;
+/* --- نافذة تسجيل الدخول وإنشاء الحساب الحديثة --- */
+.shawy-auth-card {
+  width: 100%;
+  max-width: 380px;
+  background: #ffffff;
+  border-radius: 26px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+  animation: authScale 0.25s ease-out;
+}
+
+@keyframes authScale {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.auth-top-close {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  background: rgba(0, 0, 0, 0.2);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-blue-header {
+  background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
+  padding: 36px 20px 24px;
+  text-align: center;
+  color: #ffffff;
+  border-bottom-left-radius: 30px;
+  border-bottom-right-radius: 30px;
+}
+
+.auth-header-circle {
+  width: 52px;
+  height: 52px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  margin: 0 auto 12px;
+}
+
+.auth-blue-header h2 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.auth-blue-header p {
+  font-size: 0.8rem;
+  opacity: 0.9;
+}
+
+.auth-body-content {
+  padding: 24px 20px 20px;
+  text-align: center;
+  color: #0f172a;
+}
+
+.auth-main-title {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.auth-sub-title {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin: 4px 0 18px;
+}
+
+.shawy-input-group {
+  margin-bottom: 14px;
+  text-align: right;
+}
+
+.shawy-input-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 6px;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-icon input {
+  width: 100%;
+  padding: 13px 40px 13px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f172a;
+  background: #f8fafc;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input-with-icon input:focus {
+  border-color: #0284c7;
+  background: #ffffff;
+}
+
+.input-with-icon i {
+  position: absolute;
+  right: 14px;
+  color: #94a3b8;
+  font-size: 1rem;
+}
+
+.btn-shawy-auth {
+  width: 100%;
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
   padding: 14px;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  margin-top: 10px;
+  box-shadow: 0 4px 15px rgba(2, 132, 199, 0.35);
+  transition: opacity 0.2s;
+}
+
+.btn-shawy-auth:active {
+  opacity: 0.9;
+}
+
+.auth-switch-box {
+  margin-top: 18px;
+  font-size: 0.82rem;
+  color: #64748b;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-text-link {
+  background: none;
+  border: none;
+  color: #0284c7;
+  font-weight: 800;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+/* --- نافذة تأكيد الخروج المنبثقة --- */
+.shawy-logout-card {
+  width: 100%;
+  max-width: 330px;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 26px 20px 22px;
+  text-align: center;
+  color: #0f172a;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4);
+  animation: authScale 0.25s ease-out;
+}
+
+.logout-icon-circle {
+  font-size: 2rem;
+  color: #0f172a;
+  margin-bottom: 12px;
+}
+
+.logout-title {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.logout-desc {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 22px;
+}
+
+.logout-actions-row {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-logout-confirm {
+  flex: 1;
+  background: #e11d48;
+  color: #ffffff;
+  border: none;
+  padding: 12px;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.35);
+}
+
+.btn-logout-cancel {
+  flex: 1;
+  background: #ffffff;
+  color: #0284c7;
+  border: 1.5px solid #0284c7;
+  padding: 12px;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* لوحة إدارة النظام (Admin) */
+.admin-wrapper {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: #070d18 !important;
+  z-index: 100000 !important;
+  overflow-y: auto !important;
+  padding: 16px !important;
 }
 
 .admin-header {
