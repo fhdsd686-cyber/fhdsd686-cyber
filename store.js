@@ -10,9 +10,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // تحميل هوية واسم ولوجو وإعلانات الموقع
 function loadSiteSettings() {
-  const defaultBanners = [
-    "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80",
-    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80"
+  const defaultBanners = typeof DEFAULT_BANNERS !== "undefined" ? DEFAULT_BANNERS : [
+    "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80"
   ];
 
   const settings = getDB("site_settings", {
@@ -27,11 +26,10 @@ function loadSiteSettings() {
   if (logoEl && settings.logo) logoEl.src = settings.logo;
   if (titleEl && settings.name) titleEl.innerText = settings.name;
 
-  // تشغيل سلايدر الإعلانات المتعددة
   initBannerSlider(settings.banners || defaultBanners);
 }
 
-// سلايدر الإعلانات التلقائي
+// تشغيل سلايدر الإعلانات تلقائياً
 function initBannerSlider(banners) {
   const bannerCard = document.querySelector(".banner-card");
   if (!bannerCard || !banners || banners.length === 0) return;
@@ -48,7 +46,9 @@ function initBannerSlider(banners) {
 
   function showSlide(index) {
     currentIndex = index;
-    if (imgEl) imgEl.src = banners[currentIndex];
+    if (imgEl && banners[currentIndex]) {
+      imgEl.src = banners[currentIndex];
+    }
     const dots = bannerCard.querySelectorAll(".b-dot");
     dots.forEach((dot, i) => {
       dot.classList.toggle("active", i === currentIndex);
@@ -68,7 +68,7 @@ function initBannerSlider(banners) {
 
 // تغيير الصورة الشخصية للمستخدم بالنقر المباشر
 function promptChangeUserAvatar() {
-  const newUrl = prompt("ضع رابط صورتك الشخصية الجديدة (من Postimages أو أي رابط مباشر):");
+  const newUrl = prompt("ضع رابط صورتك الشخصية الجديدة (رابط مباشر من Postimages يبدأ بـ https://):");
   if (!newUrl || !newUrl.trim()) return;
 
   const users = getDB("users", []);
@@ -90,7 +90,7 @@ function promptChangeUserAvatar() {
   alert("تم تغيير صورتك الشخصية بنجاح!");
 }
 
-// فتح وإغلاق نافذة الإيداع
+// إدارة نافذة شحن الرصيد
 function openDepositModal() {
   const modal = document.getElementById("deposit-modal");
   if (modal) modal.classList.remove("hidden");
@@ -101,7 +101,6 @@ function closeDepositModal() {
   if (modal) modal.classList.add("hidden");
 }
 
-// نسخ رقم هاتف الإيداع
 function copyDepositNumber() {
   const phone = "0957455972";
   navigator.clipboard.writeText(phone).then(() => {
@@ -111,12 +110,12 @@ function copyDepositNumber() {
   });
 }
 
-// 1. عرض الأقسام الرئيسية
+// عرض شبكة الأقسام بنمط 3 أعمدة
 function renderCategories(filterText = "") {
   const container = document.getElementById("categories-container");
   if (!container) return;
 
-  const categories = getDB("categories", []);
+  const categories = getDB("categories", initialCategories);
   const mainCategories = categories.filter(c => !c.parentId);
 
   const filtered = mainCategories.filter(c => 
@@ -130,17 +129,18 @@ function renderCategories(filterText = "") {
     return;
   }
 
+  const defaultCategoryPlaceholder = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80";
+
   filtered.forEach(cat => {
     const item = document.createElement("div");
     item.className = "cat-app-item";
     item.onclick = () => openCategory(cat.id, cat.name, cat.image);
 
-    const defaultImg = "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?w=300";
-    const imgSrc = cat.image || defaultImg;
+    const imgSrc = (cat.image && cat.image.trim().length > 10) ? cat.image : defaultCategoryPlaceholder;
 
     item.innerHTML = `
       <div class="cat-app-avatar">
-        <img src="${imgSrc}" alt="${cat.name}" onerror="this.src='${defaultImg}'">
+        <img src="${imgSrc}" alt="${cat.name}" onerror="this.src='${defaultCategoryPlaceholder}'">
       </div>
       <span class="cat-app-label">${cat.name}</span>
     `;
@@ -155,7 +155,7 @@ function filterCategories() {
   }
 }
 
-// 2. فتح القسم ونظام واجهة الطلب
+// عرض نموذج طلب الخدمة
 function openCategory(catId, catName, catImage) {
   document.getElementById("categories-container").classList.add("hidden");
   const searchBox = document.querySelector(".search-pill-box");
@@ -167,11 +167,12 @@ function openCategory(catId, catName, catImage) {
   const titleEl = document.getElementById("current-category-title");
   if (titleEl) titleEl.innerText = catName;
 
-  const products = getDB("products", []);
+  const products = getDB("products", initialProducts);
   const catProducts = products.filter(p => p.categoryId === catId);
   const container = document.getElementById("products-container");
 
-  const defaultImg = catImage || "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?w=300";
+  const fallbackImg = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80";
+  const defaultImg = (catImage && catImage.trim().length > 10) ? catImage : fallbackImg;
 
   if (catProducts.length === 0) {
     container.className = "products-compact-grid";
@@ -195,7 +196,7 @@ function openCategory(catId, catName, catImage) {
   container.innerHTML = `
     <div class="service-top-card">
       <div class="service-logo-box">
-        <img src="${defaultImg}" alt="${catName}" onerror="this.src='https://images.unsplash.com/photo-1614680376593-902f749f7ffc?w=300'">
+        <img src="${defaultImg}" alt="${catName}" onerror="this.src='${fallbackImg}'">
       </div>
       <h2 class="service-title-text">${catName}</h2>
     </div>
@@ -250,7 +251,7 @@ function handleServiceOrder(e, catId, catName) {
     return;
   }
 
-  const products = getDB("products", []);
+  const products = getDB("products", initialProducts);
   const product = products.find(p => p.id === prodId);
   if (!product) return;
 
@@ -291,7 +292,7 @@ function backToCategories() {
   if (searchBox) searchBox.classList.remove("hidden");
 }
 
-// 3. تحديث واجهة المستخدم مع القفل الأمني لزر لوحة التحكم
+// تحديث الواجهة وتطبيق قفل لوحة الإدارة
 function updateUserUI() {
   const users = getDB("users", []);
   const user = users[0] || { name: "زائر", balanceUSD: 0, role: "عضو" };
@@ -311,7 +312,6 @@ function updateUserUI() {
   if (headerRank) headerRank.innerText = user.role || "VIP 1";
   if (drawerAvatar && user.avatar) drawerAvatar.src = user.avatar;
 
-  // القفل الأمني: إخفاء لوحة الإدارة عن أي شخص غير المسؤول
   if (adminLink) {
     if (user.role === "الأسطورة" || user.role === "Admin" || user.name === "Mohannad") {
       adminLink.style.display = "flex";
@@ -341,7 +341,6 @@ function toggleSidebar(force) {
   }
 }
 
-// فتح نافذة الدخول / إنشاء الحساب المنبثقة
 function openAuthModal() {
   const modal = document.getElementById("auth-modal");
   if (modal) {
@@ -355,7 +354,6 @@ function closeAuthModal() {
   if (modal) modal.classList.add("hidden");
 }
 
-// فتح نافذة تأكيد تسجيل الخروج الحديثة
 function logoutUser() {
   const modal = document.getElementById("logout-confirm-modal");
   if (modal) modal.classList.remove("hidden");
