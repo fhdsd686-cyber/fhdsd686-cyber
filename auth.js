@@ -1,23 +1,14 @@
-// --- إدارة المستخدمين وتسجيل الدخول والحماية ---
+// --- إدارة الحسابات، تسجيل الدخول، إنشاء الحساب، وتأكيد الخروج ---
 
 let isSignUpMode = false;
-let currentUser = null;
-
-// فحص الجلسة عند تحميل الصفحة
-document.addEventListener("DOMContentLoaded", () => {
-  const savedUser = localStorage.getItem("mk_session");
-  if (savedUser) {
-    currentUser = JSON.parse(savedUser);
-    applyUserSession();
-  } else {
-    updateHeaderUI();
-  }
-});
 
 // فتح نافذة الدخول
 function openAuthModal() {
   const modal = document.getElementById("auth-modal");
-  if (modal) modal.classList.remove("hidden");
+  if (modal) {
+    modal.classList.remove("hidden");
+    setAuthMode(false); // الافتراضي هو تسجيل الدخول
+  }
 }
 
 // إغلاق نافذة الدخول
@@ -26,151 +17,124 @@ function closeAuthModal() {
   if (modal) modal.classList.add("hidden");
 }
 
-// التبديل بين تسجيل الدخول وإنشاء حساب
+// التبديل بين الدخول وإنشاء حساب
 function toggleAuthMode() {
-  isSignUpMode = !isSignUpMode;
-  const nameGroup = document.getElementById("group-name");
-  const authTitle = document.getElementById("auth-title");
-  const submitBtn = document.getElementById("auth-submit-btn");
+  setAuthMode(!isSignUpMode);
+}
+
+function setAuthMode(signUp) {
+  isSignUpMode = signUp;
+  
+  const bannerTitle = document.getElementById("auth-banner-title");
+  const bannerDesc = document.getElementById("auth-banner-desc");
+  const formTitle = document.getElementById("auth-form-title");
+  const formSubtitle = document.getElementById("auth-form-subtitle");
+  const actionBtn = document.getElementById("auth-action-btn");
   const switchText = document.getElementById("auth-switch-text");
-  const toggleBtn = document.getElementById("auth-toggle-mode");
+  const switchBtn = document.getElementById("auth-switch-btn");
+  const groupName = document.getElementById("group-signup-name");
 
   if (isSignUpMode) {
-    if (nameGroup) nameGroup.style.display = "block";
-    if (authTitle) authTitle.innerText = "إنشاء حساب جديد";
-    if (submitBtn) submitBtn.innerText = "إنشاء حساب";
+    if (bannerTitle) bannerTitle.innerText = "حساب جديد";
+    if (bannerDesc) bannerDesc.innerText = "انضم إلينا واستمتع بأفضل خدمات الشحن الفوري";
+    if (formTitle) formTitle.innerText = "إنشاء حساب";
+    if (formSubtitle) formSubtitle.innerText = "أدخل بياناتك لإنشاء حسابك فوراً";
+    if (actionBtn) actionBtn.innerText = "إنشاء الحساب";
     if (switchText) switchText.innerText = "لديك حساب بالفعل؟";
-    if (toggleBtn) toggleBtn.innerText = "تسجيل الدخول";
+    if (switchBtn) switchBtn.innerText = "تسجيل الدخول";
+    if (groupName) groupName.classList.remove("hidden");
   } else {
-    if (nameGroup) nameGroup.style.display = "none";
-    if (authTitle) authTitle.innerText = "تسجيل الدخول";
-    if (submitBtn) submitBtn.innerText = "دخول";
+    if (bannerTitle) bannerTitle.innerText = "أهلاً بعودتك";
+    if (bannerDesc) bannerDesc.innerText = "سجّل دخولك للوصول إلى حسابك وخدماتك";
+    if (formTitle) formTitle.innerText = "تسجيل الدخول";
+    if (formSubtitle) formSubtitle.innerText = "مرحباً بك مجدداً!";
+    if (actionBtn) actionBtn.innerText = "تسجيل الدخول";
     if (switchText) switchText.innerText = "ليس لديك حساب؟";
-    if (toggleBtn) toggleBtn.innerText = "إنشاء حساب جديد";
+    if (switchBtn) switchBtn.innerText = "إنشاء حساب جديد";
+    if (groupName) groupName.classList.add("hidden");
   }
 }
 
-// إرسال نموذج تسجيل الدخول أو إنشاء الحساب
-function handleAuthSubmit(event) {
-  event.preventDefault();
+// معالجة نموذج الدخول / التسجيل
+function handleAuthSubmit(e) {
+  e.preventDefault();
 
   const identifier = document.getElementById("auth-identifier").value.trim();
   const password = document.getElementById("auth-password").value.trim();
   const users = getDB("users", []);
 
   if (isSignUpMode) {
-    // عملية إنشاء حساب جديد
-    const username = document.getElementById("auth-username").value.trim();
-    if (!username) {
-      alert("يرجى إدخال اسم المستخدم");
+    // إنشاء حساب جديد
+    const fullname = document.getElementById("auth-fullname").value.trim();
+    if (!fullname || !identifier || !password) {
+      alert("يرجى ملء جميع الحقول");
       return;
     }
 
-    // التحقق من تكرار البريد أو الاسم
-    const exists = users.find(u => u.email.toLowerCase() === identifier.toLowerCase() || u.name.toLowerCase() === username.toLowerCase());
+    const exists = users.some(u => u.name.toLowerCase() === identifier.toLowerCase());
     if (exists) {
-      alert("البريد الإلكتروني أو اسم المستخدم مستخدم بالفعل!");
+      alert("اسم المستخدم هذا مستخدم مسبقاً، يرجى اختيار اسم آخر");
       return;
     }
 
     const newUser = {
-      id: "user-" + Date.now(),
-      name: username,
-      email: identifier,
+      id: "u_" + Date.now(),
+      name: identifier,
+      fullname: fullname,
       password: password,
-      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
-      role: (identifier.toLowerCase() === ADMIN_EMAIL.toLowerCase()) ? "مدير" : "عميل",
-      rank: "مضيف",
       balanceUSD: 0.00,
-      balanceSYP: 0,
+      role: "VIP 1",
       ordersCount: 0,
-      successPurchases: 0,
-      depositsCount: 0,
-      totalSuccessfulDepositsUSD: 0.00,
-      joinedDate: new Date().toISOString().split("T")[0]
+      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"
     };
 
-    users.push(newUser);
+    users.unshift(newUser);
     setDB("users", users);
-    currentUser = newUser;
-    localStorage.setItem("mk_session", JSON.stringify(currentUser));
-    alert("تم إنشاء الحساب بنجاح!");
+    
+    alert(`🎉 أهلاً بك يا ${fullname}! تم إنشاء حسابك بنجاح.`);
+    closeAuthModal();
+    if (typeof updateUserUI === "function") updateUserUI();
   } else {
-    // عملية تسجيل الدخول (بالاسم أو البريد)
+    // تسجيل الدخول
     const user = users.find(u => 
-      (u.email.toLowerCase() === identifier.toLowerCase() || u.name.toLowerCase() === identifier.toLowerCase()) && 
-      u.password === password
+      (u.name.toLowerCase() === identifier.toLowerCase() || (u.email && u.email.toLowerCase() === identifier.toLowerCase()))
     );
 
     if (!user) {
-      alert("بيانات الدخول غير صحيحة، يرجى التأكد من البريد/الاسم وكلمة المرور.");
+      alert("اسم المستخدم غير مسجل، يمكنك الضغط على 'إنشاء حساب جديد'");
       return;
     }
 
-    currentUser = user;
-    localStorage.setItem("mk_session", JSON.stringify(currentUser));
-    alert("مرحباً بك مجدداً يا " + currentUser.name);
-  }
-
-  closeAuthModal();
-  applyUserSession();
-}
-
-// تطبيق بيانات المستخدم في الموقع والقائمة الجانبية
-function applyUserSession() {
-  if (!currentUser) return;
-
-  // تحديث شريط الهيدر
-  const headerBtn = document.getElementById("auth-header-btn");
-  if (headerBtn) {
-    headerBtn.innerHTML = `<i class="fa-solid fa-user-check"></i> ${currentUser.name}`;
-    headerBtn.onclick = () => toggleSidebar();
-  }
-
-  // تحديث الرصيد
-  updateHeaderBalances(currentUser.balanceUSD, currentUser.balanceSYP);
-
-  // تحديث القائمة الجانبية
-  const sideName = document.getElementById("side-user-name");
-  const sideRank = document.getElementById("side-user-rank");
-  const logoutLink = document.getElementById("logout-link");
-  const adminLink = document.getElementById("admin-panel-link");
-
-  if (sideName) sideName.innerText = currentUser.name;
-  if (sideRank) sideRank.innerText = currentUser.role === "مدير" ? "مدير النظام" : currentUser.rank;
-  if (logoutLink) logoutLink.classList.remove("hidden");
-
-  // حماية لوحة الإدارة: تظهر فقط لحسابك المشرف
-  if (adminLink) {
-    if (currentUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-      adminLink.classList.remove("hidden");
-    } else {
-      adminLink.classList.add("hidden");
+    // نقل المستخدم الحالي ليصبح الأول في المصفوفة
+    const index = users.indexOf(user);
+    if (index > 0) {
+      users.splice(index, 1);
+      users.unshift(user);
+      setDB("users", users);
     }
+
+    alert(`مرحباً بعودتك يا ${user.name}!`);
+    closeAuthModal();
+    if (typeof updateUserUI === "function") updateUserUI();
   }
 }
 
-// تحديث الرصيد في الشريط العلوي
-function updateHeaderBalances(usd, syp) {
-  const usdEl = document.getElementById("header-balance-usd");
-  const sypEl = document.getElementById("header-balance-syp");
-  if (usdEl) usdEl.innerText = `$${Number(usd || 0).toFixed(2)}`;
-  if (sypEl) sypEl.innerText = `${Number(syp || 0).toLocaleString()} ل.س`;
-}
-
-// تحديث واجهة الهيدر في حال الزائر غير مسجل
-function updateHeaderUI() {
-  const headerBtn = document.getElementById("auth-header-btn");
-  if (headerBtn) {
-    headerBtn.innerHTML = `<i class="fa-solid fa-user"></i> دخول`;
-    headerBtn.onclick = () => openAuthModal();
-  }
-  updateHeaderBalances(0, 0);
-}
-
-// تسجيل الخروج
+// --- نافذة تأكيد الخروج ---
 function logoutUser() {
-  localStorage.removeItem("mk_session");
-  currentUser = null;
-  location.reload();
+  const modal = document.getElementById("logout-confirm-modal");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeLogoutModal() {
+  const modal = document.getElementById("logout-confirm-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function confirmLogoutAction() {
+  closeLogoutModal();
+  if (typeof toggleSidebar === "function") toggleSidebar(false);
+  
+  // إعادة تعيين الرصيد أو تصفير الواجهة كزائر
+  alert("تم تسجيل الخروج بنجاح.");
+  openAuthModal();
 }
