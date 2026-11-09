@@ -6,6 +6,10 @@ document.addEventListener("DOMContentLoaded", () => {
   loadSiteSettings();
   renderCategories();
   updateUserUI();
+  // تفعيل القفل الإجباري فور فتح الموقع لأي زائر جديد
+  if (typeof checkAuthGate === "function") {
+    checkAuthGate();
+  }
 });
 
 // تحميل هوية المتجر والبانر
@@ -92,6 +96,12 @@ function promptChangeUserAvatar() {
 
 // نوافذ الإيداع
 function openDepositModal() {
+  const users = getDB("users", []);
+  const hasValidUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
+  if (!hasValidUser) {
+    openAuthModal();
+    return;
+  }
   const modal = document.getElementById("deposit-modal");
   if (modal) modal.classList.remove("hidden");
 }
@@ -110,7 +120,7 @@ function copyDepositNumber() {
   });
 }
 
-// عرض الأقسام للزوار مع الصور الثابتة
+// عرض الأقسام للزوار
 function renderCategories(filterText = "") {
   const container = document.getElementById("categories-container");
   if (!container) return;
@@ -155,8 +165,16 @@ function filterCategories() {
   }
 }
 
-// فتح القسم والطلب
+// فتح القسم والتأكد من تسجيل الحساب قبل المتابعة
 function openCategory(catId, catName, catImage) {
+  const users = getDB("users", []);
+  const hasValidUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
+  
+  if (!hasValidUser) {
+    openAuthModal();
+    return;
+  }
+
   document.getElementById("categories-container").classList.add("hidden");
   const searchBox = document.querySelector(".search-pill-box");
   if (searchBox) searchBox.classList.add("hidden");
@@ -258,7 +276,7 @@ function handleServiceOrder(e, catId, catName) {
   if (!product) return;
 
   let users = getDB("users", []);
-  if (!Array.isArray(users) || users.length === 0) {
+  if (!Array.isArray(users) || users.length === 0 || !users[0].name || users[0].name === "زائر") {
     alert("يرجى تسجيل الدخول أو إنشاء حساب لإتمام عملية الشحن.");
     openAuthModal();
     return;
@@ -302,7 +320,7 @@ function backToCategories() {
   if (searchBox) searchBox.classList.remove("hidden");
 }
 
-// تحديث الواجهة بأمان كامل يمنع أي خطأ للزائر الجديد
+// تحديث الواجهة وتطبيق قفل لوحة الإدارة
 function updateUserUI() {
   const users = getDB("users", []);
   const hasUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
@@ -329,7 +347,6 @@ function updateUserUI() {
   if (headerRank) headerRank.innerText = user.role || "عضو";
   if (drawerAvatar) drawerAvatar.src = user.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
 
-  // إخفاء لوحة الإدارة تماماً إلا إذا كان المستخدم هو مهند أو أسطورة
   if (adminLink) {
     if (user.role === "الأسطورة" || user.role === "Admin" || user.name === "Mohannad") {
       adminLink.style.display = "flex";
@@ -357,35 +374,6 @@ function toggleSidebar(force) {
     drawer.classList.add("open");
     backdrop.classList.remove("hidden");
   }
-}
-
-// دوال فتح نوافذ الدخول والخروج
-function openAuthModal() {
-  const modal = document.getElementById("auth-modal");
-  if (modal) {
-    modal.classList.remove("hidden");
-    if (typeof setAuthMode === "function") setAuthMode(false);
-  }
-}
-
-function closeAuthModal() {
-  const modal = document.getElementById("auth-modal");
-  if (modal) modal.classList.add("hidden");
-}
-
-function logoutUser() {
-  const users = getDB("users", []);
-  if (!Array.isArray(users) || users.length === 0 || !users[0].name || users[0].name === "زائر") {
-    openAuthModal();
-    return;
-  }
-  const modal = document.getElementById("logout-confirm-modal");
-  if (modal) modal.classList.remove("hidden");
-}
-
-function closeLogoutModal() {
-  const modal = document.getElementById("logout-confirm-modal");
-  if (modal) modal.classList.add("hidden");
 }
 
 function toggleTheme() {
