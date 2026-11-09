@@ -1,11 +1,7 @@
 // --- قاعدة البيانات الأولية المعتمدة لجميع المستخدمين والزوار ---
 
-// رابط إعلان متجر مهند كارد الأساسي
-const DEFAULT_BANNERS = [
-  "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80"
-];
+const DEFAULT_BANNER = "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80";
 
-// مصفوفة الأقسام الرئيسية المحدثة بروابط ثابتة
 const initialCategories = [
   {
     id: "cat_syriatel",
@@ -45,7 +41,6 @@ const initialCategories = [
   }
 ];
 
-// المنتجات الافتراضية المرتبطة بالأقسام
 const initialProducts = [
   { id: "p1", categoryId: "cat_syriatel", name: "شحن 10,000 ل.س سيريتل", priceUSD: 0.70, priceSYP: 10000 },
   { id: "p2", categoryId: "cat_syriatel", name: "شحن 25,000 ل.س سيريتل", priceUSD: 1.75, priceSYP: 25000 },
@@ -55,11 +50,11 @@ const initialProducts = [
   { id: "p6", categoryId: "cat_apple", name: "بطاقة آيتونز 5$", priceUSD: 5.00, priceSYP: 75000 }
 ];
 
-// جلب البيانات مع التحقق الإجباري لتحديث البيانات للزوار الجدد
+// دالة آمنة 100% تقرأ البيانات دون التسبب بأي خطأ برمجي للزائر
 function getDB(key, defaultVal) {
   try {
     const data = localStorage.getItem(key);
-    if (!data) {
+    if (!data || data === "undefined" || data === "null") {
       if (key === "categories") return initialCategories;
       if (key === "products") return initialProducts;
       return defaultVal;
@@ -68,13 +63,17 @@ function getDB(key, defaultVal) {
     if (key === "categories" && (!Array.isArray(parsed) || parsed.length === 0)) {
       return initialCategories;
     }
+    if (key === "products" && (!Array.isArray(parsed) || parsed.length === 0)) {
+      return initialProducts;
+    }
     return parsed;
   } catch (e) {
+    if (key === "categories") return initialCategories;
+    if (key === "products") return initialProducts;
     return defaultVal;
   }
 }
 
-// حفظ البيانات في التخزين المحلي
 function setDB(key, val) {
   try {
     localStorage.setItem(key, JSON.stringify(val));
