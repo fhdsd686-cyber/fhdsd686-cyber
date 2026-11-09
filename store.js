@@ -8,9 +8,9 @@ document.addEventListener("DOMContentLoaded", () => {
   updateUserUI();
 });
 
-// تحميل هوية واسم ولوجو وإعلانات الموقع
+// تحميل هوية المتجر والبانر
 function loadSiteSettings() {
-  const defaultBanners = typeof DEFAULT_BANNERS !== "undefined" ? DEFAULT_BANNERS : [
+  const defaultBanners = [
     "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80"
   ];
 
@@ -23,13 +23,13 @@ function loadSiteSettings() {
   const logoEl = document.getElementById("site-logo");
   const titleEl = document.getElementById("site-title");
 
-  if (logoEl && settings.logo) logoEl.src = settings.logo;
-  if (titleEl && settings.name) titleEl.innerText = settings.name;
+  if (logoEl && settings && settings.logo) logoEl.src = settings.logo;
+  if (titleEl && settings && settings.name) titleEl.innerText = settings.name;
 
-  initBannerSlider(settings.banners || defaultBanners);
+  initBannerSlider((settings && settings.banners && settings.banners.length > 0) ? settings.banners : defaultBanners);
 }
 
-// تشغيل سلايدر الإعلانات تلقائياً
+// سلايدر الإعلانات
 function initBannerSlider(banners) {
   const bannerCard = document.querySelector(".banner-card");
   if (!bannerCard || !banners || banners.length === 0) return;
@@ -66,21 +66,21 @@ function initBannerSlider(banners) {
   }
 }
 
-// تغيير الصورة الشخصية للمستخدم بالنقر المباشر
+// تغيير الصورة الشخصية
 function promptChangeUserAvatar() {
-  const newUrl = prompt("ضع رابط صورتك الشخصية الجديدة (رابط مباشر من Postimages يبدأ بـ https://):");
+  const newUrl = prompt("ضع رابط صورتك الشخصية الجديدة:");
   if (!newUrl || !newUrl.trim()) return;
 
-  const users = getDB("users", []);
-  if (users.length === 0) {
-    users.push({
+  let users = getDB("users", []);
+  if (!Array.isArray(users) || users.length === 0) {
+    users = [{
       id: "u_1",
       name: "Mohannad",
       avatar: newUrl.trim(),
       balanceUSD: 1415.613,
       role: "الأسطورة",
       ordersCount: 0
-    });
+    }];
   } else {
     users[0].avatar = newUrl.trim();
   }
@@ -90,7 +90,7 @@ function promptChangeUserAvatar() {
   alert("تم تغيير صورتك الشخصية بنجاح!");
 }
 
-// إدارة نافذة شحن الرصيد
+// نوافذ الإيداع
 function openDepositModal() {
   const modal = document.getElementById("deposit-modal");
   if (modal) modal.classList.remove("hidden");
@@ -110,16 +110,16 @@ function copyDepositNumber() {
   });
 }
 
-// عرض شبكة الأقسام بنمط 3 أعمدة
+// عرض الأقسام للزوار مع الصور الثابتة
 function renderCategories(filterText = "") {
   const container = document.getElementById("categories-container");
   if (!container) return;
 
   const categories = getDB("categories", initialCategories);
-  const mainCategories = categories.filter(c => !c.parentId);
+  const mainCategories = Array.isArray(categories) ? categories.filter(c => !c.parentId) : [];
 
   const filtered = mainCategories.filter(c => 
-    c.name.toLowerCase().includes(filterText.toLowerCase())
+    c.name && c.name.toLowerCase().includes((filterText || "").toLowerCase())
   );
 
   container.innerHTML = "";
@@ -129,18 +129,18 @@ function renderCategories(filterText = "") {
     return;
   }
 
-  const defaultCategoryPlaceholder = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80";
+  const defaultImg = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80";
 
   filtered.forEach(cat => {
     const item = document.createElement("div");
     item.className = "cat-app-item";
     item.onclick = () => openCategory(cat.id, cat.name, cat.image);
 
-    const imgSrc = (cat.image && cat.image.trim().length > 10) ? cat.image : defaultCategoryPlaceholder;
+    const imgSrc = (cat.image && cat.image.trim().length > 10) ? cat.image : defaultImg;
 
     item.innerHTML = `
       <div class="cat-app-avatar">
-        <img src="${imgSrc}" alt="${cat.name}" onerror="this.src='${defaultCategoryPlaceholder}'">
+        <img src="${imgSrc}" alt="${cat.name}" onerror="this.src='${defaultImg}'">
       </div>
       <span class="cat-app-label">${cat.name}</span>
     `;
@@ -155,21 +155,22 @@ function filterCategories() {
   }
 }
 
-// عرض نموذج طلب الخدمة
+// فتح القسم والطلب
 function openCategory(catId, catName, catImage) {
   document.getElementById("categories-container").classList.add("hidden");
   const searchBox = document.querySelector(".search-pill-box");
   if (searchBox) searchBox.classList.add("hidden");
 
   const prodView = document.getElementById("products-view");
-  prodView.classList.remove("hidden");
+  if (prodView) prodView.classList.remove("hidden");
 
   const titleEl = document.getElementById("current-category-title");
   if (titleEl) titleEl.innerText = catName;
 
   const products = getDB("products", initialProducts);
-  const catProducts = products.filter(p => p.categoryId === catId);
+  const catProducts = Array.isArray(products) ? products.filter(p => p.categoryId === catId) : [];
   const container = document.getElementById("products-container");
+  if (!container) return;
 
   const fallbackImg = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80";
   const defaultImg = (catImage && catImage.trim().length > 10) ? catImage : fallbackImg;
@@ -231,6 +232,7 @@ function openCategory(catId, catName, catImage) {
 function onPackageSelectChange() {
   const select = document.getElementById("srv-package-select");
   const display = document.getElementById("srv-price-display");
+  if (!select || !display) return;
   const selectedOpt = select.options[select.selectedIndex];
   if (selectedOpt && selectedOpt.dataset.price) {
     display.innerText = `${selectedOpt.dataset.price} $`;
@@ -255,12 +257,17 @@ function handleServiceOrder(e, catId, catName) {
   const product = products.find(p => p.id === prodId);
   if (!product) return;
 
-  const users = getDB("users", []);
-  const currentUser = users[0] || { name: "Mohannad", balanceUSD: 1415.613, ordersCount: 0 };
+  let users = getDB("users", []);
+  if (!Array.isArray(users) || users.length === 0) {
+    alert("يرجى تسجيل الدخول أو إنشاء حساب لإتمام عملية الشحن.");
+    openAuthModal();
+    return;
+  }
 
+  const currentUser = users[0];
   const price = Number(product.priceUSD);
   if ((currentUser.balanceUSD || 0) < price) {
-    alert(`عذراً، رصيدك الحالي ($${currentUser.balanceUSD}) لا يكفي لشراء هذه الباقة ($${price})! يرجى شحن رصيدك.`);
+    alert(`عذراً، رصيدك الحالي ($${currentUser.balanceUSD || 0}) لا يكفي لشراء هذه الباقة ($${price})! يرجى شحن رصيدك.`);
     return;
   }
 
@@ -286,16 +293,26 @@ function handleServiceOrder(e, catId, catName) {
 }
 
 function backToCategories() {
-  document.getElementById("products-view").classList.add("hidden");
-  document.getElementById("categories-container").classList.remove("hidden");
+  const prodView = document.getElementById("products-view");
+  const catGrid = document.getElementById("categories-container");
   const searchBox = document.querySelector(".search-pill-box");
+
+  if (prodView) prodView.classList.add("hidden");
+  if (catGrid) catGrid.classList.remove("hidden");
   if (searchBox) searchBox.classList.remove("hidden");
 }
 
-// تحديث الواجهة وتطبيق قفل لوحة الإدارة
+// تحديث الواجهة بأمان كامل يمنع أي خطأ للزائر الجديد
 function updateUserUI() {
   const users = getDB("users", []);
-  const user = users[0] || { name: "زائر", balanceUSD: 0, role: "عضو" };
+  const hasUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
+  
+  const user = hasUser ? users[0] : {
+    name: "زائر",
+    balanceUSD: 0,
+    role: "عضو",
+    avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"
+  };
 
   const headerBal = document.getElementById("header-balance-usd");
   const drawerBal = document.getElementById("drawer-balance-text");
@@ -308,10 +325,11 @@ function updateUserUI() {
   if (headerBal) headerBal.innerText = `${Number(user.balanceUSD || 0).toFixed(3)} $`;
   if (drawerBal) drawerBal.innerText = `${Number(user.balanceUSD || 0).toFixed(3)} $`;
   if (sideName) sideName.innerText = user.name || "زائر";
-  if (sideRank) sideRank.innerText = user.role || "VIP 1";
-  if (headerRank) headerRank.innerText = user.role || "VIP 1";
-  if (drawerAvatar && user.avatar) drawerAvatar.src = user.avatar;
+  if (sideRank) sideRank.innerText = user.role || "عضو";
+  if (headerRank) headerRank.innerText = user.role || "عضو";
+  if (drawerAvatar) drawerAvatar.src = user.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
 
+  // إخفاء لوحة الإدارة تماماً إلا إذا كان المستخدم هو مهند أو أسطورة
   if (adminLink) {
     if (user.role === "الأسطورة" || user.role === "Admin" || user.name === "Mohannad") {
       adminLink.style.display = "flex";
@@ -341,6 +359,7 @@ function toggleSidebar(force) {
   }
 }
 
+// دوال فتح نوافذ الدخول والخروج
 function openAuthModal() {
   const modal = document.getElementById("auth-modal");
   if (modal) {
@@ -355,6 +374,11 @@ function closeAuthModal() {
 }
 
 function logoutUser() {
+  const users = getDB("users", []);
+  if (!Array.isArray(users) || users.length === 0 || !users[0].name || users[0].name === "زائر") {
+    openAuthModal();
+    return;
+  }
   const modal = document.getElementById("logout-confirm-modal");
   if (modal) modal.classList.remove("hidden");
 }
