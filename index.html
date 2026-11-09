@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=101">
+  <link rel="stylesheet" href="style.css?v=102">
 
   <style>
-    /* تنسيقات مباشرة إجبارية لحل مشكلة الكاش وظهور النوافذ بشكل صحيح */
+    /* تنسيقات مباشرة إجبارية لضمان عمل النوافذ وتفادي كاش المتصفح */
     .hidden,
     #admin-wrapper.hidden,
     #deposit-modal.hidden,
@@ -36,7 +36,7 @@
       padding: 16px;
     }
 
-    /* بطاقة الدخول Shawy Card الحديثة */
+    /* بطاقة الدخول وإنشاء الحساب */
     .shawy-auth-card {
       width: 100%;
       max-width: 380px;
@@ -266,7 +266,7 @@
 </head>
 <body>
 
-  <!-- الهيدر العلوي بنمط Shawy Card -->
+  <!-- الهيدر العلوي -->
   <header class="main-header">
     <div class="header-right">
       <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80" id="site-logo" class="site-logo-img" alt="Logo">
@@ -619,10 +619,10 @@
     </div>
   </div>
 
-  <!-- استدعاء السكربتات برقم إصدار إجباري v=101 لتجاوز الكاش تماماً -->
-  <script src="data.js?v=101"></script>
-  <script src="auth.js?v=101"></script>
-  <script src="store.js?v=101"></script>
-  <script src="admin.js?v=101"></script>
+  <!-- استدعاء ملفات السكربت برقم إصدار v=102 لكسر الكاش فوراً -->
+  <script src="data.js?v=102"></script>
+  <script src="auth.js?v=102"></script>
+  <script src="store.js?v=102"></script>
+  <script src="admin.js?v=102"></script>
 </body>
 </html>
