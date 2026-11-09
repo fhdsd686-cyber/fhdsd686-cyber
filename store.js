@@ -1,4 +1,4 @@
-// --- منطق المتجر وعرض المنتجات وتحديث هوية المستخدم وإدارة الأمان والإيداع ---
+// --- منطق المتجر وعرض المنتجات وتحديث هوية المستخدم وإدارة فحص وضع الصيانة ---
 
 let bannerInterval = null;
 
@@ -6,11 +6,31 @@ document.addEventListener("DOMContentLoaded", () => {
   loadSiteSettings();
   renderCategories();
   updateUserUI();
-  // تفعيل القفل الإجباري فور فتح الموقع لأي زائر جديد
+
+  // فحص وضع الصيانة وقفل التصفح
+  checkMaintenanceGate();
+
   if (typeof checkAuthGate === "function") {
     checkAuthGate();
   }
 });
+
+// فحص تفعيل وضع الصيانة للزوار العاديين
+function checkMaintenanceGate() {
+  const isMaintenance = getDB("maintenance_mode", false);
+  const modal = document.getElementById("maintenance-modal");
+  const users = getDB("users", []);
+  const currentUser = (Array.isArray(users) && users.length > 0) ? users[0] : null;
+
+  // المسؤول (Mohannad أو الأسطورة) لا يتم إيقاف الموقع أمامه
+  const isAdmin = currentUser && (currentUser.name === "Mohannad" || currentUser.role === "الأسطورة" || currentUser.role === "Admin");
+
+  if (isMaintenance && !isAdmin) {
+    if (modal) modal.classList.remove("hidden");
+  } else {
+    if (modal) modal.classList.add("hidden");
+  }
+}
 
 // تحميل هوية المتجر والبانر
 function loadSiteSettings() {
