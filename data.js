@@ -1,8 +1,11 @@
-// --- قاعدة البيانات الأولية الموحدة لجميع الزوار والمستخدمين ---
+// --- قاعدة البيانات الأولية المعتمدة لجميع المستخدمين والزوار ---
 
-const DEFAULT_BANNER = "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80";
+// رابط إعلان متجر مهند كارد الأساسي
+const DEFAULT_BANNERS = [
+  "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80"
+];
 
-// الأقسام الأساسية بصورها الافتراضية الثابتة
+// مصفوفة الأقسام الرئيسية المحدثة بروابط ثابتة
 const initialCategories = [
   {
     id: "cat_syriatel",
@@ -20,7 +23,7 @@ const initialCategories = [
     id: "cat_superlive",
     name: "شحن منصة SuperLive",
     parentId: null,
-    image: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=300&q=80"
+    image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80"
   },
   {
     id: "cat_apple",
@@ -42,17 +45,17 @@ const initialCategories = [
   }
 ];
 
-// المنتجات والباقات المبدئية
+// المنتجات الافتراضية المرتبطة بالأقسام
 const initialProducts = [
-  { id: "p1", categoryId: "cat_syriatel", name: "شحن 10,000 ل.س", priceUSD: 0.70, priceSYP: 10000 },
-  { id: "p2", categoryId: "cat_syriatel", name: "شحن 25,000 ل.س", priceUSD: 1.75, priceSYP: 25000 },
-  { id: "p3", categoryId: "cat_syriatel", name: "شحن 50,000 ل.س", priceUSD: 3.50, priceSYP: 50000 },
+  { id: "p1", categoryId: "cat_syriatel", name: "شحن 10,000 ل.س سيريتل", priceUSD: 0.70, priceSYP: 10000 },
+  { id: "p2", categoryId: "cat_syriatel", name: "شحن 25,000 ل.س سيريتل", priceUSD: 1.75, priceSYP: 25000 },
+  { id: "p3", categoryId: "cat_syriatel", name: "شحن 50,000 ل.س سيريتل", priceUSD: 3.50, priceSYP: 50000 },
   { id: "p4", categoryId: "cat_mtn", name: "شحن 10,000 ل.س MTN", priceUSD: 0.70, priceSYP: 10000 },
   { id: "p5", categoryId: "cat_superlive", name: "1,000 ماسة SuperLive", priceUSD: 1.20, priceSYP: 17000 },
   { id: "p6", categoryId: "cat_apple", name: "بطاقة آيتونز 5$", priceUSD: 5.00, priceSYP: 75000 }
 ];
 
-// دوال إدارة التخزين
+// جلب البيانات مع التحقق الإجباري لتحديث البيانات للزوار الجدد
 function getDB(key, defaultVal) {
   try {
     const data = localStorage.getItem(key);
@@ -62,7 +65,6 @@ function getDB(key, defaultVal) {
       return defaultVal;
     }
     const parsed = JSON.parse(data);
-    // إذا كانت الأقسام المخزنة قديمة أو فارغة، اعتمد البيانات الأساسية
     if (key === "categories" && (!Array.isArray(parsed) || parsed.length === 0)) {
       return initialCategories;
     }
@@ -72,6 +74,7 @@ function getDB(key, defaultVal) {
   }
 }
 
+// حفظ البيانات في التخزين المحلي
 function setDB(key, val) {
   try {
     localStorage.setItem(key, JSON.stringify(val));
