@@ -1,4 +1,4 @@
-// --- منطق المتجر وعرض المنتجات وتحديث هوية المستخدم وإدارة الإيداع المباشر ---
+// --- منطق المتجر وعرض المنتجات وتحديث هوية المستخدم وإدارة الأمان والإيداع ---
 
 let bannerInterval = null;
 
@@ -291,19 +291,34 @@ function backToCategories() {
   if (searchBox) searchBox.classList.remove("hidden");
 }
 
+// 3. تحديث واجهة المستخدم مع القفل الأمني لزر لوحة التحكم
 function updateUserUI() {
   const users = getDB("users", []);
-  const user = users[0] || { name: "Mohannad", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80", balanceUSD: 1415.613, role: "الأسطورة" };
+  const user = users[0] || { name: "زائر", balanceUSD: 0, role: "عضو" };
 
   const headerBal = document.getElementById("header-balance-usd");
   const drawerBal = document.getElementById("drawer-balance-text");
   const sideName = document.getElementById("side-user-name");
   const drawerAvatar = document.getElementById("drawer-avatar");
+  const sideRank = document.getElementById("side-user-rank");
+  const headerRank = document.getElementById("header-user-rank");
+  const adminLink = document.getElementById("admin-panel-link");
 
   if (headerBal) headerBal.innerText = `${Number(user.balanceUSD || 0).toFixed(3)} $`;
   if (drawerBal) drawerBal.innerText = `${Number(user.balanceUSD || 0).toFixed(3)} $`;
-  if (sideName) sideName.innerText = user.name || "Mohannad";
+  if (sideName) sideName.innerText = user.name || "زائر";
+  if (sideRank) sideRank.innerText = user.role || "VIP 1";
+  if (headerRank) headerRank.innerText = user.role || "VIP 1";
   if (drawerAvatar && user.avatar) drawerAvatar.src = user.avatar;
+
+  // القفل الأمني: إخفاء لوحة الإدارة عن أي شخص غير المسؤول
+  if (adminLink) {
+    if (user.role === "الأسطورة" || user.role === "Admin" || user.name === "Mohannad") {
+      adminLink.style.display = "flex";
+    } else {
+      adminLink.style.display = "none";
+    }
+  }
 }
 
 function showStore() {
