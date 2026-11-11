@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=106">
+  <link rel="stylesheet" href="style.css?v=107">
 
   <style>
-    /* تنسيقات مباشرة إجبارية لضمان عمل النوافذ وتفادي كاش المتصفح */
+    /* تنسيقات أساسية وإجبارية للنوافذ */
     .hidden,
     #admin-wrapper.hidden,
     #deposit-modal.hidden,
@@ -288,6 +288,155 @@
       font-weight: 800;
       cursor: pointer;
     }
+
+    /* بطاقة الإيداع بنمط Shawy-Kartd */
+    .shawy-deposit-card {
+      width: 100%;
+      max-width: 400px;
+      background: #0b1329;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 24px;
+      padding: 24px 20px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      position: relative;
+      color: #fff;
+      animation: authPop 0.25s ease-out;
+    }
+
+    .deposit-method-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+    }
+
+    .deposit-method-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .deposit-method-logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: #fff;
+      object-fit: contain;
+      padding: 4px;
+    }
+
+    .deposit-method-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .deposit-currency-switch {
+      display: flex;
+      background: #0f172a;
+      border-radius: 12px;
+      padding: 4px;
+      gap: 4px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .currency-tab {
+      flex: 1;
+      background: none;
+      border: none;
+      color: #94a3b8;
+      padding: 8px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .currency-tab.active {
+      background: #0284c7;
+      color: #ffffff;
+    }
+
+    .deposit-input-group {
+      margin-bottom: 14px;
+      text-align: right;
+    }
+
+    .deposit-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+
+    .deposit-field {
+      width: 100%;
+      background: #050b18;
+      border: 1.5px solid rgba(56, 189, 248, 0.25);
+      border-radius: 14px;
+      padding: 12px 14px;
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      outline: none;
+      box-sizing: border-box;
+    }
+
+    .deposit-field:focus {
+      border-color: #0284c7;
+    }
+
+    .deposit-rate-hint {
+      font-size: 0.8rem;
+      color: #38bdf8;
+      margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .deposit-file-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #050b18;
+      border: 1.5px dashed rgba(56, 189, 248, 0.3);
+      border-radius: 14px;
+      padding: 12px 14px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+
+    .deposit-file-label:hover {
+      border-color: #0284c7;
+      color: #fff;
+    }
+
+    .btn-send-deposit {
+      width: 100%;
+      background: #0284c7;
+      color: #ffffff;
+      border: none;
+      padding: 14px;
+      border-radius: 14px;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      margin-top: 10px;
+      box-shadow: 0 4px 15px rgba(2, 132, 199, 0.35);
+      transition: opacity 0.2s;
+    }
+
+    .btn-send-deposit:active {
+      opacity: 0.85;
+    }
   </style>
 </head>
 <body>
@@ -438,32 +587,6 @@
     </button>
   </nav>
 
-  <!-- نافذة إيداع وشحن الرصيد المباشرة -->
-  <div id="deposit-modal" class="modal-overlay hidden">
-    <div class="modal-card" style="text-align: center;">
-      <button class="modal-close" onclick="closeDepositModal()">✕</button>
-      <h3 style="color: #00d2ff; margin-bottom: 12px;"><i class="fa-solid fa-wallet"></i> شحن الرصيد</h3>
-      <p style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 16px;">
-        لشحن رصيد حسابك، يرجى تحويل المبلغ المطلوب عبر سيريتل كاش أو MTN كاش إلى الرقم التالي:
-      </p>
-
-      <div style="background: #162444; border: 1.5px dashed #00d2ff; border-radius: 12px; padding: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
-        <span id="deposit-phone-number" style="font-size: 1.15rem; font-weight: 800; letter-spacing: 1px; color: #fff;" dir="ltr">0957455972</span>
-        <button onclick="copyDepositNumber()" style="background: #0284c7; border: none; color: #fff; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: bold;">
-          <i class="fa-regular fa-copy"></i> نسخ
-        </button>
-      </div>
-
-      <p style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 16px;">
-        بعد إتمام التحويل، اضغط على الزر أدناه لتأكيد العملية وإرسال الإشعار عبر الواتساب لتعبئة الرصيد فوراً.
-      </p>
-
-      <a href="https://wa.me/963957455972?text=مرحباً،%20قمت%20بتحويل%20مبلغ%20لشحن%20رصيدي%20في%20متجر%20مهند%20كارد" target="_blank" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: #25d366; color: #fff; text-decoration: none; padding: 12px; border-radius: 12px; font-weight: 800; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);">
-        <i class="fa-brands fa-whatsapp" style="font-size: 1.2rem;"></i> تأكيد الشحن عبر واتساب
-      </a>
-    </div>
-  </div>
-
   <!-- نافذة وضع الصيانة للزوار -->
   <div id="maintenance-modal" class="modal-overlay hidden">
     <div class="maintenance-card">
@@ -476,6 +599,77 @@
       <a href="https://wa.me/963957455972?text=مرحباً،%20أستفسر%20عن%20موعد%20انتهاء%20صيانة%20المتجر" target="_blank" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #25d366; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; font-size: 0.85rem;">
         <i class="fa-brands fa-whatsapp"></i> تواصل مع الدعم الفني
       </a>
+    </div>
+  </div>
+
+  <!-- نافذة الإيداع التفاعلية بنمط Shawy-Kartd -->
+  <div id="deposit-modal" class="modal-overlay hidden">
+    <div class="shawy-deposit-card">
+      <button class="auth-top-close" onclick="closeDepositModal()">✕</button>
+
+      <!-- اختيار وسيلة الدفع -->
+      <div class="deposit-method-header">
+        <div class="deposit-method-info">
+          <img src="https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=100&q=80" id="deposit-active-logo" class="deposit-method-logo" alt="Logo">
+          <div>
+            <div class="deposit-method-title" id="deposit-active-name">سيريتل كاش / MTN كاش</div>
+            <div style="font-size: 0.78rem; color: #38bdf8; margin-top: 2px;">
+              رقم الحساب: <span id="deposit-display-account" dir="ltr" style="font-weight: 800; color: #fff;">0957455972</span>
+              <button onclick="copyDepositNumber()" style="background: none; border: none; color: #38bdf8; cursor: pointer; font-size: 0.8rem; margin-right: 4px;">
+                <i class="fa-regular fa-copy"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- محول العملات: دولار / ليرة سورية -->
+      <div class="deposit-currency-switch">
+        <button type="button" class="currency-tab active" id="tab-curr-usd" onclick="setDepositCurrency('USD')">
+          إيداع بالدولار ($)
+        </button>
+        <button type="button" class="currency-tab" id="tab-curr-syp" onclick="setDepositCurrency('SYP')">
+          إيداع بالليرة السورية (ل.س)
+        </button>
+      </div>
+
+      <form onsubmit="handleDepositSubmit(event)">
+        <!-- حقل المبلغ -->
+        <div class="deposit-input-group">
+          <label class="deposit-label" id="deposit-amount-label">المبلغ المطلوب شحنه (USD):</label>
+          <input type="number" step="any" id="deposit-input-val" class="deposit-field" placeholder="0.00" required oninput="calculateDepositConversion()">
+          <div class="deposit-rate-hint">
+            <span>الرصيد الفعلي الذي سيُضاف: <strong id="deposit-converted-val" style="color: #38bdf8;">0.00 $</strong></span>
+            <span id="deposit-rate-info" style="color: #94a3b8; font-size: 0.75rem;">(1$ = 15,000 ل.س)</span>
+          </div>
+        </div>
+
+        <!-- رقم المرسل / اسم الحساب -->
+        <div class="deposit-input-group">
+          <label class="deposit-label">رقم المرسل / اسم الحساب المحول منه:</label>
+          <input type="text" id="deposit-sender-info" class="deposit-field" placeholder="مثال: 09xxxxxxxx أو الاسم" required dir="ltr">
+        </div>
+
+        <!-- ملاحظة اختيارية -->
+        <div class="deposit-input-group">
+          <label class="deposit-label">ملاحظة (اختياري):</label>
+          <input type="text" id="deposit-note" class="deposit-field" placeholder="أي ملاحظة تود كتابتها...">
+        </div>
+
+        <!-- رفع صورة الإشعار -->
+        <div class="deposit-input-group">
+          <label class="deposit-label">صورة إشعار التحويل:</label>
+          <label class="deposit-file-label">
+            <span id="deposit-file-text">اختيار ملف إشعار التحويل...</span>
+            <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.1rem; color: #38bdf8;"></i>
+            <input type="file" id="deposit-receipt-file" accept="image/*" style="display: none;" onchange="onDepositFileChosen(event)">
+          </label>
+        </div>
+
+        <button type="submit" class="btn-send-deposit">
+          <i class="fa-solid fa-paper-plane"></i> إرسال طلب الشحن
+        </button>
+      </form>
     </div>
   </div>
 
@@ -554,12 +748,11 @@
     </div>
   </div>
 
-  <!-- لوحة الإدارة (مزودة بزر وضع الصيانة في الأعلى) -->
+  <!-- لوحة الإدارة -->
   <div id="admin-wrapper" class="admin-wrapper hidden">
     <div class="admin-header">
       <h3 style="font-size: 1rem;"><i class="fa-solid fa-shield"></i> لوحة إدارة النظام - Mohannad kard</h3>
       <div style="display: flex; gap: 8px; align-items: center;">
-        <!-- زر الصيانة الفوري -->
         <button id="admin-maintenance-btn" class="btn-back-pill" style="background:#10b981; border:none; color:#fff; font-weight: bold;" onclick="toggleMaintenanceMode()">
           <i class="fa-solid fa-power-off"></i> وضع الصيانة: معطل
         </button>
@@ -666,10 +859,10 @@
     </div>
   </div>
 
-  <!-- استدعاء ملفات السكربت برقم إصدار v=106 لكسر الكاش فوراً -->
-  <script src="data.js?v=106"></script>
-  <script src="auth.js?v=106"></script>
-  <script src="store.js?v=106"></script>
-  <script src="admin.js?v=106"></script>
+  <!-- ملفات السكربت مع رقم إصدار v=107 لكسر الكاش فوراً -->
+  <script src="data.js?v=107"></script>
+  <script src="auth.js?v=107"></script>
+  <script src="store.js?v=107"></script>
+  <script src="admin.js?v=107"></script>
 </body>
 </html>
