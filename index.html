@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=107">
+  <link rel="stylesheet" href="style.css?v=108">
 
   <style>
     /* تنسيقات أساسية وإجبارية للنوافذ */
@@ -289,7 +289,7 @@
       cursor: pointer;
     }
 
-    /* بطاقة الإيداع بنمط Shawy-Kartd */
+    /* بطاقة الإيداع بنمط Shawy-Kartd - شام كاش سوري */
     .shawy-deposit-card {
       width: 100%;
       max-width: 400px;
@@ -318,11 +318,12 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      width: 100%;
     }
 
     .deposit-method-logo {
-      width: 48px;
-      height: 48px;
+      width: 52px;
+      height: 52px;
       border-radius: 12px;
       background: #fff;
       object-fit: contain;
@@ -602,20 +603,20 @@
     </div>
   </div>
 
-  <!-- نافذة الإيداع التفاعلية بنمط Shawy-Kartd -->
+  <!-- نافذة الإيداع التفاعلية بنمط Shawy-Kartd - شام كاش سوري -->
   <div id="deposit-modal" class="modal-overlay hidden">
     <div class="shawy-deposit-card">
       <button class="auth-top-close" onclick="closeDepositModal()">✕</button>
 
-      <!-- اختيار وسيلة الدفع -->
+      <!-- اختيار وسيلة الدفع شام كاش سوري -->
       <div class="deposit-method-header">
         <div class="deposit-method-info">
-          <img src="https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=100&q=80" id="deposit-active-logo" class="deposit-method-logo" alt="Logo">
-          <div>
-            <div class="deposit-method-title" id="deposit-active-name">سيريتل كاش / MTN كاش</div>
-            <div style="font-size: 0.78rem; color: #38bdf8; margin-top: 2px;">
+          <img src="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=100&q=80" id="deposit-active-logo" class="deposit-method-logo" alt="شام كاش">
+          <div style="flex: 1;">
+            <div class="deposit-method-title" id="deposit-active-name">شام كاش سوري</div>
+            <div style="font-size: 0.8rem; color: #38bdf8; margin-top: 4px;">
               رقم الحساب: <span id="deposit-display-account" dir="ltr" style="font-weight: 800; color: #fff;">0957455972</span>
-              <button onclick="copyDepositNumber()" style="background: none; border: none; color: #38bdf8; cursor: pointer; font-size: 0.8rem; margin-right: 4px;">
+              <button type="button" onclick="copyDepositNumber()" style="background: none; border: none; color: #38bdf8; cursor: pointer; font-size: 0.85rem; margin-right: 4px;">
                 <i class="fa-regular fa-copy"></i>
               </button>
             </div>
@@ -859,10 +860,10 @@
     </div>
   </div>
 
-  <!-- ملفات السكربت مع رقم إصدار v=107 لكسر الكاش فوراً -->
-  <script src="data.js?v=107"></script>
-  <script src="auth.js?v=107"></script>
-  <script src="store.js?v=107"></script>
-  <script src="admin.js?v=107"></script>
+  <!-- ملفات السكربت مع رقم إصدار v=108 لكسر الكاش فوراً -->
+  <script src="data.js?v=108"></script>
+  <script src="auth.js?v=108"></script>
+  <script src="store.js?v=108"></script>
+  <script src="admin.js?v=108"></script>
 </body>
 </html>
