@@ -1,4 +1,4 @@
-// --- منطق لوحة إدارة النظام والتحكم بوضع الصيانة والبيانات ---
+// --- منطق لوحة إدارة النظام والتحكم بوضع الصيانة والبيانات والطلبات ---
 
 document.addEventListener("DOMContentLoaded", () => {
   updateMaintenanceBtnUI();
@@ -23,6 +23,7 @@ function openAdminPanel() {
   renderAdminCategories();
   renderAdminDepositMethods();
   renderAdminUsers();
+  renderAdminDepositRequests();
   updateMaintenanceBtnUI();
 }
 
@@ -83,6 +84,7 @@ function switchAdminSection(secId) {
 
   if (secId === 'add-product') loadCategoriesIntoSelect('prod-category-select');
   if (secId === 'add-category') loadParentCategoriesSelect('cat-parent-select');
+  if (secId === 'deposit-requests') renderAdminDepositRequests();
 }
 
 // 1. الإحصائيات
@@ -234,7 +236,72 @@ function loadParentCategoriesSelect(selectId) {
     categories.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
 }
 
-// 5. إدارة طرق الإيداع
+// 5. إدارة طلبات الإيداع المباشرة
+function renderAdminDepositRequests() {
+  const container = document.getElementById("deposit-requests-container");
+  if (!container) return;
+
+  const requests = getDB("deposit_requests", []);
+  if (requests.length === 0) {
+    container.innerHTML = `<p style="color:#94a3b8; text-align:center; padding:20px;">لا توجد طلبات إيداع جديدة</p>`;
+    return;
+  }
+
+  container.innerHTML = requests.map(r => `
+    <div style="background:#162444; border-radius:12px; padding:14px; margin-bottom:12px; border-right:4px solid ${r.status === 'مقبول' ? '#10b981' : '#f59e0b'};">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <strong>المستخدم: ${r.userName}</strong>
+        <span style="font-size:0.8rem; color:#94a3b8;">${r.date}</span>
+      </div>
+      <div style="font-size:0.9rem; margin-bottom:6px;">
+        المبلغ: <span style="color:#38bdf8; font-weight:bold;">$${r.amountUSD}</span> (${Number(r.amountSYP).toLocaleString()} ل.س)
+      </div>
+      <div style="font-size:0.85rem; color:#cbd5e1; margin-bottom:8px;">
+        الحساب المحول منه: <span dir="ltr">${r.sender}</span> | ملاحظة: ${r.note || "لا يوجد"}
+      </div>
+      ${r.receipt ? `<div style="margin-bottom:8px;"><a href="${r.receipt}" target="_blank" style="color:#38bdf8; font-size:0.85rem; text-decoration:underline;">عرض صورة الإشعار</a></div>` : ''}
+      <div style="display:flex; gap:8px;">
+        ${r.status === 'معلق' ? `
+          <button onclick="approveDepositRequest('${r.id}')" style="background:#10b981; border:none; color:#fff; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:0.85rem;">قبول وشحن الرصيد</button>
+          <button onclick="rejectDepositRequest('${r.id}')" style="background:#ef4444; border:none; color:#fff; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:0.85rem;">رفض</button>
+        ` : `<span style="font-size:0.85rem; font-weight:bold; color:${r.status === 'مقبول' ? '#10b981' : '#ef4444'};">الحالة: ${r.status}</span>`}
+      </div>
+    </div>
+  `).join("");
+}
+
+function approveDepositRequest(reqId) {
+  let requests = getDB("deposit_requests", []);
+  const req = requests.find(r => r.id === reqId);
+  if (!req) return;
+
+  let users = getDB("users", []);
+  const user = users.find(u => u.name === req.userName);
+  if (user) {
+    user.balanceUSD = Number(((user.balanceUSD || 0) + Number(req.amountUSD)).toFixed(3));
+    setDB("users", users);
+  }
+
+  req.status = "مقبول";
+  setDB("deposit_requests", requests);
+  alert(`✅ تم شحن $${req.amountUSD} في حساب ${req.userName} بنجاح!`);
+  renderAdminDepositRequests();
+  renderAdminStats();
+  if (typeof updateUserUI === "function") updateUserUI();
+}
+
+function rejectDepositRequest(reqId) {
+  let requests = getDB("deposit_requests", []);
+  const req = requests.find(r => r.id === reqId);
+  if (!req) return;
+
+  req.status = "مرفوض";
+  setDB("deposit_requests", requests);
+  alert("تم رفض طلب الشحن.");
+  renderAdminDepositRequests();
+}
+
+// 6. إدارة طرق الإيداع
 function renderAdminDepositMethods() {
   const container = document.getElementById("admin-methods-container");
   if (!container) return;
@@ -271,7 +338,7 @@ function deleteAdminDepositMethod(id) {
   renderAdminDepositMethods();
 }
 
-// 6. إدارة المستخدمين والترقيات
+// 7. إدارة المستخدمين والترقيات
 function renderAdminUsers() {
   const container = document.getElementById("admin-users-list");
   if (!container) return;
