@@ -12,7 +12,7 @@ function checkAuthGate() {
 
   if (!hasValidUser) {
     if (authModal) authModal.classList.remove("hidden");
-    if (closeBtn) closeBtn.style.display = "none"; // إخفاء زر الإغلاق لإجباره على الدخول
+    if (closeBtn) closeBtn.style.display = "none";
     setAuthMode(false);
   } else {
     if (authModal) authModal.classList.add("hidden");
@@ -34,7 +34,7 @@ function openAuthModal() {
   }
 }
 
-// محاولة إغلاق نافذة الدخول (ممنوعة إذا لم يكن مسجلاً)
+// محاولة إغلاق نافذة الدخول
 function closeAuthModal() {
   const users = getDB("users", []);
   const hasValidUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
@@ -97,7 +97,7 @@ function handleAuthSubmit(e) {
   if (!Array.isArray(users)) users = [];
 
   if (isSignUpMode) {
-    // 1. إنشاء حساب جديد
+    // إنشاء حساب جديد
     const fullname = document.getElementById("auth-fullname").value.trim();
     if (!fullname || !identifier || !password) {
       alert("يرجى ملء جميع الحقول المطلوبة");
@@ -134,7 +134,7 @@ function handleAuthSubmit(e) {
     
     if (typeof updateUserUI === "function") updateUserUI();
   } else {
-    // 2. تسجيل الدخول
+    // تسجيل الدخول
     if (identifier.toLowerCase() === "mohannad" && !users.some(u => u.name.toLowerCase() === "mohannad")) {
       const adminUser = {
         id: "u_admin",
