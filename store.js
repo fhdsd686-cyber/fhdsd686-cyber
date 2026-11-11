@@ -1,6 +1,9 @@
-// --- منطق المتجر وعرض المنتجات وتحديث هوية المستخدم وإدارة فحص وضع الصيانة ---
+// --- منطق المتجر، عرض المنتجات، محول العملات اللحظي، وتأكيد الإيداع عبر واتساب ---
 
 let bannerInterval = null;
+let currentDepositCurrency = "USD";
+const EXCHANGE_RATE = 15000; // سعر الصرف المعتمد (1 دولار = 15,000 ليرة سورية)
+let depositReceiptBase64 = "";
 
 document.addEventListener("DOMContentLoaded", () => {
   loadSiteSettings();
@@ -8,21 +11,23 @@ document.addEventListener("DOMContentLoaded", () => {
   updateUserUI();
 
   // فحص وضع الصيانة وقفل التصفح
-  checkMaintenanceGate();
+  if (typeof checkMaintenanceGate === "function") {
+    checkMaintenanceGate();
+  }
 
+  // فحص تسجيل الدخول الإجباري
   if (typeof checkAuthGate === "function") {
     checkAuthGate();
   }
 });
 
-// فحص تفعيل وضع الصيانة للزوار العاديين
+// فحص وضع الصيانة
 function checkMaintenanceGate() {
   const isMaintenance = getDB("maintenance_mode", false);
   const modal = document.getElementById("maintenance-modal");
   const users = getDB("users", []);
   const currentUser = (Array.isArray(users) && users.length > 0) ? users[0] : null;
 
-  // المسؤول (Mohannad أو الأسطورة) لا يتم إيقاف الموقع أمامه
   const isAdmin = currentUser && (currentUser.name === "Mohannad" || currentUser.role === "الأسطورة" || currentUser.role === "Admin");
 
   if (isMaintenance && !isAdmin) {
@@ -114,12 +119,12 @@ function promptChangeUserAvatar() {
   alert("تم تغيير صورتك الشخصية بنجاح!");
 }
 
-// نوافذ الإيداع
+// --- نظام الإيداع التفاعلي والتحويل المالي ---
 function openDepositModal() {
   const users = getDB("users", []);
   const hasValidUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
   if (!hasValidUser) {
-    openAuthModal();
+    if (typeof openAuthModal === "function") openAuthModal();
     return;
   }
   const modal = document.getElementById("deposit-modal");
@@ -138,6 +143,113 @@ function copyDepositNumber() {
   }).catch(() => {
     prompt("انسخ الرقم يدوياً:", phone);
   });
+}
+
+function setDepositCurrency(curr) {
+  currentDepositCurrency = curr;
+  const tabUsd = document.getElementById("tab-curr-usd");
+  const tabSyp = document.getElementById("tab-curr-syp");
+  const label = document.getElementById("deposit-amount-label");
+  const input = document.getElementById("deposit-input-val");
+
+  if (!tabUsd || !tabSyp || !label || !input) return;
+
+  if (curr === "USD") {
+    tabUsd.classList.add("active");
+    tabSyp.classList.remove("active");
+    label.innerText = "المبلغ المطلوب شحنه (USD):";
+    input.placeholder = "مثال: 10";
+  } else {
+    tabSyp.classList.add("active");
+    tabUsd.classList.remove("active");
+    label.innerText = "المبلغ المطلوب شحنه (ليرة سورية):";
+    input.placeholder = "مثال: 150000";
+  }
+
+  calculateDepositConversion();
+}
+
+function calculateDepositConversion() {
+  const inputEl = document.getElementById("deposit-input-val");
+  const convertedEl = document.getElementById("deposit-converted-val");
+  const rateInfoEl = document.getElementById("deposit-rate-info");
+  if (!inputEl || !convertedEl || !rateInfoEl) return;
+
+  const inputVal = parseFloat(inputEl.value) || 0;
+
+  if (currentDepositCurrency === "USD") {
+    convertedEl.innerText = `${inputVal.toFixed(2)} $`;
+    const sypEquiv = Math.round(inputVal * EXCHANGE_RATE).toLocaleString("en-US");
+    rateInfoEl.innerText = `(ما يعادل: ${sypEquiv} ل.س)`;
+  } else {
+    const usdEquiv = (inputVal / EXCHANGE_RATE).toFixed(3);
+    convertedEl.innerText = `${usdEquiv} $`;
+    rateInfoEl.innerText = `(سعر الصرف: 1$ = ${EXCHANGE_RATE.toLocaleString()} ل.س)`;
+  }
+}
+
+function onDepositFileChosen(e) {
+  const file = e.target.files[0];
+  const textEl = document.getElementById("deposit-file-text");
+  if (!file) return;
+
+  if (textEl) textEl.innerText = file.name;
+
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    depositReceiptBase64 = event.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleDepositSubmit(e) {
+  e.preventDefault();
+
+  const inputVal = parseFloat(document.getElementById("deposit-input-val").value) || 0;
+  const senderInfo = document.getElementById("deposit-sender-info").value.trim();
+  const note = document.getElementById("deposit-note").value.trim();
+
+  if (inputVal <= 0) {
+    alert("يرجى إدخال مبلغ صحيح!");
+    return;
+  }
+
+  const amountUSD = currentDepositCurrency === "USD" ? inputVal : Number((inputVal / EXCHANGE_RATE).toFixed(3));
+  const amountSYP = currentDepositCurrency === "SYP" ? inputVal : Math.round(inputVal * EXCHANGE_RATE);
+
+  const users = getDB("users", []);
+  const currentUser = users[0] || { name: "زائر" };
+
+  const newDepositRequest = {
+    id: "dep_" + Date.now(),
+    userName: currentUser.name,
+    amountUSD: amountUSD,
+    amountSYP: amountSYP,
+    currency: currentDepositCurrency,
+    sender: senderInfo,
+    note: note,
+    receipt: depositReceiptBase64,
+    date: new Date().toLocaleString("ar-SY"),
+    status: "معلق"
+  };
+
+  const allRequests = getDB("deposit_requests", []);
+  allRequests.unshift(newDepositRequest);
+  setDB("deposit_requests", allRequests);
+
+  const waMsg = encodeURIComponent(
+    `طلب شحن رصيد جديد:\n` +
+    `👤 المستخدم: ${currentUser.name}\n` +
+    `💵 المبلغ بالدولار: ${amountUSD} $\n` +
+    `🇸🇾 المبلغ بالليرة: ${amountSYP.toLocaleString()} ل.س\n` +
+    `📱 رقم/حساب المحول: ${senderInfo}\n` +
+    `📝 ملاحظة: ${note || "لا يوجد"}`
+  );
+
+  alert("✅ تم إرسال طلب الشحن بنجاح!\nسيتم تحويلك إلى واتساب لإرسال صورة الإشعار وتأكيد التعبئة.");
+  closeDepositModal();
+
+  window.open(`https://wa.me/963957455972?text=${waMsg}`, "_blank");
 }
 
 // عرض الأقسام للزوار
@@ -191,7 +303,7 @@ function openCategory(catId, catName, catImage) {
   const hasValidUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
   
   if (!hasValidUser) {
-    openAuthModal();
+    if (typeof openAuthModal === "function") openAuthModal();
     return;
   }
 
@@ -298,7 +410,7 @@ function handleServiceOrder(e, catId, catName) {
   let users = getDB("users", []);
   if (!Array.isArray(users) || users.length === 0 || !users[0].name || users[0].name === "زائر") {
     alert("يرجى تسجيل الدخول أو إنشاء حساب لإتمام عملية الشحن.");
-    openAuthModal();
+    if (typeof openAuthModal === "function") openAuthModal();
     return;
   }
 
