@@ -1,4 +1,4 @@
-// --- منطق المتجر، عرض المنتجات، محول العملات اللحظي، وتأكيد الإيداع عبر واتساب ---
+// --- منطق المتجر، عرض المنتجات، محول العملات اللحظي، وتأكيد الإيداع عبر واتساب بنمط شام كاش ---
 
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
@@ -238,7 +238,7 @@ function handleDepositSubmit(e) {
   setDB("deposit_requests", allRequests);
 
   const waMsg = encodeURIComponent(
-    `طلب شحن رصيد جديد:\n` +
+    `طلب شحن رصيد جديد (شام كاش سوري):\n` +
     `👤 المستخدم: ${currentUser.name}\n` +
     `💵 المبلغ بالدولار: ${amountUSD} $\n` +
     `🇸🇾 المبلغ بالليرة: ${amountSYP.toLocaleString()} ل.س\n` +
