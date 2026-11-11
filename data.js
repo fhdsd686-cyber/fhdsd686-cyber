@@ -50,7 +50,7 @@ const initialProducts = [
   { id: "p6", categoryId: "cat_apple", name: "بطاقة آيتونز 5$", priceUSD: 5.00, priceSYP: 75000 }
 ];
 
-// دالة آمنة 100% تقرأ البيانات دون التسبب بأي خطأ برمجي للزائر
+// دالة آمنة تقرأ البيانات دون أخطاء برمجية
 function getDB(key, defaultVal) {
   try {
     const data = localStorage.getItem(key);
