@@ -1,9 +1,11 @@
-// --- منطق المتجر، الميزات التفاعلية، محول العملات اللحظي، وصلاحيات الإدارة والحظر ---
+// --- منطق المتجر، تبديل عملة الرصيد ($ ⇄ ل.س)، الميزات التفاعلية، وصلاحيات الإدارة ---
 
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
 let activeDepositMethod = null;
 let depositReceiptBase64 = "";
+let displayCurrency = getDB("display_currency", "USD"); // عملة العرض الحالية: USD أو SYP
+const STORE_EXCHANGE_RATE = 15000;
 
 document.addEventListener("DOMContentLoaded", () => {
   loadSiteSettings();
@@ -19,6 +21,29 @@ document.addEventListener("DOMContentLoaded", () => {
     checkAuthGate();
   }
 });
+
+// تبديل عملة عرض الرصيد والأسعار بين الدولار ($) والليرة السورية (ل.س)
+function toggleDisplayCurrency(e) {
+  if (e) e.stopPropagation();
+  displayCurrency = (displayCurrency === "USD") ? "SYP" : "USD";
+  setDB("display_currency", displayCurrency);
+  updateUserUI();
+
+  // تحديث سعر الباقة المعروضة حالياً إن كان المستخدم داخل قسم منتجات
+  if (typeof onPackageSelectChange === "function") {
+    onPackageSelectChange();
+  }
+}
+
+// دالة لتنسيق أي مبلغ بالدولار حسب عملة العرض المختارة ($ أو ل.س)
+function formatStoreAmount(usdAmount) {
+  const val = Number(usdAmount || 0);
+  if (displayCurrency === "SYP") {
+    const sypVal = Math.round(val * STORE_EXCHANGE_RATE).toLocaleString("en-US");
+    return `${sypVal} ل.س`;
+  }
+  return `${val.toFixed(3)} $`;
+}
 
 // استعادة وضع المظهر المحفوظ (مظلم / نهاري)
 function initSavedTheme() {
@@ -221,7 +246,7 @@ function openFeatureModal(type) {
         <div style="background:#0f172a; border-right:3px solid #10b981; padding:12px; border-radius:12px; margin-bottom:10px;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <strong style="font-size:0.88rem; color:#fff;">${o.packageName}</strong>
-            <span style="color:#38bdf8; font-weight:800;">$${o.price}</span>
+            <span style="color:#38bdf8; font-weight:800;">${formatStoreAmount(o.price)}</span>
           </div>
           <div style="font-size:0.78rem; color:#94a3b8; margin-top:4px;">
             القسم: ${o.categoryName} | المستلم: <strong style="color:#fff;">${o.target}</strong>
@@ -450,7 +475,7 @@ function getActiveExchangeRate() {
   if (activeDepositMethod && Number(activeDepositMethod.rate) > 1) {
     return Number(activeDepositMethod.rate);
   }
-  return 15000;
+  return STORE_EXCHANGE_RATE;
 }
 
 function copyDepositNumber() {
@@ -667,8 +692,9 @@ function openCategory(catId, catName, catImage) {
 
   let packageOptions = `<option value="" disabled selected>اختر الباقة</option>`;
   catProducts.forEach(prod => {
+    const formattedPrice = formatStoreAmount(prod.priceUSD);
     packageOptions += `<option value="${prod.id}" data-price="${prod.priceUSD}">
-      ${prod.name} &nbsp;&nbsp;&nbsp;&nbsp; (${prod.priceUSD} $)
+      ${prod.name} &nbsp;&nbsp;&nbsp;&nbsp; (${formattedPrice})
     </option>`;
   });
 
@@ -698,7 +724,7 @@ function openCategory(catId, catName, catImage) {
 
       <div class="order-summary-bar">
         <span>السعر المطلوب:</span>
-        <strong id="srv-price-display" style="color: var(--accent-cyan); font-size: 1.1rem;">0.00 $</strong>
+        <strong id="srv-price-display" style="color: var(--accent-cyan); font-size: 1.1rem;">${formatStoreAmount(0)}</strong>
       </div>
 
       <button type="submit" class="btn-confirm-order">
@@ -714,9 +740,9 @@ function onPackageSelectChange() {
   if (!select || !display) return;
   const selectedOpt = select.options[select.selectedIndex];
   if (selectedOpt && selectedOpt.dataset.price) {
-    display.innerText = `${selectedOpt.dataset.price} $`;
+    display.innerText = formatStoreAmount(selectedOpt.dataset.price);
   } else {
-    display.innerText = `0.00 $`;
+    display.innerText = formatStoreAmount(0);
   }
 }
 
@@ -751,7 +777,7 @@ function handleServiceOrder(e, catId, catName) {
   const currentUser = users[0];
   const price = Number(product.priceUSD);
   if ((currentUser.balanceUSD || 0) < price) {
-    alert(`عذراً، رصيدك الحالي ($${currentUser.balanceUSD || 0}) لا يكفي لشراء هذه الباقة ($${price})! يرجى شحن رصيدك.`);
+    alert(`عذراً، رصيدك الحالي (${formatStoreAmount(currentUser.balanceUSD || 0)}) لا يكفي لشراء هذه الباقة (${formatStoreAmount(price)})! يرجى شحن رصيدك.`);
     return;
   }
 
@@ -772,7 +798,7 @@ function handleServiceOrder(e, catId, catName) {
   setDB("orders", orders);
 
   updateUserUI();
-  alert(`✅ تم تنفيذ طلب الشحن بنجاح!\nالرقم: ${targetInput}\nالباقة: ${product.name}\nالمبلغ المخصوم: ${price} $`);
+  alert(`✅ تم تنفيذ طلب الشحن بنجاح!\nالرقم: ${targetInput}\nالباقة: ${product.name}\nالمبلغ المخصوم: ${formatStoreAmount(price)}`);
   backToCategories();
 }
 
@@ -805,8 +831,27 @@ function updateUserUI() {
   const headerRank = document.getElementById("header-user-rank");
   const adminLink = document.getElementById("admin-panel-link");
 
-  if (headerBal) headerBal.innerText = `${Number(user.balanceUSD || 0).toFixed(3)} $`;
-  if (drawerBal) drawerBal.innerText = `${Number(user.balanceUSD || 0).toFixed(3)} $`;
+  const balUSD = Number(user.balanceUSD || 0);
+  const balSYP = Math.round(balUSD * STORE_EXCHANGE_RATE).toLocaleString("en-US");
+
+  // في الهيدر: عرض الرصيد حسب العملة المختارة + زر تبديل سريع ($ ⇄ ل.س)
+  if (headerBal) {
+    const formattedHeader = displayCurrency === "SYP" ? `${balSYP} ل.س` : `${balUSD.toFixed(3)} $`;
+    headerBal.innerHTML = `${formattedHeader} <span onclick="toggleDisplayCurrency(event)" title="اضغط للتبديل بين الدولار والسوري" style="background:rgba(56,189,248,0.2); color:#38bdf8; padding:1px 6px; border-radius:8px; font-size:0.72rem; margin-right:4px; border:1px solid rgba(56,189,248,0.4);">⇄</span>`;
+  }
+
+  // في القائمة الجانبية: عرض الرصيد بالدولار وتحته بالليرة السورية + زر التبديل
+  if (drawerBal) {
+    drawerBal.innerHTML = `
+      <div style="cursor:pointer;" onclick="toggleDisplayCurrency(event)" title="اضغط لتبديل عملة العرض">
+        <div>${displayCurrency === "SYP" ? `${balSYP} ل.س` : `$ ${balUSD.toFixed(3)}`} <i class="fa-solid fa-repeat" style="font-size:0.75rem; color:#38bdf8;"></i></div>
+        <div style="font-size:0.78rem; color:#94a3b8; font-weight:600; margin-top:2px;">
+          ${displayCurrency === "SYP" ? `($ ${balUSD.toFixed(3)})` : `(${balSYP} ل.س)`}
+        </div>
+      </div>
+    `;
+  }
+
   if (sideName) sideName.innerText = user.fullname || user.name || "زائر";
   if (sideRank) sideRank.innerText = user.role || "عضو";
   if (headerRank) headerRank.innerText = user.role || "عضو";
