@@ -50,6 +50,19 @@ const initialProducts = [
   { id: "p6", categoryId: "cat_apple", name: "بطاقة آيتونز 5$", priceUSD: 5.00, priceSYP: 75000 }
 ];
 
+// طرق الإيداع الافتراضية (تشمل شام كاش بباركود حسابك الرسمي)
+const initialDepositMethods = [
+  {
+    id: "method_shamcash",
+    name: "شام كاش سوري",
+    account: "b7a6624b69166fb60e741400cee2b8bd",
+    currency: "USD",
+    rate: 15000,
+    qrImage: "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=b7a6624b69166fb60e741400cee2b8bd",
+    icon: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=100&q=80"
+  }
+];
+
 // دالة آمنة تقرأ البيانات دون أخطاء برمجية
 function getDB(key, defaultVal) {
   try {
@@ -57,6 +70,7 @@ function getDB(key, defaultVal) {
     if (!data || data === "undefined" || data === "null") {
       if (key === "categories") return initialCategories;
       if (key === "products") return initialProducts;
+      if (key === "depositMethods") return initialDepositMethods;
       return defaultVal;
     }
     const parsed = JSON.parse(data);
@@ -66,10 +80,14 @@ function getDB(key, defaultVal) {
     if (key === "products" && (!Array.isArray(parsed) || parsed.length === 0)) {
       return initialProducts;
     }
+    if (key === "depositMethods" && (!Array.isArray(parsed) || parsed.length === 0)) {
+      return initialDepositMethods;
+    }
     return parsed;
   } catch (e) {
     if (key === "categories") return initialCategories;
     if (key === "products") return initialProducts;
+    if (key === "depositMethods") return initialDepositMethods;
     return defaultVal;
   }
 }
