@@ -1,8 +1,12 @@
-// --- إدارة الحسابات، تسجيل الدخول، إنشاء الحساب، وتأكيد الخروج مع نظام القفل الإجباري ---
+// --- إدارة الحسابات: تسجيل الدخول بالاسم أو الإيميل، Google، نسيت كلمة السر، وحساب الآدمن ---
 
 let isSignUpMode = false;
 
-// فحص أمني إجباري: منع الزائر من رؤية الخدمات قبل تسجيل الدخول أو إنشاء الحساب
+// بيانات الإدارة المعتمدة
+const ADMIN_EMAIL = "fhdsd686@gmail.com";
+const ADMIN_PASS = "f123456f";
+
+// فحص أمني إجباري عند فتح الموقع
 function checkAuthGate() {
   const users = getDB("users", []);
   const hasValidUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
@@ -20,7 +24,6 @@ function checkAuthGate() {
   }
 }
 
-// فتح نافذة الدخول يدوياً
 function openAuthModal() {
   const modal = document.getElementById("auth-modal");
   const closeBtn = document.querySelector(".auth-top-close");
@@ -34,7 +37,6 @@ function openAuthModal() {
   }
 }
 
-// محاولة إغلاق نافذة الدخول
 function closeAuthModal() {
   const users = getDB("users", []);
   const hasValidUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
@@ -48,7 +50,6 @@ function closeAuthModal() {
   if (modal) modal.classList.add("hidden");
 }
 
-// التبديل بين تسجيل الدخول وإنشاء حساب
 function toggleAuthMode() {
   setAuthMode(!isSignUpMode);
 }
@@ -64,6 +65,10 @@ function setAuthMode(signUp) {
   const switchText = document.getElementById("auth-switch-text");
   const switchBtn = document.getElementById("auth-switch-btn");
   const groupName = document.getElementById("group-signup-name");
+  const groupEmail = document.getElementById("group-signup-email");
+  const idLabel = document.getElementById("auth-identifier-label");
+  const idInput = document.getElementById("auth-identifier");
+  const forgotWrap = document.getElementById("forgot-pass-container");
 
   if (isSignUpMode) {
     if (bannerTitle) bannerTitle.innerText = "حساب جديد";
@@ -74,6 +79,10 @@ function setAuthMode(signUp) {
     if (switchText) switchText.innerText = "لديك حساب بالفعل؟";
     if (switchBtn) switchBtn.innerText = "تسجيل الدخول";
     if (groupName) groupName.classList.remove("hidden");
+    if (groupEmail) groupEmail.classList.remove("hidden");
+    if (idLabel) idLabel.innerText = "اسم المستخدم";
+    if (idInput) idInput.placeholder = "اختر اسم مستخدم";
+    if (forgotWrap) forgotWrap.classList.add("hidden");
   } else {
     if (bannerTitle) bannerTitle.innerText = "أهلاً بعودتك";
     if (bannerDesc) bannerDesc.innerText = "سجّل دخولك للوصول إلى حسابك وخدماتك";
@@ -83,6 +92,10 @@ function setAuthMode(signUp) {
     if (switchText) switchText.innerText = "ليس لديك حساب؟";
     if (switchBtn) switchBtn.innerText = "إنشاء حساب جديد";
     if (groupName) groupName.classList.add("hidden");
+    if (groupEmail) groupEmail.classList.add("hidden");
+    if (idLabel) idLabel.innerText = "اسم المستخدم أو البريد الإلكتروني";
+    if (idInput) idInput.placeholder = "أدخل اسم المستخدم أو الإيميل";
+    if (forgotWrap) forgotWrap.classList.remove("hidden");
   }
 }
 
@@ -97,27 +110,33 @@ function handleAuthSubmit(e) {
   if (!Array.isArray(users)) users = [];
 
   if (isSignUpMode) {
-    // إنشاء حساب جديد
+    // 1. إنشاء حساب جديد
     const fullname = document.getElementById("auth-fullname").value.trim();
+    const email = document.getElementById("auth-email").value.trim();
+
     if (!fullname || !identifier || !password) {
       alert("يرجى ملء جميع الحقول المطلوبة");
       return;
     }
 
-    const exists = users.some(u => u.name && u.name.toLowerCase() === identifier.toLowerCase());
+    const exists = users.some(u => 
+      (u.name && u.name.toLowerCase() === identifier.toLowerCase()) ||
+      (email && u.email && u.email.toLowerCase() === email.toLowerCase())
+    );
     if (exists) {
-      alert("اسم المستخدم هذا مسجل مسبقاً، اختر اسماً آخر");
+      alert("اسم المستخدم أو البريد الإلكتروني مسجل مسبقاً!");
       return;
     }
 
-    const isMohannad = identifier.toLowerCase() === "mohannad";
+    const isAdmin = (email && email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
     const newUser = {
       id: "u_" + Date.now(),
       name: identifier,
       fullname: fullname,
+      email: email || "",
       password: password,
-      balanceUSD: isMohannad ? 1415.613 : 0.00,
-      role: isMohannad ? "الأسطورة" : "VIP 1",
+      balanceUSD: isAdmin ? 1415.613 : 0.00,
+      role: isAdmin ? "الأسطورة" : "VIP 1",
       ordersCount: 0,
       avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"
     };
@@ -126,45 +145,65 @@ function handleAuthSubmit(e) {
     setDB("users", users);
     
     alert(`🎉 أهلاً بك يا ${fullname}! تم إنشاء حسابك بنجاح.`);
-    
-    const closeBtn = document.querySelector(".auth-top-close");
-    if (closeBtn) closeBtn.style.display = "flex";
-    const authModal = document.getElementById("auth-modal");
-    if (authModal) authModal.classList.add("hidden");
-    
-    if (typeof updateUserUI === "function") updateUserUI();
+    finishLoginSuccess();
   } else {
-    // تسجيل الدخول
-    if (identifier.toLowerCase() === "mohannad" && !users.some(u => u.name.toLowerCase() === "mohannad")) {
-      const adminUser = {
-        id: "u_admin",
-        name: "Mohannad",
-        fullname: "مهند",
-        password: password,
-        balanceUSD: 1415.613,
-        role: "الأسطورة",
-        ordersCount: 0,
-        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"
-      };
-      users.unshift(adminUser);
-      setDB("users", users);
-      alert(`مرحباً بعودتك يا Mohannad! تم تفعيل لوحة الإدارة.`);
-      
-      const closeBtn = document.querySelector(".auth-top-close");
-      if (closeBtn) closeBtn.style.display = "flex";
-      const authModal = document.getElementById("auth-modal");
-      if (authModal) authModal.classList.add("hidden");
+    // 2. تسجيل الدخول
+    const lowerId = identifier.toLowerCase();
 
-      if (typeof updateUserUI === "function") updateUserUI();
+    // التحقق من حساب الآدمن المحدد (fhdsd686@gmail.com وكلمة السر f123456f)
+    if (lowerId === ADMIN_EMAIL.toLowerCase() || lowerId === "mohannad") {
+      if (password !== ADMIN_PASS) {
+        alert("❌ كلمة المرور غير صحيحة لحساب الإدارة!");
+        return;
+      }
+
+      let adminUser = users.find(u => 
+        (u.email && u.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) || 
+        (u.name && u.name.toLowerCase() === "mohannad")
+      );
+
+      if (!adminUser) {
+        adminUser = {
+          id: "u_admin",
+          name: "Mohannad",
+          fullname: "مهند",
+          email: ADMIN_EMAIL,
+          password: ADMIN_PASS,
+          balanceUSD: 1415.613,
+          role: "الأسطورة",
+          ordersCount: 0,
+          avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"
+        };
+        users.unshift(adminUser);
+      } else {
+        adminUser.role = "الأسطورة";
+        adminUser.email = ADMIN_EMAIL;
+        const idx = users.indexOf(adminUser);
+        if (idx > 0) {
+          users.splice(idx, 1);
+          users.unshift(adminUser);
+        }
+      }
+
+      setDB("users", users);
+      alert("👑 مرحباً بعودتك يا مهند! تم تفعيل حساب الإدارة ولوحة التحكم.");
+      finishLoginSuccess();
       return;
     }
 
+    // البحث عن مستخدم مسجل بالاسم أو الإيميل
     const user = users.find(u => 
-      u.name && u.name.toLowerCase() === identifier.toLowerCase()
+      (u.name && u.name.toLowerCase() === lowerId) ||
+      (u.email && u.email.toLowerCase() === lowerId)
     );
 
     if (!user) {
-      alert("اسم المستخدم غير مسجل، اضغط على 'إنشاء حساب جديد' بالأسفل");
+      alert("الحساب غير مسجل! اضغط على 'إنشاء حساب جديد' أو سجل بحساب Google.");
+      return;
+    }
+
+    if (user.password && user.password !== password) {
+      alert("❌ كلمة المرور غير صحيحة! إذا نسيتها اضغط على 'نسيت كلمة السر؟'");
       return;
     }
 
@@ -175,15 +214,101 @@ function handleAuthSubmit(e) {
       setDB("users", users);
     }
 
-    alert(`مرحباً بعودتك يا ${user.name}!`);
-
-    const closeBtn = document.querySelector(".auth-top-close");
-    if (closeBtn) closeBtn.style.display = "flex";
-    const authModal = document.getElementById("auth-modal");
-    if (authModal) authModal.classList.add("hidden");
-
-    if (typeof updateUserUI === "function") updateUserUI();
+    alert(`مرحباً بعودتك يا ${user.fullname || user.name}!`);
+    finishLoginSuccess();
   }
+}
+
+// تسجيل الدخول المباشر بحساب Google
+function loginWithGoogle() {
+  const googleEmail = prompt("أدخل بريدك الإلكتروني في Google للمتابعة السريعة:\n(مثال: name@gmail.com)");
+  if (!googleEmail || !googleEmail.trim()) return;
+
+  const cleanEmail = googleEmail.trim().toLowerCase();
+  if (!cleanEmail.includes("@")) {
+    alert("يرجى إدخال بريد إلكتروني صحيح!");
+    return;
+  }
+
+  let users = getDB("users", []);
+  if (!Array.isArray(users)) users = [];
+
+  const isAdmin = (cleanEmail === ADMIN_EMAIL.toLowerCase());
+  let existingUser = users.find(u => u.email && u.email.toLowerCase() === cleanEmail);
+
+  if (existingUser) {
+    if (isAdmin) existingUser.role = "الأسطورة";
+    const idx = users.indexOf(existingUser);
+    if (idx > 0) {
+      users.splice(idx, 1);
+      users.unshift(existingUser);
+    }
+    setDB("users", users);
+    alert(`✅ تم تسجيل الدخول بحساب Google بنجاح! أهلاً بك يا ${existingUser.name}`);
+  } else {
+    const derivedName = isAdmin ? "Mohannad" : cleanEmail.split("@")[0];
+    const newGoogleUser = {
+      id: "u_g_" + Date.now(),
+      name: derivedName,
+      fullname: isAdmin ? "مهند" : derivedName,
+      email: cleanEmail,
+      password: isAdmin ? ADMIN_PASS : "google_auth",
+      balanceUSD: isAdmin ? 1415.613 : 0.00,
+      role: isAdmin ? "الأسطورة" : "VIP 1",
+      ordersCount: 0,
+      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"
+    };
+    users.unshift(newGoogleUser);
+    setDB("users", users);
+    alert(`🎉 تم ربط حساب Google والدخول بنجاح! أهلاً بك يا ${derivedName}`);
+  }
+
+  finishLoginSuccess();
+}
+
+// استعادة / تغيير كلمة السر (نسيت كلمة السر؟)
+function handleForgotPassword() {
+  const targetInput = prompt("أدخل اسم المستخدم أو البريد الإلكتروني لاستعادة كلمة المرور:");
+  if (!targetInput || !targetInput.trim()) return;
+
+  const cleanTarget = targetInput.trim().toLowerCase();
+
+  if (cleanTarget === ADMIN_EMAIL.toLowerCase() || cleanTarget === "mohannad") {
+    alert("لحماية حساب الإدارة، يرجى التواصل مع الدعم الفني أو استخدام بريد الإدارة المعتمد.");
+    return;
+  }
+
+  let users = getDB("users", []);
+  const user = users.find(u => 
+    (u.name && u.name.toLowerCase() === cleanTarget) ||
+    (u.email && u.email.toLowerCase() === cleanTarget)
+  );
+
+  if (!user) {
+    alert("لم يتم العثور على حساب بهذا الاسم أو البريد الإلكتروني!");
+    return;
+  }
+
+  const newPass = prompt(`تم العثور على الحساب (${user.name}).\nأدخل كلمة المرور الجديدة لحسابك:`);
+  if (!newPass || newPass.trim().length < 4) {
+    alert("يجب أن تتكون كلمة المرور الجديدة من 4 أحرف على الأقل.");
+    return;
+  }
+
+  user.password = newPass.trim();
+  setDB("users", users);
+  alert("✅ تم تحديث كلمة المرور بنجاح! يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.");
+}
+
+// إغلاق نافذة الدخول وتحديث المتجر
+function finishLoginSuccess() {
+  const closeBtn = document.querySelector(".auth-top-close");
+  if (closeBtn) closeBtn.style.display = "flex";
+  const authModal = document.getElementById("auth-modal");
+  if (authModal) authModal.classList.add("hidden");
+
+  if (typeof updateUserUI === "function") updateUserUI();
+  if (typeof checkMaintenanceGate === "function") checkMaintenanceGate();
 }
 
 // نافذة تأكيد تسجيل الخروج
