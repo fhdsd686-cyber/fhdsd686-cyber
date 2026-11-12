@@ -1,4 +1,4 @@
-// --- منطق لوحة إدارة النظام والتحكم بوضع الصيانة والبيانات والطلبات والمستخدمين ---
+// --- منطق لوحة إدارة النظام، التسعير التلقائي والعروض، وإدارة المستخدمين والطلبات ---
 
 document.addEventListener("DOMContentLoaded", () => {
   updateMaintenanceBtnUI();
@@ -26,6 +26,7 @@ function openAdminPanel() {
   if (typeof toggleSidebar === "function") toggleSidebar(false);
 
   renderAdminStats();
+  renderAdminPricingOffers();
   renderAdminProducts();
   renderAdminCategories();
   renderAdminDepositMethods();
@@ -88,11 +89,98 @@ function switchAdminSection(secId) {
   });
   if (clicked) clicked.classList.add("active");
 
+  if (secId === 'pricing-offers') renderAdminPricingOffers();
   if (secId === 'add-product') loadCategoriesIntoSelect('prod-category-select');
   if (secId === 'add-category') loadParentCategoriesSelect('cat-parent-select');
   if (secId === 'deposit-requests') renderAdminDepositRequests();
   if (secId === 'deposit-methods') renderAdminDepositMethods();
   if (secId === 'users') renderAdminUsers();
+}
+
+// --- نظام التسعير والعروض (السعر = سعر المورد + النسبة العامة أو الخاصة) ---
+function renderAdminPricingOffers() {
+  const globalInput = document.getElementById("global-profit-percent");
+  const listContainer = document.getElementById("category-offers-list");
+
+  const globalPercent = getDB("global_profit_percent", 0);
+  if (globalInput) globalInput.value = globalPercent;
+
+  if (!listContainer) return;
+  const categories = getDB("categories", initialCategories);
+  const categoryOffers = getDB("category_profit_percents", {});
+
+  listContainer.innerHTML = categories.map(cat => {
+    const hasCustom = categoryOffers[cat.id] !== undefined && categoryOffers[cat.id] !== null && categoryOffers[cat.id] !== "";
+    const currentVal = hasCustom ? categoryOffers[cat.id] : "";
+
+    return `
+      <div style="background:#162444; border:1px solid ${hasCustom ? '#f59e0b' : 'rgba(56,189,248,0.15)'}; padding:12px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+        <div>
+          <strong style="color:#fff; font-size:0.92rem;">${cat.name}</strong>
+          <div style="font-size:0.76rem; color:${hasCustom ? '#f59e0b' : '#94a3b8'}; margin-top:2px;">
+            ${hasCustom ? `🔥 عرض / نسبة خاصة: +${currentVal}%` : `يطبق النسبة العامة (+${globalPercent}%)`}
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:6px;">
+          <input type="number" step="any" id="cat-offer-input-${cat.id}" value="${currentVal}" placeholder="عام (${globalPercent}%)" style="width:105px; background:#050b18; border:1px solid #38bdf8; border-radius:8px; padding:7px 8px; color:#fff; font-size:0.82rem; font-weight:bold;">
+          <button type="button" onclick="saveCategoryOfferPercent('${cat.id}')" style="background:#10b981; border:none; color:#fff; padding:7px 12px; border-radius:8px; font-weight:bold; font-size:0.8rem; cursor:pointer;">حفظ</button>
+          ${hasCustom ? `<button type="button" onclick="resetCategoryOfferPercent('${cat.id}')" style="background:#ef4444; border:none; color:#fff; padding:7px 10px; border-radius:8px; font-weight:bold; font-size:0.8rem; cursor:pointer;" title="إلغاء النسبة الخاصة والعودة للعامة">✕</button>` : ''}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function saveGlobalProfitPercent() {
+  const input = document.getElementById("global-profit-percent");
+  if (!input) return;
+  const val = parseFloat(input.value);
+  if (isNaN(val) || val < 0) {
+    alert("يرجى إدخال نسبة مئوية صحيحة (مثلاً 0 أو 10)!");
+    return;
+  }
+
+  setDB("global_profit_percent", val);
+  alert(`✅ تم حفظ النسبة العامة (+${val}%) وتطبيقها تلقائياً على جميع التطبيقات!`);
+  renderAdminPricingOffers();
+  renderAdminProducts();
+  if (typeof renderCategories === "function") renderCategories();
+}
+
+function saveCategoryOfferPercent(catId) {
+  const input = document.getElementById(`cat-offer-input-${catId}`);
+  if (!input) return;
+
+  const raw = input.value.trim();
+  const categoryOffers = getDB("category_profit_percents", {});
+
+  if (raw === "") {
+    delete categoryOffers[catId];
+  } else {
+    const num = parseFloat(raw);
+    if (isNaN(num) || num < 0) {
+      alert("يرجى إدخال نسبة صحيحة!");
+      return;
+    }
+    categoryOffers[catId] = num;
+  }
+
+  setDB("category_profit_percents", categoryOffers);
+  alert("✅ تم حفظ نسبة العرض الخاصة بهذا التطبيق وتحديث أسعاره فوراً!");
+  renderAdminPricingOffers();
+  renderAdminProducts();
+  if (typeof renderCategories === "function") renderCategories();
+}
+
+function resetCategoryOfferPercent(catId) {
+  const categoryOffers = getDB("category_profit_percents", {});
+  delete categoryOffers[catId];
+  setDB("category_profit_percents", categoryOffers);
+  alert("تم إلغاء النسبة الخاصة وإرجاع التطبيق للنسبة العامة.");
+  renderAdminPricingOffers();
+  renderAdminProducts();
+  if (typeof renderCategories === "function") renderCategories();
 }
 
 function renderAdminStats() {
@@ -130,16 +218,22 @@ function handleSiteSettingsUpdate(e) {
 function renderAdminProducts() {
   const tbody = document.getElementById("admin-products-table");
   if (!tbody) return;
-  const products = getDB("products", []);
-  const categories = getDB("categories", []);
+  const products = getDB("products", initialProducts);
+  const categories = getDB("categories", initialCategories);
 
   tbody.innerHTML = products.map(p => {
     const cat = categories.find(c => c.id === p.categoryId);
+    const supplierUSD = Number(p.supplierPriceUSD !== undefined ? p.supplierPriceUSD : (p.priceUSD || 0));
+    const finalUSD = (typeof calculateProductFinalPrice === "function") ? calculateProductFinalPrice(p) : supplierUSD;
+
     return `
       <tr>
         <td>${p.name}</td>
         <td>${cat ? cat.name : "عام"}</td>
-        <td>$${p.priceUSD}</td>
+        <td>
+          <div style="font-size:0.75rem; color:#94a3b8;">مورد: $${supplierUSD}</div>
+          <div style="font-weight:bold; color:#10b981;">بيع: $${finalUSD}</div>
+        </td>
         <td><button style="background:#ef4444; border:none; color:#fff; padding:4px 8px; border-radius:6px; cursor:pointer;" onclick="deleteAdminProduct('${p.id}')">حذف</button></td>
       </tr>
     `;
@@ -150,23 +244,27 @@ function handleAddProduct(e) {
   e.preventDefault();
   const categoryId = document.getElementById("prod-category-select").value;
   const name = document.getElementById("prod-name").value.trim();
-  const priceUSD = parseFloat(document.getElementById("prod-price-usd").value);
-  const priceSYP = parseFloat(document.getElementById("prod-price-syp").value);
+  const supplierPriceUSD = parseFloat(document.getElementById("prod-price-usd").value);
+  const customPercentRaw = document.getElementById("prod-custom-percent") ? document.getElementById("prod-custom-percent").value.trim() : "";
+  const customPercent = customPercentRaw !== "" ? parseFloat(customPercentRaw) : null;
+  const priceSYP = parseFloat(document.getElementById("prod-price-syp").value) || Math.round(supplierPriceUSD * 15000);
   const desc = document.getElementById("prod-desc").value.trim();
   const image = document.getElementById("prod-image").value.trim();
 
-  const products = getDB("products", []);
+  const products = getDB("products", initialProducts);
   products.unshift({
     id: "p_" + Date.now(),
     categoryId,
     name,
-    priceUSD,
+    supplierPriceUSD,
+    priceUSD: supplierPriceUSD,
+    customPercent,
     priceSYP,
     desc,
     image
   });
   setDB("products", products);
-  alert("تمت إضافة المنتج بنجاح!");
+  alert("✅ تمت إضافة المنتج بنجاح وسيتم تسعيره تلقائياً حسب النسبة!");
   e.target.reset();
   renderAdminProducts();
   switchAdminSection("products");
@@ -174,7 +272,7 @@ function handleAddProduct(e) {
 
 function deleteAdminProduct(id) {
   if (!confirm("هل أنت متأكد من حذف هذا المنتج؟")) return;
-  let products = getDB("products", []);
+  let products = getDB("products", initialProducts);
   products = products.filter(p => p.id !== id);
   setDB("products", products);
   renderAdminProducts();
@@ -183,14 +281,14 @@ function deleteAdminProduct(id) {
 function loadCategoriesIntoSelect(selectId) {
   const select = document.getElementById(selectId);
   if (!select) return;
-  const categories = getDB("categories", []);
+  const categories = getDB("categories", initialCategories);
   select.innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
 }
 
 function renderAdminCategories() {
   const tbody = document.getElementById("admin-categories-table");
   if (!tbody) return;
-  const categories = getDB("categories", []);
+  const categories = getDB("categories", initialCategories);
 
   tbody.innerHTML = categories.map(c => `
     <tr>
@@ -208,7 +306,7 @@ function handleAddCategory(e) {
   const parentId = parentVal === "none" ? null : parentVal;
   const image = document.getElementById("cat-image").value.trim();
 
-  const categories = getDB("categories", []);
+  const categories = getDB("categories", initialCategories);
   categories.push({
     id: "cat_" + Date.now(),
     name,
@@ -225,7 +323,7 @@ function handleAddCategory(e) {
 
 function deleteAdminCategory(id) {
   if (!confirm("هل أنت متأكد من حذف هذا القسم؟")) return;
-  let categories = getDB("categories", []);
+  let categories = getDB("categories", initialCategories);
   categories = categories.filter(c => c.id !== id);
   setDB("categories", categories);
   renderAdminCategories();
@@ -235,7 +333,7 @@ function deleteAdminCategory(id) {
 function loadParentCategoriesSelect(selectId) {
   const select = document.getElementById(selectId);
   if (!select) return;
-  const categories = getDB("categories", []).filter(c => !c.parentId);
+  const categories = getDB("categories", initialCategories).filter(c => !c.parentId);
   select.innerHTML = `<option value="none">-- قسم رئيسي --</option>` + 
     categories.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
 }
@@ -375,7 +473,7 @@ function deleteAdminDepositMethod(id) {
   renderAdminDepositMethods();
 }
 
-// --- إدارة المستخدمين المتقدمة (عرض المواصفات + حظر + حذف + تعديل الرصيد) ---
+// --- إدارة المستخدمين المتقدمة ---
 function renderAdminUsers() {
   const container = document.getElementById("admin-users-list");
   if (!container) return;
@@ -414,13 +512,11 @@ function renderAdminUsers() {
   }).join("");
 }
 
-// نافذة منبثقة لعرض جميع مواصفات ومميزات الحساب مع أزرار الحظر والحذف
 function openUserDetailsModal(userIndex) {
   const users = getDB("users", []);
   const u = users[userIndex];
   if (!u) return;
 
-  // إزالة أي نافذة سابقة إن وجدت
   const oldModal = document.getElementById("admin-user-inspect-modal");
   if (oldModal) oldModal.remove();
 
@@ -452,13 +548,11 @@ function openUserDetailsModal(userIndex) {
         <div><span style="color:#94a3b8;">صلاحية الإدارة:</span> <strong>${isProtectedAdmin ? "مدير النظام (كاملة)" : "مستخدم متجر"}</strong></div>
       </div>
 
-      <!-- تعديل الرصيد السريع -->
       <div style="display:flex; gap:8px; margin-bottom:14px;">
         <input type="number" step="any" id="quick-edit-balance" value="${Number(u.balanceUSD || 0)}" placeholder="الرصيد الجديد ($)" style="flex:1; background:#050b18; border:1px solid #38bdf8; border-radius:10px; padding:9px 12px; color:#fff; font-weight:bold;">
         <button onclick="adminUpdateUserBalance(${userIndex})" style="background:#10b981; border:none; color:#fff; padding:0 14px; border-radius:10px; font-weight:800; cursor:pointer;">حفظ الرصيد</button>
       </div>
 
-      <!-- أزرار الحظر والحذف -->
       <div style="display:flex; gap:10px;">
         <button onclick="adminToggleBanUser(${userIndex})" style="flex:1; background:${isBanned ? '#10b981' : '#f59e0b'}; border:none; color:#fff; padding:11px; border-radius:12px; font-weight:800; font-size:0.88rem; cursor:pointer;">
           <i class="fa-solid ${isBanned ? 'fa-unlock' : 'fa-ban'}"></i> ${isBanned ? 'فك الحظر' : 'حظر الحساب'}
