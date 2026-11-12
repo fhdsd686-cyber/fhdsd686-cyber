@@ -1,4 +1,4 @@
-// --- منطق المتجر، عرض المنتجات، محول العملات اللحظي، وصلاحيات الإدارة والحظر ---
+// --- منطق المتجر، الميزات التفاعلية، محول العملات اللحظي، وصلاحيات الإدارة والحظر ---
 
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadSiteSettings();
   renderCategories();
   updateUserUI();
+  initSavedTheme();
 
   if (typeof checkMaintenanceGate === "function") {
     checkMaintenanceGate();
@@ -18,6 +19,242 @@ document.addEventListener("DOMContentLoaded", () => {
     checkAuthGate();
   }
 });
+
+// استعادة وضع المظهر المحفوظ (مظلم / نهاري)
+function initSavedTheme() {
+  const savedTheme = getDB("site_theme", "dark");
+  const icon = document.getElementById("theme-icon");
+  const label = document.getElementById("theme-status-label");
+
+  if (savedTheme === "light") {
+    document.body.classList.remove("dark-drawer");
+    document.body.classList.add("light-mode");
+    if (icon) { icon.className = "fa-solid fa-sun"; icon.style.color = "#f59e0b"; }
+    if (label) label.innerText = "الوضع المظلم: معطل (نهاري)";
+  } else {
+    document.body.classList.add("dark-drawer");
+    document.body.classList.remove("light-mode");
+    if (icon) { icon.className = "fa-solid fa-moon"; icon.style.color = "#38bdf8"; }
+    if (label) label.innerText = "الوضع المظلم: مفعل";
+  }
+}
+
+// تبديل الوضع المظلم والنهاري
+function toggleTheme() {
+  const isCurrentlyDark = document.body.classList.contains("dark-drawer");
+  const icon = document.getElementById("theme-icon");
+  const label = document.getElementById("theme-status-label");
+
+  if (isCurrentlyDark) {
+    document.body.classList.remove("dark-drawer");
+    document.body.classList.add("light-mode");
+    setDB("site_theme", "light");
+    if (icon) { icon.className = "fa-solid fa-sun"; icon.style.color = "#f59e0b"; }
+    if (label) label.innerText = "الوضع المظلم: معطل (نهاري)";
+  } else {
+    document.body.classList.add("dark-drawer");
+    document.body.classList.remove("light-mode");
+    setDB("site_theme", "dark");
+    if (icon) { icon.className = "fa-solid fa-moon"; icon.style.color = "#38bdf8"; }
+    if (label) label.innerText = "الوضع المظلم: مفعل";
+  }
+}
+
+// --- فتح نوافذ الميزات التفاعلية (المستويات، الحماية، الجلسات، مفضلتي، الإشعارات، الطلبات) ---
+function openFeatureModal(type) {
+  toggleSidebar(false);
+
+  const modal = document.getElementById("feature-modal");
+  const titleEl = document.getElementById("feature-modal-title");
+  const iconEl = document.getElementById("feature-modal-icon");
+  const bodyEl = document.getElementById("feature-modal-body");
+  if (!modal || !titleEl || !iconEl || !bodyEl) return;
+
+  const users = getDB("users", []);
+  const currentUser = (Array.isArray(users) && users.length > 0 && users[0].name !== "زائر") ? users[0] : null;
+
+  if (type === "levels") {
+    iconEl.className = "fa-solid fa-crown";
+    iconEl.style.color = "#f59e0b";
+    titleEl.innerText = "نظام المستويات والعضويات";
+    const currentRank = currentUser ? (currentUser.role || "عضو") : "زائر";
+
+    const levels = [
+      { name: "عضو", desc: "الحساب الأساسي لجميع المستخدمين الجدد.", badge: "#64748b" },
+      { name: "VIP 1", desc: "أولوية في معالجة الطلبات وتنفيذ أسرع.", badge: "#0284c7" },
+      { name: "VIP 4", desc: "خصومات خاصة على البطاقات والباقات + دعم مباشر.", badge: "#8b5cf6" },
+      { name: "الأسطورة", desc: "أعلى مستوى في المتجر مع كامل الصلاحيات وأفضل الأسعار.", badge: "#f59e0b" }
+    ];
+
+    bodyEl.innerHTML = `
+      <div style="background:#050b18; border:1px solid rgba(56,189,248,0.25); padding:12px; border-radius:14px; margin-bottom:12px; text-align:center;">
+        مستواك الحالي: <strong style="color:#38bdf8; font-size:1.05rem;">${currentRank}</strong>
+      </div>
+      ${levels.map(l => `
+        <div style="background:#0f172a; border:1px solid ${currentRank === l.name ? '#38bdf8' : 'rgba(255,255,255,0.08)'}; padding:12px; border-radius:14px; margin-bottom:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <strong style="color:#fff;">${l.name}</strong>
+            <span style="background:${l.badge}; color:#fff; font-size:0.72rem; padding:2px 10px; border-radius:20px;">
+              ${currentRank === l.name ? 'مستواك الحالي ✓' : 'متاح'}
+            </span>
+          </div>
+          <p style="font-size:0.8rem; color:#94a3b8; margin:0;">${l.desc}</p>
+        </div>
+      `).join("")}
+    `;
+  }
+
+  else if (type === "security") {
+    if (!currentUser) {
+      if (typeof openAuthModal === "function") openAuthModal();
+      return;
+    }
+    iconEl.className = "fa-solid fa-shield-halved";
+    iconEl.style.color = "#10b981";
+    titleEl.innerText = "إعدادات الأمان والحماية";
+
+    bodyEl.innerHTML = `
+      <div style="background:#050b18; border:1px solid rgba(16,185,129,0.3); padding:12px; border-radius:14px; margin-bottom:14px; font-size:0.85rem;">
+        <div style="color:#10b981; font-weight:800; margin-bottom:4px;"><i class="fa-solid fa-circle-check"></i> حسابك محمي ومؤمّن</div>
+        <div style="color:#94a3b8;">البريد المرتبط: <strong style="color:#fff;" dir="ltr">${currentUser.email || "غير مرتبط"}</strong></div>
+      </div>
+
+      <form onsubmit="handleQuickPasswordChange(event)">
+        <div class="deposit-input-group">
+          <label class="deposit-label">تعيين كلمة مرور جديدة للحساب:</label>
+          <input type="password" id="sec-new-password" class="deposit-field" placeholder="أدخل كلمة المرور الجديدة (6 أحرف على الأقل)" required minlength="6">
+        </div>
+        <button type="submit" class="btn-send-deposit" style="background:#10b981;">
+          <i class="fa-solid fa-key"></i> تحديث كلمة المرور
+        </button>
+      </form>
+    `;
+  }
+
+  else if (type === "sessions") {
+    iconEl.className = "fa-solid fa-mobile-screen";
+    iconEl.style.color = "#38bdf8";
+    titleEl.innerText = "الجلسات النشطة";
+
+    const deviceInfo = navigator.userAgent.includes("Android") ? "هاتف Android" :
+                       navigator.userAgent.includes("iPhone") ? "هاتف iPhone" : "متصفح ويب";
+    const nowTime = new Date().toLocaleString("ar-SY");
+
+    bodyEl.innerHTML = `
+      <div style="background:#0f172a; border:1px solid #38bdf8; padding:14px; border-radius:14px; margin-bottom:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <strong style="color:#fff;"><i class="fa-solid fa-mobile-screen-button" style="color:#38bdf8;"></i> ${deviceInfo} (الجلسة الحالية)</strong>
+          <span style="background:#10b981; color:#fff; font-size:0.7rem; padding:2px 8px; border-radius:20px;">نشط الآن</span>
+        </div>
+        <div style="font-size:0.78rem; color:#94a3b8;">آخر نشاط: ${nowTime}</div>
+      </div>
+      <button type="button" onclick="closeFeatureModal(); logoutUser();" class="btn-send-deposit" style="background:#ef4444;">
+        <i class="fa-solid fa-right-from-bracket"></i> إنهاء الجلسة وتسجيل الخروج
+      </button>
+    `;
+  }
+
+  else if (type === "favorites") {
+    iconEl.className = "fa-solid fa-heart";
+    iconEl.style.color = "#ef4444";
+    titleEl.innerText = "الأقسام المفضلة";
+
+    const categories = getDB("categories", initialCategories);
+    const favIds = getDB("user_favorites", ["cat_syriatel", "cat_mtn", "cat_superlive"]);
+    const favCats = categories.filter(c => favIds.includes(c.id));
+
+    if (favCats.length === 0) {
+      bodyEl.innerHTML = `<p style="text-align:center; color:#94a3b8; padding:20px;">لا توجد عناصر في المفضلة حالياً.</p>`;
+    } else {
+      bodyEl.innerHTML = favCats.map(c => `
+        <div style="background:#0f172a; border:1px solid rgba(255,255,255,0.08); padding:10px 12px; border-radius:14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <img src="${c.image}" style="width:38px; height:38px; border-radius:10px; object-fit:cover;">
+            <strong style="font-size:0.88rem; color:#fff;">${c.name}</strong>
+          </div>
+          <button onclick="closeFeatureModal(); openCategory('${c.id}', '${c.name}', '${c.image}')" style="background:#0284c7; border:none; color:#fff; padding:6px 12px; border-radius:8px; font-size:0.78rem; font-weight:bold; cursor:pointer;">
+            فتح
+          </button>
+        </div>
+      `).join("");
+    }
+  }
+
+  else if (type === "notifications") {
+    iconEl.className = "fa-solid fa-bell";
+    iconEl.style.color = "#f59e0b";
+    titleEl.innerText = "الإشعارات والتنبيهات";
+
+    const deposits = getDB("deposit_requests", []);
+    const userDeposits = currentUser ? deposits.filter(d => d.userName === currentUser.name) : [];
+
+    let html = `
+      <div style="background:#0f172a; border-right:3px solid #38bdf8; padding:12px; border-radius:12px; margin-bottom:10px;">
+        <div style="font-weight:800; font-size:0.88rem; color:#fff;">أهلاً بك في متجر Mohannad kard 🇸🇾</div>
+        <div style="font-size:0.78rem; color:#94a3b8; margin-top:4px;">يمكنك شحن رصيدك فوراً عبر شام كاش والباركود والاستمتاع بالشحن السريع.</div>
+      </div>
+    `;
+
+    userDeposits.forEach(d => {
+      const color = d.status === "مقبول" ? "#10b981" : (d.status === "مرفوض" ? "#ef4444" : "#f59e0b");
+      html += `
+        <div style="background:#0f172a; border-right:3px solid ${color}; padding:12px; border-radius:12px; margin-bottom:10px;">
+          <div style="font-weight:800; font-size:0.85rem; color:#fff;">طلب إيداع بقيمة $${d.amountUSD} (${d.methodName || "شام كاش"})</div>
+          <div style="font-size:0.78rem; color:${color}; font-weight:bold; margin-top:4px;">الحالة: ${d.status} • <span style="color:#94a3b8; font-weight:normal;">${d.date}</span></div>
+        </div>
+      `;
+    });
+
+    bodyEl.innerHTML = html;
+  }
+
+  else if (type === "orders") {
+    iconEl.className = "fa-solid fa-cart-shopping";
+    iconEl.style.color = "#38bdf8";
+    titleEl.innerText = "سجل طلباتي";
+
+    const orders = getDB("orders", []);
+    if (!Array.isArray(orders) || orders.length === 0) {
+      bodyEl.innerHTML = `<p style="text-align:center; color:#94a3b8; padding:24px;">لم تقم بأي طلب شراء حتى الآن.</p>`;
+    } else {
+      bodyEl.innerHTML = orders.map(o => `
+        <div style="background:#0f172a; border-right:3px solid #10b981; padding:12px; border-radius:12px; margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong style="font-size:0.88rem; color:#fff;">${o.packageName}</strong>
+            <span style="color:#38bdf8; font-weight:800;">$${o.price}</span>
+          </div>
+          <div style="font-size:0.78rem; color:#94a3b8; margin-top:4px;">
+            القسم: ${o.categoryName} | المستلم: <strong style="color:#fff;">${o.target}</strong>
+          </div>
+          <div style="font-size:0.74rem; color:#10b981; margin-top:4px;">الحالة: ${o.status} • ${o.date}</div>
+        </div>
+      `).join("");
+    }
+  }
+
+  modal.classList.remove("hidden");
+}
+
+function closeFeatureModal() {
+  const modal = document.getElementById("feature-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function handleQuickPasswordChange(e) {
+  e.preventDefault();
+  const newPass = document.getElementById("sec-new-password").value.trim();
+  if (newPass.length < 6) {
+    alert("يجب أن تكون كلمة المرور 6 أحرف على الأقل.");
+    return;
+  }
+  const users = getDB("users", []);
+  if (Array.isArray(users) && users.length > 0) {
+    users[0].password = newPass;
+    setDB("users", users);
+    alert("✅ تم تحديث كلمة المرور بنجاح!");
+    closeFeatureModal();
+  }
+}
 
 // دالة مساعدة للتحقق هل المستخدم الحالي هو الآدمن
 function isCurrentUserAdmin(user) {
@@ -120,6 +357,7 @@ function promptChangeUserAvatar() {
 
 // --- نظام الإيداع الديناميكي والباركود ---
 function openDepositModal() {
+  toggleSidebar(false);
   const users = getDB("users", []);
   const hasValidUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
   if (!hasValidUser) {
@@ -601,8 +839,4 @@ function toggleSidebar(force) {
     drawer.classList.add("open");
     backdrop.classList.remove("hidden");
   }
-}
-
-function toggleTheme() {
-  document.body.classList.toggle("light-mode");
 }
