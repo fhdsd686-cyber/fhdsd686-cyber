@@ -2,7 +2,7 @@
 
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
-const EXCHANGE_RATE = 15000;
+let activeDepositMethod = null;
 let depositReceiptBase64 = "";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -113,7 +113,7 @@ function promptChangeUserAvatar() {
   alert("تم تغيير صورتك الشخصية بنجاح!");
 }
 
-// --- نظام الإيداع ---
+// --- نظام الإيداع الديناميكي والباركود ---
 function openDepositModal() {
   const users = getDB("users", []);
   const hasValidUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
@@ -121,6 +121,9 @@ function openDepositModal() {
     if (typeof openAuthModal === "function") openAuthModal();
     return;
   }
+
+  renderDepositMethodsSelector();
+
   const modal = document.getElementById("deposit-modal");
   if (modal) modal.classList.remove("hidden");
 }
@@ -130,12 +133,86 @@ function closeDepositModal() {
   if (modal) modal.classList.add("hidden");
 }
 
+function renderDepositMethodsSelector() {
+  const selector = document.getElementById("deposit-methods-selector");
+  if (!selector) return;
+
+  const methods = getDB("depositMethods", initialDepositMethods);
+  if (!Array.isArray(methods) || methods.length === 0) return;
+
+  // الحفاظ على الطريقة المختارة أو تحديد الأولى افتراضياً
+  if (!activeDepositMethod || !methods.find(m => m.id === activeDepositMethod.id)) {
+    activeDepositMethod = methods[0];
+  }
+
+  const defaultIcon = "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=100&q=80";
+
+  selector.innerHTML = methods.map(m => {
+    const isActive = activeDepositMethod && activeDepositMethod.id === m.id;
+    const iconUrl = (m.icon && m.icon.trim().length > 5) ? m.icon : defaultIcon;
+    return `
+      <button type="button" class="method-pill-btn ${isActive ? 'active' : ''}" onclick="selectDepositMethod('${m.id}')">
+        <img src="${iconUrl}" alt="${m.name}" style="width: 20px; height: 20px; border-radius: 6px; object-fit: cover;" onerror="this.src='${defaultIcon}'">
+        <span>${m.name}</span>
+      </button>
+    `;
+  }).join("");
+
+  applyActiveDepositMethodUI();
+}
+
+function selectDepositMethod(methodId) {
+  const methods = getDB("depositMethods", initialDepositMethods);
+  const found = methods.find(m => m.id === methodId);
+  if (!found) return;
+
+  activeDepositMethod = found;
+  renderDepositMethodsSelector();
+}
+
+function applyActiveDepositMethodUI() {
+  if (!activeDepositMethod) return;
+
+  const defaultIcon = "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=100&q=80";
+  const logoEl = document.getElementById("deposit-active-logo");
+  const nameEl = document.getElementById("deposit-active-name");
+  const accountEl = document.getElementById("deposit-display-account");
+  const qrEl = document.getElementById("deposit-active-qr");
+  const qrWrap = document.getElementById("deposit-qr-wrapper");
+
+  if (logoEl) {
+    logoEl.src = (activeDepositMethod.icon && activeDepositMethod.icon.trim().length > 5)
+      ? activeDepositMethod.icon
+      : defaultIcon;
+  }
+  if (nameEl) nameEl.innerText = activeDepositMethod.name || "وسيلة إيداع";
+  if (accountEl) accountEl.innerText = activeDepositMethod.account || "";
+
+  // عرض صورة الباركود المخصصة أو توليدها تلقائياً من عنوان الحساب
+  if (qrEl && qrWrap) {
+    const qrSrc = (activeDepositMethod.qrImage && activeDepositMethod.qrImage.trim().length > 5)
+      ? activeDepositMethod.qrImage.trim()
+      : `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(activeDepositMethod.account || "")}`;
+    qrEl.src = qrSrc;
+    qrWrap.style.display = "inline-flex";
+  }
+
+  calculateDepositConversion();
+}
+
+function getActiveExchangeRate() {
+  if (activeDepositMethod && Number(activeDepositMethod.rate) > 1) {
+    return Number(activeDepositMethod.rate);
+  }
+  return 15000;
+}
+
 function copyDepositNumber() {
-  const phone = "0957455972";
-  navigator.clipboard.writeText(phone).then(() => {
-    alert("تم نسخ الرقم بنجاح: " + phone);
+  const accountText = activeDepositMethod ? activeDepositMethod.account : "b7a6624b69166fb60e741400cee2b8bd";
+  navigator.clipboard.writeText(accountText).then(() => {
+    alert("✅ تم نسخ عنوان الحساب بنجاح:\n" + accountText);
   }).catch(() => {
-    prompt("انسخ الرقم يدوياً:", phone);
+    prompt("انسخ عنوان الحساب يدوياً:", accountText);
   });
 }
 
@@ -169,16 +246,17 @@ function calculateDepositConversion() {
   const rateInfoEl = document.getElementById("deposit-rate-info");
   if (!inputEl || !convertedEl || !rateInfoEl) return;
 
+  const rate = getActiveExchangeRate();
   const inputVal = parseFloat(inputEl.value) || 0;
 
   if (currentDepositCurrency === "USD") {
     convertedEl.innerText = `${inputVal.toFixed(2)} $`;
-    const sypEquiv = Math.round(inputVal * EXCHANGE_RATE).toLocaleString("en-US");
+    const sypEquiv = Math.round(inputVal * rate).toLocaleString("en-US");
     rateInfoEl.innerText = `(ما يعادل: ${sypEquiv} ل.س)`;
   } else {
-    const usdEquiv = (inputVal / EXCHANGE_RATE).toFixed(3);
+    const usdEquiv = (inputVal / rate).toFixed(3);
     convertedEl.innerText = `${usdEquiv} $`;
-    rateInfoEl.innerText = `(سعر الصرف: 1$ = ${EXCHANGE_RATE.toLocaleString()} ل.س)`;
+    rateInfoEl.innerText = `(سعر الصرف: 1$ = ${rate.toLocaleString()} ل.س)`;
   }
 }
 
@@ -208,8 +286,10 @@ function handleDepositSubmit(e) {
     return;
   }
 
-  const amountUSD = currentDepositCurrency === "USD" ? inputVal : Number((inputVal / EXCHANGE_RATE).toFixed(3));
-  const amountSYP = currentDepositCurrency === "SYP" ? inputVal : Math.round(inputVal * EXCHANGE_RATE);
+  const rate = getActiveExchangeRate();
+  const methodName = activeDepositMethod ? activeDepositMethod.name : "شام كاش سوري";
+  const amountUSD = currentDepositCurrency === "USD" ? inputVal : Number((inputVal / rate).toFixed(3));
+  const amountSYP = currentDepositCurrency === "SYP" ? inputVal : Math.round(inputVal * rate);
 
   const users = getDB("users", []);
   const currentUser = users[0] || { name: "زائر" };
@@ -217,6 +297,7 @@ function handleDepositSubmit(e) {
   const newDepositRequest = {
     id: "dep_" + Date.now(),
     userName: currentUser.name,
+    methodName: methodName,
     amountUSD: amountUSD,
     amountSYP: amountSYP,
     currency: currentDepositCurrency,
@@ -232,7 +313,7 @@ function handleDepositSubmit(e) {
   setDB("deposit_requests", allRequests);
 
   const waMsg = encodeURIComponent(
-    `طلب شحن رصيد جديد (شام كاش سوري):\n` +
+    `طلب شحن رصيد جديد (${methodName}):\n` +
     `👤 المستخدم: ${currentUser.name}\n` +
     `💵 المبلغ بالدولار: ${amountUSD} $\n` +
     `🇸🇾 المبلغ بالليرة: ${amountSYP.toLocaleString()} ل.س\n` +
@@ -328,7 +409,7 @@ function openCategory(catId, catName, catImage) {
     return;
   }
 
-  let packageOptions = `<option value="" disabled selected>اختر اختر_الباقة</option>`;
+  let packageOptions = `<option value="" disabled selected>اختر الباقة</option>`;
   catProducts.forEach(prod => {
     packageOptions += `<option value="${prod.id}" data-price="${prod.priceUSD}">
       ${prod.name} &nbsp;&nbsp;&nbsp;&nbsp; (${prod.priceUSD} $)
@@ -346,12 +427,12 @@ function openCategory(catId, catName, catImage) {
 
     <form class="service-order-form" onsubmit="handleServiceOrder(event, '${catId}', '${catName}')">
       <div class="field-block">
-        <label class="field-label">رقم_الهاتف_09</label>
-        <input type="tel" id="srv-target-input" class="field-input" placeholder="أدخل رقم_الهاتف_09" required dir="ltr">
+        <label class="field-label">رقم الهاتف أو المعرف</label>
+        <input type="text" id="srv-target-input" class="field-input" placeholder="أدخل الرقم أو المعرف المطلوب" required dir="ltr">
       </div>
 
       <div class="field-block">
-        <label class="field-label">اختر_الباقة</label>
+        <label class="field-label">اختر الباقة</label>
         <div class="select-dropdown-box">
           <select id="srv-package-select" class="field-select" required onchange="onPackageSelectChange()">
             ${packageOptions}
