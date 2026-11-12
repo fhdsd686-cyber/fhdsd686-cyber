@@ -1,10 +1,10 @@
-// --- منطق المتجر، تبديل عملة الرصيد ($ ⇄ ل.س)، الميزات التفاعلية، وصلاحيات الإدارة ---
+// --- منطق المتجر، التسعير التلقائي والعروض (سعر المورد + النسبة)، وتبديل العملات ---
 
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
 let activeDepositMethod = null;
 let depositReceiptBase64 = "";
-let displayCurrency = getDB("display_currency", "USD"); // عملة العرض الحالية: USD أو SYP
+let displayCurrency = getDB("display_currency", "USD");
 const STORE_EXCHANGE_RATE = 15000;
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -22,6 +22,49 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+// محرك حساب السعر النهائي للزبون:
+// السعر = سعر المورد + النسبة (تُطبق النسبة العامة على الكل إلا إذا وُجدت نسبة عرض خاصة للمنتج أو التطبيق)
+function calculateProductFinalPrice(product) {
+  if (!product) return 0;
+
+  // سعر المورد الأساسي (إن لم يكن محدداً نأخذ السعر المحفوظ كسعر مورد)
+  const supplierPrice = Number(product.supplierPriceUSD !== undefined ? product.supplierPriceUSD : (product.priceUSD || 0));
+
+  const globalPercent = Number(getDB("global_profit_percent", 0));
+  const categoryOffers = getDB("category_profit_percents", {});
+
+  let appliedPercent = globalPercent;
+
+  // 1. إذا كان للتطبيق/القسم نسبة عرض خاصة، تتجاوز النسبة العامة
+  if (product.categoryId && categoryOffers[product.categoryId] !== undefined && categoryOffers[product.categoryId] !== null && categoryOffers[product.categoryId] !== "") {
+    appliedPercent = Number(categoryOffers[product.categoryId]);
+  }
+
+  // 2. إذا كان للمنتج نفسه نسبة عرض خاصة، تتجاوز نسبة القسم والنسبة العامة
+  if (product.customPercent !== undefined && product.customPercent !== null && product.customPercent !== "") {
+    appliedPercent = Number(product.customPercent);
+  }
+
+  const finalUSD = supplierPrice + (supplierPrice * (appliedPercent / 100));
+  return Number(finalUSD.toFixed(3));
+}
+
+// معرفة النسبة المطبقة حالياً على المنتج لعرض شارة "عرض خاص" إن وجدت
+function getProductAppliedOfferInfo(product) {
+  const globalPercent = Number(getDB("global_profit_percent", 0));
+  const categoryOffers = getDB("category_profit_percents", {});
+
+  if (product.customPercent !== undefined && product.customPercent !== null && product.customPercent !== "") {
+    const p = Number(product.customPercent);
+    return { percent: p, isSpecialOffer: p < globalPercent };
+  }
+  if (product.categoryId && categoryOffers[product.categoryId] !== undefined && categoryOffers[product.categoryId] !== null && categoryOffers[product.categoryId] !== "") {
+    const p = Number(categoryOffers[product.categoryId]);
+    return { percent: p, isSpecialOffer: p < globalPercent };
+  }
+  return { percent: globalPercent, isSpecialOffer: false };
+}
+
 // تبديل عملة عرض الرصيد والأسعار بين الدولار ($) والليرة السورية (ل.س)
 function toggleDisplayCurrency(e) {
   if (e) e.stopPropagation();
@@ -29,13 +72,11 @@ function toggleDisplayCurrency(e) {
   setDB("display_currency", displayCurrency);
   updateUserUI();
 
-  // تحديث سعر الباقة المعروضة حالياً إن كان المستخدم داخل قسم منتجات
   if (typeof onPackageSelectChange === "function") {
     onPackageSelectChange();
   }
 }
 
-// دالة لتنسيق أي مبلغ بالدولار حسب عملة العرض المختارة ($ أو ل.س)
 function formatStoreAmount(usdAmount) {
   const val = Number(usdAmount || 0);
   if (displayCurrency === "SYP") {
@@ -64,7 +105,6 @@ function initSavedTheme() {
   }
 }
 
-// تبديل الوضع المظلم والنهاري
 function toggleTheme() {
   const isCurrentlyDark = document.body.classList.contains("dark-drawer");
   const icon = document.getElementById("theme-icon");
@@ -85,7 +125,7 @@ function toggleTheme() {
   }
 }
 
-// --- فتح نوافذ الميزات التفاعلية (المستويات، الحماية، الجلسات، مفضلتي، الإشعارات، الطلبات) ---
+// --- فتح نوافذ الميزات التفاعلية ---
 function openFeatureModal(type) {
   toggleSidebar(false);
 
@@ -281,7 +321,6 @@ function handleQuickPasswordChange(e) {
   }
 }
 
-// دالة مساعدة للتحقق هل المستخدم الحالي هو الآدمن
 function isCurrentUserAdmin(user) {
   if (!user) return false;
   return (
@@ -292,7 +331,6 @@ function isCurrentUserAdmin(user) {
   );
 }
 
-// فحص وضع الصيانة
 function checkMaintenanceGate() {
   const isMaintenance = getDB("maintenance_mode", false);
   const modal = document.getElementById("maintenance-modal");
@@ -608,6 +646,8 @@ function renderCategories(filterText = "") {
   if (!container) return;
 
   const categories = getDB("categories", initialCategories);
+  const categoryOffers = getDB("category_profit_percents", {});
+  const globalPercent = Number(getDB("global_profit_percent", 0));
   const mainCategories = Array.isArray(categories) ? categories.filter(c => !c.parentId) : [];
 
   const filtered = mainCategories.filter(c => 
@@ -626,11 +666,19 @@ function renderCategories(filterText = "") {
   filtered.forEach(cat => {
     const item = document.createElement("div");
     item.className = "cat-app-item";
+    item.style.position = "relative";
     item.onclick = () => openCategory(cat.id, cat.name, cat.image);
 
     const imgSrc = (cat.image && cat.image.trim().length > 10) ? cat.image : defaultImg;
 
+    // إظهار شارة "عرض 🔥" إذا كان القسم لديه نسبة خاصة أقل من النسبة العامة
+    const hasOffer = categoryOffers[cat.id] !== undefined && categoryOffers[cat.id] !== "" && Number(categoryOffers[cat.id]) < globalPercent;
+    const offerBadge = hasOffer
+      ? `<span style="position:absolute; top:-4px; left:6px; background:#ef4444; color:#fff; font-size:0.65rem; font-weight:900; padding:2px 7px; border-radius:10px; z-index:2; box-shadow:0 2px 6px rgba(239,68,68,0.5);">عرض 🔥</span>`
+      : "";
+
     item.innerHTML = `
+      ${offerBadge}
       <div class="cat-app-avatar">
         <img src="${imgSrc}" alt="${cat.name}" onerror="this.src='${defaultImg}'">
       </div>
@@ -692,9 +740,13 @@ function openCategory(catId, catName, catImage) {
 
   let packageOptions = `<option value="" disabled selected>اختر الباقة</option>`;
   catProducts.forEach(prod => {
-    const formattedPrice = formatStoreAmount(prod.priceUSD);
-    packageOptions += `<option value="${prod.id}" data-price="${prod.priceUSD}">
-      ${prod.name} &nbsp;&nbsp;&nbsp;&nbsp; (${formattedPrice})
+    const finalUSD = calculateProductFinalPrice(prod);
+    const offerInfo = getProductAppliedOfferInfo(prod);
+    const formattedPrice = formatStoreAmount(finalUSD);
+    const offerTag = offerInfo.isSpecialOffer ? " 🔥 عرض خاص" : "";
+
+    packageOptions += `<option value="${prod.id}" data-price="${finalUSD}">
+      ${prod.name} &nbsp;&nbsp; (${formattedPrice})${offerTag}
     </option>`;
   });
 
@@ -775,7 +827,9 @@ function handleServiceOrder(e, catId, catName) {
   if (!product) return;
 
   const currentUser = users[0];
-  const price = Number(product.priceUSD);
+  // السعر النهائي المحسوب حسب (سعر المورد + النسبة العامة أو الخاصة)
+  const price = calculateProductFinalPrice(product);
+
   if ((currentUser.balanceUSD || 0) < price) {
     alert(`عذراً، رصيدك الحالي (${formatStoreAmount(currentUser.balanceUSD || 0)}) لا يكفي لشراء هذه الباقة (${formatStoreAmount(price)})! يرجى شحن رصيدك.`);
     return;
@@ -834,13 +888,11 @@ function updateUserUI() {
   const balUSD = Number(user.balanceUSD || 0);
   const balSYP = Math.round(balUSD * STORE_EXCHANGE_RATE).toLocaleString("en-US");
 
-  // في الهيدر: عرض الرصيد حسب العملة المختارة + زر تبديل سريع ($ ⇄ ل.س)
   if (headerBal) {
     const formattedHeader = displayCurrency === "SYP" ? `${balSYP} ل.س` : `${balUSD.toFixed(3)} $`;
     headerBal.innerHTML = `${formattedHeader} <span onclick="toggleDisplayCurrency(event)" title="اضغط للتبديل بين الدولار والسوري" style="background:rgba(56,189,248,0.2); color:#38bdf8; padding:1px 6px; border-radius:8px; font-size:0.72rem; margin-right:4px; border:1px solid rgba(56,189,248,0.4);">⇄</span>`;
   }
 
-  // في القائمة الجانبية: عرض الرصيد بالدولار وتحته بالليرة السورية + زر التبديل
   if (drawerBal) {
     drawerBal.innerHTML = `
       <div style="cursor:pointer;" onclick="toggleDisplayCurrency(event)" title="اضغط لتبديل عملة العرض">
