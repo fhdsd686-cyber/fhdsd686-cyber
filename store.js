@@ -1,4 +1,4 @@
-// --- منطق المتجر، عرض المنتجات، محول العملات اللحظي، وصلاحيات الإدارة عبر الإيميل ---
+// --- منطق المتجر، عرض المنتجات، محول العملات اللحظي، وصلاحيات الإدارة والحظر ---
 
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
@@ -101,10 +101,15 @@ function initBannerSlider(banners) {
 }
 
 function promptChangeUserAvatar() {
+  const users = getDB("users", []);
+  if (Array.isArray(users) && users[0] && users[0].isBanned) {
+    alert("🚫 عذراً، تم حظر حسابك من قبل إدارة المتجر.");
+    return;
+  }
+
   const newUrl = prompt("ضع رابط صورتك الشخصية الجديدة:");
   if (!newUrl || !newUrl.trim()) return;
 
-  let users = getDB("users", []);
   if (!Array.isArray(users) || users.length === 0) return;
 
   users[0].avatar = newUrl.trim();
@@ -119,6 +124,11 @@ function openDepositModal() {
   const hasValidUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
   if (!hasValidUser) {
     if (typeof openAuthModal === "function") openAuthModal();
+    return;
+  }
+
+  if (users[0] && users[0].isBanned) {
+    alert("🚫 عذراً، تم حظر حسابك من قبل إدارة المتجر.");
     return;
   }
 
@@ -140,7 +150,6 @@ function renderDepositMethodsSelector() {
   const methods = getDB("depositMethods", initialDepositMethods);
   if (!Array.isArray(methods) || methods.length === 0) return;
 
-  // الحفاظ على الطريقة المختارة أو تحديد الأولى افتراضياً
   if (!activeDepositMethod || !methods.find(m => m.id === activeDepositMethod.id)) {
     activeDepositMethod = methods[0];
   }
@@ -188,7 +197,6 @@ function applyActiveDepositMethodUI() {
   if (nameEl) nameEl.innerText = activeDepositMethod.name || "وسيلة إيداع";
   if (accountEl) accountEl.innerText = activeDepositMethod.account || "";
 
-  // عرض صورة الباركود المخصصة أو توليدها تلقائياً من عنوان الحساب
   if (qrEl && qrWrap) {
     const qrSrc = (activeDepositMethod.qrImage && activeDepositMethod.qrImage.trim().length > 5)
       ? activeDepositMethod.qrImage.trim()
@@ -277,6 +285,12 @@ function onDepositFileChosen(e) {
 function handleDepositSubmit(e) {
   e.preventDefault();
 
+  const users = getDB("users", []);
+  if (Array.isArray(users) && users[0] && users[0].isBanned) {
+    alert("🚫 عذراً، تم حظر حسابك من قبل إدارة المتجر.");
+    return;
+  }
+
   const inputVal = parseFloat(document.getElementById("deposit-input-val").value) || 0;
   const senderInfo = document.getElementById("deposit-sender-info").value.trim();
   const note = document.getElementById("deposit-note").value.trim();
@@ -291,7 +305,6 @@ function handleDepositSubmit(e) {
   const amountUSD = currentDepositCurrency === "USD" ? inputVal : Number((inputVal / rate).toFixed(3));
   const amountSYP = currentDepositCurrency === "SYP" ? inputVal : Math.round(inputVal * rate);
 
-  const users = getDB("users", []);
   const currentUser = users[0] || { name: "زائر" };
 
   const newDepositRequest = {
@@ -377,6 +390,11 @@ function openCategory(catId, catName, catImage) {
   
   if (!hasValidUser) {
     if (typeof openAuthModal === "function") openAuthModal();
+    return;
+  }
+
+  if (users[0] && users[0].isBanned) {
+    alert("🚫 عذراً، تم حظر حسابك من قبل إدارة المتجر.");
     return;
   }
 
@@ -467,6 +485,18 @@ function onPackageSelectChange() {
 function handleServiceOrder(e, catId, catName) {
   e.preventDefault();
 
+  let users = getDB("users", []);
+  if (!Array.isArray(users) || users.length === 0 || !users[0].name || users[0].name === "زائر") {
+    alert("يرجى تسجيل الدخول أو إنشاء حساب لإتمام عملية الشحن.");
+    if (typeof openAuthModal === "function") openAuthModal();
+    return;
+  }
+
+  if (users[0] && users[0].isBanned) {
+    alert("🚫 عذراً، تم حظر حسابك من قبل إدارة المتجر.");
+    return;
+  }
+
   const targetInput = document.getElementById("srv-target-input").value.trim();
   const select = document.getElementById("srv-package-select");
   const prodId = select.value;
@@ -479,13 +509,6 @@ function handleServiceOrder(e, catId, catName) {
   const products = getDB("products", initialProducts);
   const product = products.find(p => p.id === prodId);
   if (!product) return;
-
-  let users = getDB("users", []);
-  if (!Array.isArray(users) || users.length === 0 || !users[0].name || users[0].name === "زائر") {
-    alert("يرجى تسجيل الدخول أو إنشاء حساب لإتمام عملية الشحن.");
-    if (typeof openAuthModal === "function") openAuthModal();
-    return;
-  }
 
   const currentUser = users[0];
   const price = Number(product.priceUSD);
