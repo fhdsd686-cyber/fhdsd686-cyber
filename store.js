@@ -1,8 +1,8 @@
-// --- منطق المتجر، عرض المنتجات، محول العملات اللحظي، وتأكيد الإيداع عبر واتساب بنمط شام كاش ---
+// --- منطق المتجر، عرض المنتجات، محول العملات اللحظي، وصلاحيات الإدارة عبر الإيميل ---
 
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
-const EXCHANGE_RATE = 15000; // سعر الصرف المعتمد (1 دولار = 15,000 ليرة سورية)
+const EXCHANGE_RATE = 15000;
 let depositReceiptBase64 = "";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -10,16 +10,25 @@ document.addEventListener("DOMContentLoaded", () => {
   renderCategories();
   updateUserUI();
 
-  // فحص وضع الصيانة وقفل التصفح
   if (typeof checkMaintenanceGate === "function") {
     checkMaintenanceGate();
   }
 
-  // فحص تسجيل الدخول الإجباري
   if (typeof checkAuthGate === "function") {
     checkAuthGate();
   }
 });
+
+// دالة مساعدة للتحقق هل المستخدم الحالي هو الآدمن
+function isCurrentUserAdmin(user) {
+  if (!user) return false;
+  return (
+    user.role === "الأسطورة" ||
+    user.role === "Admin" ||
+    (user.email && user.email.toLowerCase() === "fhdsd686@gmail.com") ||
+    (user.name && user.name.toLowerCase() === "mohannad")
+  );
+}
 
 // فحص وضع الصيانة
 function checkMaintenanceGate() {
@@ -28,16 +37,13 @@ function checkMaintenanceGate() {
   const users = getDB("users", []);
   const currentUser = (Array.isArray(users) && users.length > 0) ? users[0] : null;
 
-  const isAdmin = currentUser && (currentUser.name === "Mohannad" || currentUser.role === "الأسطورة" || currentUser.role === "Admin");
-
-  if (isMaintenance && !isAdmin) {
+  if (isMaintenance && !isCurrentUserAdmin(currentUser)) {
     if (modal) modal.classList.remove("hidden");
   } else {
     if (modal) modal.classList.add("hidden");
   }
 }
 
-// تحميل هوية المتجر والبانر
 function loadSiteSettings() {
   const defaultBanners = [
     "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80"
@@ -58,7 +64,6 @@ function loadSiteSettings() {
   initBannerSlider((settings && settings.banners && settings.banners.length > 0) ? settings.banners : defaultBanners);
 }
 
-// سلايدر الإعلانات
 function initBannerSlider(banners) {
   const bannerCard = document.querySelector(".banner-card");
   if (!bannerCard || !banners || banners.length === 0) return;
@@ -95,31 +100,20 @@ function initBannerSlider(banners) {
   }
 }
 
-// تغيير الصورة الشخصية
 function promptChangeUserAvatar() {
   const newUrl = prompt("ضع رابط صورتك الشخصية الجديدة:");
   if (!newUrl || !newUrl.trim()) return;
 
   let users = getDB("users", []);
-  if (!Array.isArray(users) || users.length === 0) {
-    users = [{
-      id: "u_1",
-      name: "Mohannad",
-      avatar: newUrl.trim(),
-      balanceUSD: 1415.613,
-      role: "الأسطورة",
-      ordersCount: 0
-    }];
-  } else {
-    users[0].avatar = newUrl.trim();
-  }
+  if (!Array.isArray(users) || users.length === 0) return;
 
+  users[0].avatar = newUrl.trim();
   setDB("users", users);
   updateUserUI();
   alert("تم تغيير صورتك الشخصية بنجاح!");
 }
 
-// --- نظام الإيداع التفاعلي والتحويل المالي ---
+// --- نظام الإيداع ---
 function openDepositModal() {
   const users = getDB("users", []);
   const hasValidUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
@@ -242,7 +236,7 @@ function handleDepositSubmit(e) {
     `👤 المستخدم: ${currentUser.name}\n` +
     `💵 المبلغ بالدولار: ${amountUSD} $\n` +
     `🇸🇾 المبلغ بالليرة: ${amountSYP.toLocaleString()} ل.س\n` +
-    `📱 رقم/حساب المحول: ${senderInfo}\n` +
+    `👤 اسم المرسل: ${senderInfo}\n` +
     `📝 ملاحظة: ${note || "لا يوجد"}`
   );
 
@@ -252,7 +246,6 @@ function handleDepositSubmit(e) {
   window.open(`https://wa.me/963957455972?text=${waMsg}`, "_blank");
 }
 
-// عرض الأقسام للزوار
 function renderCategories(filterText = "") {
   const container = document.getElementById("categories-container");
   if (!container) return;
@@ -297,7 +290,6 @@ function filterCategories() {
   }
 }
 
-// فتح القسم والتأكد من تسجيل الحساب قبل المتابعة
 function openCategory(catId, catName, catImage) {
   const users = getDB("users", []);
   const hasValidUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
@@ -452,7 +444,6 @@ function backToCategories() {
   if (searchBox) searchBox.classList.remove("hidden");
 }
 
-// تحديث الواجهة وتطبيق قفل لوحة الإدارة
 function updateUserUI() {
   const users = getDB("users", []);
   const hasUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
@@ -474,13 +465,13 @@ function updateUserUI() {
 
   if (headerBal) headerBal.innerText = `${Number(user.balanceUSD || 0).toFixed(3)} $`;
   if (drawerBal) drawerBal.innerText = `${Number(user.balanceUSD || 0).toFixed(3)} $`;
-  if (sideName) sideName.innerText = user.name || "زائر";
+  if (sideName) sideName.innerText = user.fullname || user.name || "زائر";
   if (sideRank) sideRank.innerText = user.role || "عضو";
   if (headerRank) headerRank.innerText = user.role || "عضو";
   if (drawerAvatar) drawerAvatar.src = user.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
 
   if (adminLink) {
-    if (user.role === "الأسطورة" || user.role === "Admin" || user.name === "Mohannad") {
+    if (isCurrentUserAdmin(user)) {
       adminLink.style.display = "flex";
     } else {
       adminLink.style.display = "none";
