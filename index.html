@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=110">
+  <link rel="stylesheet" href="style.css?v=111">
 
   <style>
     /* تنسيقات أساسية وإجبارية للنوافذ */
@@ -737,7 +737,7 @@
     </div>
   </div>
 
-  <!-- نافذة تسجيل الدخول وإنشاء الحساب + Google + نسيت كلمة السر -->
+  <!-- نافذة تسجيل الدخول وإنشاء الحساب + Google الحقيقي + نسيت كلمة السر -->
   <div id="auth-modal" class="modal-overlay hidden">
     <div class="shawy-auth-card">
       <button class="auth-top-close" onclick="closeAuthModal()">✕</button>
@@ -809,7 +809,7 @@
           <span>أو</span>
         </div>
 
-        <!-- زر تسجيل الدخول المباشر بحساب Google -->
+        <!-- زر تسجيل الدخول المباشر بحساب Google الحقيقي عبر Firebase -->
         <button type="button" class="btn-google-login" onclick="loginWithGoogle()">
           <svg width="20" height="20" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M23.745 12.27c0-.79-.07-1.54-.19-2.27h-11.3v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/>
@@ -957,10 +957,28 @@
     </div>
   </div>
 
-  <!-- ملفات السكربت مع رقم إصدار v=110 لكسر الكاش فوراً -->
-  <script src="data.js?v=110"></script>
-  <script src="auth.js?v=110"></script>
-  <script src="store.js?v=110"></script>
-  <script src="admin.js?v=110"></script>
+  <!-- مكتبات Firebase الرسمية للربط المباشر مع Google -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDXKXC50f3zDImoNaBsOAo6Ie-CZHgpGs4",
+      authDomain: "markaz-mohannad.firebaseapp.com",
+      projectId: "markaz-mohannad",
+      storageBucket: "markaz-mohannad.firebasestorage.app",
+      messagingSenderId: "275163747312",
+      appId: "1:275163747312:web:ec44ed369b228004678335"
+    };
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+  </script>
+
+  <!-- ملفات السكربت مع رقم إصدار v=111 لكسر الكاش فوراً -->
+  <script src="data.js?v=111"></script>
+  <script src="auth.js?v=111"></script>
+  <script src="store.js?v=111"></script>
+  <script src="admin.js?v=111"></script>
 </body>
 </html>
