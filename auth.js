@@ -1,10 +1,87 @@
-// --- إدارة الحسابات: تسجيل الدخول الحقيقي بحسابات Google عبر Firebase، الاسم/الإيميل، وحساب الآدمن ---
+// --- إدارة الحسابات: تسجيل الدخول الحقيقي بحسابات Google (Popup + Redirect للهواتف)، الاسم/الإيميل، وحساب الآدمن ---
 
 let isSignUpMode = false;
 
 // بيانات الإدارة المعتمدة
 const ADMIN_EMAIL = "fhdsd686@gmail.com";
 const ADMIN_PASS = "f123456f";
+
+// التقاط نتيجة تسجيل الدخول عبر Google تلقائياً عند العودة من صفحة Google على الهاتف
+document.addEventListener("DOMContentLoaded", () => {
+  if (typeof firebase !== "undefined" && firebase.auth) {
+    firebase.auth().getRedirectResult()
+      .then((result) => {
+        if (result && result.user) {
+          processGoogleFirebaseUser(result.user, true);
+        }
+      })
+      .catch((err) => {
+        console.error("Redirect Auth Error:", err);
+      });
+
+    firebase.auth().onAuthStateChanged((gUser) => {
+      if (gUser && gUser.email) {
+        const users = getDB("users", []);
+        const currentLogged = (Array.isArray(users) && users.length > 0 && users[0].name !== "زائر") ? users[0] : null;
+        if (!currentLogged) {
+          processGoogleFirebaseUser(gUser, false);
+        }
+      }
+    });
+  }
+});
+
+// معالجة بيانات مستخدم Google وحفظها في قاعدة البيانات
+function processGoogleFirebaseUser(gUser, showAlertMsg = true) {
+  const email = (gUser.email || "").toLowerCase();
+  const displayName = gUser.displayName || email.split("@")[0];
+  const photoURL = gUser.photoURL || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
+
+  const isAdmin = (email === ADMIN_EMAIL.toLowerCase());
+
+  let users = getDB("users", []);
+  if (!Array.isArray(users)) users = [];
+
+  let existingUser = users.find(u => u.email && u.email.toLowerCase() === email);
+
+  if (existingUser) {
+    if (existingUser.isBanned && !isAdmin) {
+      alert("🚫 عذراً، تم حظر حسابك من قبل إدارة المتجر.");
+      if (typeof firebase !== "undefined" && firebase.auth) {
+        firebase.auth().signOut().catch(() => {});
+      }
+      return;
+    }
+    if (isAdmin) existingUser.role = "الأسطورة";
+    existingUser.avatar = photoURL;
+    existingUser.fullname = displayName;
+    users = users.filter(u => !u.email || u.email.toLowerCase() !== email);
+    users.unshift(existingUser);
+  } else {
+    users.unshift({
+      id: "u_" + gUser.uid,
+      name: isAdmin ? "Mohannad" : displayName,
+      fullname: displayName,
+      email: email,
+      password: isAdmin ? ADMIN_PASS : "google_auth",
+      balanceUSD: isAdmin ? 1415.613 : 0.00,
+      role: isAdmin ? "الأسطورة" : "VIP 1",
+      ordersCount: 0,
+      avatar: photoURL
+    });
+  }
+
+  setDB("users", users);
+
+  if (showAlertMsg) {
+    alert(isAdmin 
+      ? `👑 أهلاً بك يا مهند! تم الدخول بحساب الإدارة عبر Google.` 
+      : `✅ أهلاً بك يا ${displayName}! تم تسجيل الدخول بحساب Google بنجاح.`
+    );
+  }
+
+  finishLoginSuccess();
+}
 
 // فحص أمني إجباري عند فتح الموقع
 function checkAuthGate() {
@@ -148,7 +225,7 @@ function handleAuthSubmit(e) {
   } else {
     const lowerId = identifier.toLowerCase();
 
-    // التحقق من حساب الآدمن (fhdsd686@gmail.com وكلمة السر f123456f)
+    // التحقق من حساب الآدمن
     if (lowerId === ADMIN_EMAIL.toLowerCase() || lowerId === "mohannad") {
       if (password !== ADMIN_PASS) {
         alert("❌ كلمة المرور غير صحيحة لحساب الإدارة!");
@@ -199,6 +276,11 @@ function handleAuthSubmit(e) {
       return;
     }
 
+    if (user.isBanned) {
+      alert("🚫 عذراً، تم حظر حسابك من قبل إدارة المتجر.");
+      return;
+    }
+
     if (user.password && user.password !== password) {
       alert("❌ كلمة المرور غير صحيحة! إذا نسيتها اضغط على 'نسيت كلمة السر؟'");
       return;
@@ -216,7 +298,7 @@ function handleAuthSubmit(e) {
   }
 }
 
-// تسجيل الدخول الحقيقي عبر نافذة حسابات Google في الهاتف (Firebase Google Auth)
+// تسجيل الدخول الحقيقي عبر نافذة حسابات Google (يعمل بسلاسة على الهاتف والكمبيوتر)
 function loginWithGoogle() {
   if (typeof firebase === "undefined" || !firebase.auth) {
     alert("جاري تحميل خدمة Google، يرجى المحاولة بعد ثوانٍ...");
@@ -228,49 +310,21 @@ function loginWithGoogle() {
 
   firebase.auth().signInWithPopup(provider)
     .then((result) => {
-      const gUser = result.user;
-      const email = (gUser.email || "").toLowerCase();
-      const displayName = gUser.displayName || email.split("@")[0];
-      const photoURL = gUser.photoURL || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
-
-      const isAdmin = (email === ADMIN_EMAIL.toLowerCase());
-
-      let users = getDB("users", []);
-      if (!Array.isArray(users)) users = [];
-
-      let existingUser = users.find(u => u.email && u.email.toLowerCase() === email);
-
-      if (existingUser) {
-        if (isAdmin) existingUser.role = "الأسطورة";
-        existingUser.avatar = photoURL;
-        existingUser.fullname = displayName;
-        users = users.filter(u => !u.email || u.email.toLowerCase() !== email);
-        users.unshift(existingUser);
-      } else {
-        users.unshift({
-          id: "u_" + gUser.uid,
-          name: isAdmin ? "Mohannad" : displayName,
-          fullname: displayName,
-          email: email,
-          password: isAdmin ? ADMIN_PASS : "google_auth",
-          balanceUSD: isAdmin ? 1415.613 : 0.00,
-          role: isAdmin ? "الأسطورة" : "VIP 1",
-          ordersCount: 0,
-          avatar: photoURL
-        });
+      if (result && result.user) {
+        processGoogleFirebaseUser(result.user, true);
       }
-
-      setDB("users", users);
-      alert(isAdmin 
-        ? `👑 أهلاً بك يا مهند! تم الدخول بحساب الإدارة عبر Google.` 
-        : `✅ أهلاً بك يا ${displayName}! تم تسجيل الدخول بحساب Google بنجاح.`
-      );
-      finishLoginSuccess();
     })
     .catch((error) => {
-      console.error("Google Auth Error:", error);
-      if (error.code === "auth/popup-closed-by-user") {
-        return; // أغلق المستخدم النافذة بنفسه
+      console.error("Google Popup Error:", error);
+      // على متصفحات الهواتف إذا أُغلقت النافذة المنبثقة أو حُظرت، نستخدم إعادة التوجيه الآمنة تلقائياً
+      if (
+        error.code === "auth/popup-blocked" ||
+        error.code === "auth/popup-closed-by-user" ||
+        error.code === "auth/cancelled-popup-request" ||
+        error.code === "auth/web-storage-unsupported"
+      ) {
+        firebase.auth().signInWithRedirect(provider);
+        return;
       }
       if (error.code === "auth/unauthorized-domain") {
         alert("⚠️ يجب إضافة رابط الموقع (fhdsd686-cyber.github.io) في قائمة النطاقات المصرح بها (Authorized domains) داخل إعدادات Firebase Authentication.");
@@ -284,7 +338,7 @@ function loginWithGoogle() {
     });
 }
 
-// استعادة / تغيير كلمة السر (نسيت كلمة السر؟)
+// استعادة / تغيير كلمة السر
 function handleForgotPassword() {
   const targetInput = prompt("أدخل اسم المستخدم أو البريد الإلكتروني لاستعادة كلمة المرور:");
   if (!targetInput || !targetInput.trim()) return;
@@ -349,7 +403,6 @@ function closeLogoutModal() {
 function confirmLogoutAction() {
   closeLogoutModal();
 
-  // تسجيل الخروج من جلسة Firebase أيضاً إن وجدت
   if (typeof firebase !== "undefined" && firebase.auth) {
     firebase.auth().signOut().catch(() => {});
   }
