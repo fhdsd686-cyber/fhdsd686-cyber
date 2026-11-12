@@ -91,6 +91,7 @@ function switchAdminSection(secId) {
   if (secId === 'add-product') loadCategoriesIntoSelect('prod-category-select');
   if (secId === 'add-category') loadParentCategoriesSelect('cat-parent-select');
   if (secId === 'deposit-requests') renderAdminDepositRequests();
+  if (secId === 'deposit-methods') renderAdminDepositMethods();
 }
 
 function renderAdminStats() {
@@ -251,7 +252,7 @@ function renderAdminDepositRequests() {
   container.innerHTML = requests.map(r => `
     <div style="background:#162444; border-radius:12px; padding:14px; margin-bottom:12px; border-right:4px solid ${r.status === 'مقبول' ? '#10b981' : '#f59e0b'};">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-        <strong>المستخدم: ${r.userName}</strong>
+        <strong>المستخدم: ${r.userName} (${r.methodName || "شام كاش"})</strong>
         <span style="font-size:0.8rem; color:#94a3b8;">${r.date}</span>
       </div>
       <div style="font-size:0.9rem; margin-bottom:6px;">
@@ -302,39 +303,75 @@ function rejectDepositRequest(reqId) {
   renderAdminDepositRequests();
 }
 
+// --- إدارة طرق الإيداع والباركود من لوحة التحكم ---
 function renderAdminDepositMethods() {
   const container = document.getElementById("admin-methods-container");
   if (!container) return;
-  const methods = getDB("deposit_methods", []);
-  container.innerHTML = methods.map(m => `
-    <div style="background:#162444; padding:10px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-      <div><strong>${m.name}</strong> - الحساب: ${m.account} (${m.currency})</div>
-      <button style="background:#ef4444; border:none; color:#fff; padding:4px 8px; border-radius:6px; cursor:pointer;" onclick="deleteAdminDepositMethod('${m.id}')">حذف</button>
-    </div>
-  `).join("");
+
+  const methods = getDB("depositMethods", initialDepositMethods);
+  if (!Array.isArray(methods) || methods.length === 0) {
+    container.innerHTML = `<p style="color:#94a3b8; text-align:center; padding:20px;">لا توجد طرق إيداع مضافة حالياً.</p>`;
+    return;
+  }
+
+  container.innerHTML = methods.map(m => {
+    const qrPreview = (m.qrImage && m.qrImage.trim().length > 5)
+      ? m.qrImage.trim()
+      : `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(m.account || "")}`;
+
+    return `
+      <div style="background:#162444; padding:12px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; gap:12px;">
+        <div style="display:flex; align-items:center; gap:12px; overflow:hidden;">
+          <img src="${qrPreview}" alt="QR" style="width:48px; height:48px; background:#fff; padding:3px; border-radius:8px; flex-shrink:0;">
+          <div style="overflow:hidden;">
+            <div style="font-weight:800; color:#fff; font-size:0.95rem;">${m.name} (${m.currency || "USD"})</div>
+            <div style="font-size:0.78rem; color:#38bdf8; word-break:break-all;" dir="ltr">${m.account}</div>
+            <div style="font-size:0.75rem; color:#94a3b8;">سعر الصرف: 1$ = ${Number(m.rate || 15000).toLocaleString()} ل.س</div>
+          </div>
+        </div>
+        <button style="background:#ef4444; border:none; color:#fff; padding:6px 12px; border-radius:8px; cursor:pointer; font-weight:bold; flex-shrink:0;" onclick="deleteAdminDepositMethod('${m.id}')">حذف</button>
+      </div>
+    `;
+  }).join("");
 }
 
 function handleAddDepositMethod(e) {
   e.preventDefault();
   const name = document.getElementById("method-name").value.trim();
   const account = document.getElementById("method-account").value.trim();
-  const currency = document.getElementById("method-currency").value.trim();
-  const rate = parseFloat(document.getElementById("method-rate").value);
+  const currency = document.getElementById("method-currency").value.trim() || "USD";
+  const rate = parseFloat(document.getElementById("method-rate").value) || 15000;
+  const qrInput = document.getElementById("method-qr") ? document.getElementById("method-qr").value.trim() : "";
   const icon = document.getElementById("method-icon").value.trim();
 
-  const methods = getDB("deposit_methods", []);
-  methods.push({ id: "dm_" + Date.now(), name, account, currency, rate, icon });
-  setDB("deposit_methods", methods);
-  alert("تمت إضافة طريقة الإيداع بنجاح!");
+  // إذا تركت حقل الباركود فارغاً يتم توليده تلقائياً من عنوان الحساب
+  const qrImage = qrInput.length > 5
+    ? qrInput
+    : `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(account)}`;
+
+  const methods = getDB("depositMethods", initialDepositMethods);
+  methods.push({
+    id: "dm_" + Date.now(),
+    name,
+    account,
+    currency,
+    rate,
+    qrImage,
+    icon
+  });
+
+  setDB("depositMethods", methods);
+  alert("✅ تمت إضافة طريقة الإيداع والباركود بنجاح!");
   e.target.reset();
   renderAdminDepositMethods();
   switchAdminSection("deposit-methods");
 }
 
 function deleteAdminDepositMethod(id) {
-  let methods = getDB("deposit_methods", []);
+  if (!confirm("هل أنت متأكد من حذف طريقة الإيداع هذه؟")) return;
+  let methods = getDB("depositMethods", initialDepositMethods);
   methods = methods.filter(m => m.id !== id);
-  setDB("deposit_methods", methods);
+  setDB("depositMethods", methods);
   renderAdminDepositMethods();
 }
 
