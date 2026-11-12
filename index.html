@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=112">
+  <link rel="stylesheet" href="style.css?v=115">
 
   <style>
     /* تنسيقات أساسية وإجبارية للنوافذ */
@@ -15,6 +15,7 @@
     #auth-modal.hidden,
     #logout-confirm-modal.hidden,
     #maintenance-modal.hidden,
+    #feature-modal.hidden,
     #drawer-backdrop.hidden,
     #products-view.hidden {
       display: none !important;
@@ -594,9 +595,43 @@
     .btn-send-deposit:active {
       opacity: 0.85;
     }
+
+    /* تنسيق الوضع المظلم للقائمة الجانبية والموقع */
+    body.dark-drawer .shawy-side-drawer {
+      background: #0b1329 !important;
+      color: #ffffff !important;
+    }
+    body.dark-drawer .drawer-nav-row {
+      color: #e2e8f0 !important;
+      border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    body.dark-drawer .drawer-name-title {
+      color: #ffffff !important;
+    }
+    body.dark-drawer .drawer-theme-toggle {
+      color: #ffffff !important;
+    }
+    body.dark-drawer .drawer-icon-btn {
+      background: #162444 !important;
+      color: #38bdf8 !important;
+    }
+    body.light-mode {
+      background: #f1f5f9 !important;
+      color: #0f172a !important;
+    }
+    body.light-mode .main-header,
+    body.light-mode .bottom-floating-bar {
+      background: #ffffff !important;
+      color: #0f172a !important;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08) !important;
+    }
+    body.light-mode .cat-app-label,
+    body.light-mode .site-title-text {
+      color: #0f172a !important;
+    }
   </style>
 </head>
-<body>
+<body class="dark-drawer">
 
   <!-- الهيدر العلوي -->
   <header class="main-header">
@@ -654,7 +689,7 @@
   <!-- خلفية القائمة الجانبية -->
   <div id="drawer-backdrop" class="drawer-backdrop hidden" onclick="toggleSidebar()"></div>
 
-  <!-- القائمة الجانبية المنبثقة -->
+  <!-- القائمة الجانبية المنبثقة (جميع الأزرار مفعّلة بالكامل) -->
   <aside class="shawy-side-drawer" id="sidebar-drawer">
     <button class="drawer-close-btn" onclick="toggleSidebar()">
       <i class="fa-solid fa-xmark"></i>
@@ -674,41 +709,41 @@
       <div class="drawer-balance-val" id="drawer-balance-text">0.000 $</div>
 
       <div class="drawer-action-icons">
-        <button class="drawer-icon-btn" onclick="openDepositModal()"><i class="fa-solid fa-dollar-sign"></i></button>
-        <button class="drawer-icon-btn" onclick="openAuthModal()"><i class="fa-regular fa-user"></i></button>
-        <button class="drawer-icon-btn" onclick="logoutUser()"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+        <button class="drawer-icon-btn" onclick="openDepositModal()" title="شحن الرصيد"><i class="fa-solid fa-dollar-sign"></i></button>
+        <button class="drawer-icon-btn" onclick="openAuthModal()" title="الحساب"><i class="fa-regular fa-user"></i></button>
+        <button class="drawer-icon-btn" onclick="logoutUser()" title="تسجيل الخروج"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
       </div>
     </div>
 
     <div class="drawer-links-menu">
-      <div class="drawer-nav-row" onclick="showStore()">
+      <div class="drawer-nav-row" onclick="showStore()" style="cursor:pointer;">
         <div class="drawer-nav-left"><i class="fa-solid fa-house c-green"></i> <span>الرئيسية</span></div>
       </div>
-      <div class="drawer-nav-row" id="admin-panel-link" onclick="openAdminPanel()">
+      <div class="drawer-nav-row" id="admin-panel-link" onclick="openAdminPanel()" style="cursor:pointer;">
         <div class="drawer-nav-left"><i class="fa-solid fa-gear c-orange"></i> <span>لوحة التحكم</span></div>
       </div>
-      <div class="drawer-nav-row">
+      <div class="drawer-nav-row" onclick="openFeatureModal('levels')" style="cursor:pointer;">
         <div class="drawer-nav-left"><i class="fa-solid fa-crown c-gold"></i> <span>المستويات</span></div>
       </div>
-      <div class="drawer-nav-row">
+      <div class="drawer-nav-row" onclick="openFeatureModal('security')" style="cursor:pointer;">
         <div class="drawer-nav-left"><i class="fa-solid fa-shield-halved c-gold"></i> <span>الحماية</span></div>
       </div>
-      <div class="drawer-nav-row">
+      <div class="drawer-nav-row" onclick="openFeatureModal('sessions')" style="cursor:pointer;">
         <div class="drawer-nav-left"><i class="fa-solid fa-mobile-screen c-blue"></i> <span>الجلسات</span></div>
       </div>
-      <div class="drawer-nav-row">
+      <div class="drawer-nav-row" onclick="openFeatureModal('favorites')" style="cursor:pointer;">
         <div class="drawer-nav-left"><i class="fa-regular fa-heart c-red"></i> <span>مفضلتي</span></div>
       </div>
-      <div class="drawer-nav-row">
+      <div class="drawer-nav-row" onclick="openFeatureModal('notifications')" style="cursor:pointer;">
         <div class="drawer-nav-left"><i class="fa-regular fa-bell c-gold"></i> <span>الإشعارات</span></div>
       </div>
-      <div class="drawer-nav-row" onclick="openDepositModal()">
+      <div class="drawer-nav-row" onclick="openDepositModal()" style="cursor:pointer;">
         <div class="drawer-nav-left"><i class="fa-solid fa-circle-plus c-green"></i> <span>إضافة رصيد</span></div>
       </div>
 
-      <div class="drawer-theme-toggle">
-        <span style="font-size: 0.85rem; font-weight: bold;">الوضع المظلم</span>
-        <i class="fa-solid fa-moon" id="theme-icon" onclick="toggleTheme()" style="font-size: 1.2rem; cursor: pointer;"></i>
+      <div class="drawer-theme-toggle" onclick="toggleTheme()" style="cursor:pointer;">
+        <span id="theme-status-label" style="font-size: 0.85rem; font-weight: bold;">الوضع المظلم: مفعل</span>
+        <i class="fa-solid fa-moon" id="theme-icon" style="font-size: 1.2rem; color: #38bdf8;"></i>
       </div>
 
       <div class="drawer-socials">
@@ -734,15 +769,27 @@
         <i class="fa-solid fa-house"></i>
       </div>
     </button>
-    <button class="bottom-tab-btn">
+    <button class="bottom-tab-btn" onclick="openFeatureModal('orders')">
       <i class="fa-solid fa-cart-shopping"></i>
       <span>الطلبات</span>
     </button>
-    <button class="bottom-tab-btn">
+    <button class="bottom-tab-btn" onclick="openFeatureModal('notifications')">
       <i class="fa-regular fa-bell"></i>
       <span>الإشعارات</span>
     </button>
   </nav>
+
+  <!-- نافذة الميزات التفاعلية (المستويات، الحماية، الجلسات، مفضلتي، الإشعارات، الطلبات) -->
+  <div id="feature-modal" class="modal-overlay hidden">
+    <div class="shawy-deposit-card" style="max-width: 420px;">
+      <button class="auth-top-close" onclick="closeFeatureModal()">✕</button>
+      <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:14px;">
+        <i id="feature-modal-icon" class="fa-solid fa-crown" style="font-size:1.4rem; color:#38bdf8;"></i>
+        <h3 id="feature-modal-title" style="font-size:1.15rem; font-weight:900; margin:0;">العنوان</h3>
+      </div>
+      <div id="feature-modal-body" style="max-height: 65vh; overflow-y: auto; text-align: right;"></div>
+    </div>
+  </div>
 
   <!-- نافذة وضع الصيانة للزوار -->
   <div id="maintenance-modal" class="modal-overlay hidden">
@@ -751,7 +798,7 @@
       <h3 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; color: #f59e0b;">الموقع قيد الصيانة</h3>
       <p style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.6; margin-bottom: 20px;">
         نقوم حالياً ببعض أعمال التحديث والصيانة وتطوير الخدمات لتقديم تجربة أفضل.<br>
-        سنعود للعمل قريباً جداً!
+        سنعود للعمل قباً جداً!
       </p>
       <a href="https://wa.me/963957455972?text=مرحباً،%20أستفسر%20عن%20موعد%20انتهاء%20صيانة%20المتجر" target="_blank" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #25d366; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; font-size: 0.85rem;">
         <i class="fa-brands fa-whatsapp"></i> تواصل مع الدعم الفني
@@ -768,7 +815,7 @@
         اختر وسيلة الإيداع
       </h3>
 
-      <!-- أزرار اختيار طريقة الدفع الديناميكية (يتم تعبئتها من لوحة التحكم) -->
+      <!-- أزرار اختيار طريقة الدفع الديناميكية -->
       <div class="deposit-methods-pills" id="deposit-methods-selector"></div>
 
       <!-- بطاقة تفاصيل وسيلة الدفع المختارة + الباركود -->
@@ -778,12 +825,10 @@
           <div class="deposit-method-title" id="deposit-active-name">شام كاش سوري</div>
         </div>
 
-        <!-- صورة الباركود (QR Code) -->
         <div class="deposit-qr-box" id="deposit-qr-wrapper">
           <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=b7a6624b69166fb60e741400cee2b8bd" id="deposit-active-qr" alt="باركود الدفع">
         </div>
 
-        <!-- رقم الحساب أو عنوان المحفظة مع زر النسخ -->
         <div class="deposit-account-copy-bar">
           <span class="deposit-account-text" id="deposit-display-account" dir="ltr">b7a6624b69166fb60e741400cee2b8bd</span>
           <button type="button" class="btn-copy-wallet" onclick="copyDepositNumber()">
@@ -803,7 +848,6 @@
       </div>
 
       <form onsubmit="handleDepositSubmit(event)">
-        <!-- حقل المبلغ -->
         <div class="deposit-input-group">
           <label class="deposit-label" id="deposit-amount-label">المبلغ المطلوب شحنه (USD):</label>
           <input type="number" step="any" id="deposit-input-val" class="deposit-field" placeholder="0.00" required oninput="calculateDepositConversion()">
@@ -813,19 +857,16 @@
           </div>
         </div>
 
-        <!-- اسم المرسل فقط -->
         <div class="deposit-input-group">
           <label class="deposit-label">اسم المرسل المحول منه:</label>
           <input type="text" id="deposit-sender-info" class="deposit-field" placeholder="أدخل اسم صاحب الحساب" required>
         </div>
 
-        <!-- ملاحظة اختيارية -->
         <div class="deposit-input-group">
           <label class="deposit-label">ملاحظة (اختياري):</label>
           <input type="text" id="deposit-note" class="deposit-field" placeholder="أي ملاحظة تود كتابتها...">
         </div>
 
-        <!-- رفع صورة الإشعار -->
         <div class="deposit-input-group">
           <label class="deposit-label">صورة إشعار التحويل:</label>
           <label class="deposit-file-label">
@@ -842,12 +883,11 @@
     </div>
   </div>
 
-  <!-- نافذة تسجيل الدخول وإنشاء الحساب + Google الحقيقي + نسيت كلمة السر -->
+  <!-- نافذة تسجيل الدخول وإنشاء الحساب -->
   <div id="auth-modal" class="modal-overlay hidden">
     <div class="shawy-auth-card">
       <button class="auth-top-close" onclick="closeAuthModal()">✕</button>
       
-      <!-- الهيدر الأزرق المنحني -->
       <div class="auth-blue-header">
         <div class="auth-header-circle">
           <i class="fa-solid fa-arrow-right-to-bracket" id="auth-header-icon"></i>
@@ -856,13 +896,11 @@
         <p id="auth-banner-desc">سجّل دخولك للوصول إلى حسابك وخدماتك</p>
       </div>
 
-      <!-- محتوى النموذج الأبيض -->
       <div class="auth-body-content">
         <h3 class="auth-main-title" id="auth-form-title">تسجيل الدخول</h3>
         <p class="auth-sub-title" id="auth-form-subtitle">مرحباً بك مجدداً!</p>
 
         <form onsubmit="handleAuthSubmit(event)">
-          <!-- حقل الاسم الكامل يظهر فقط عند إنشاء حساب جديد -->
           <div class="shawy-input-group hidden" id="group-signup-name">
             <label>الاسم الكامل</label>
             <div class="input-with-icon">
@@ -871,7 +909,6 @@
             </div>
           </div>
 
-          <!-- حقل البريد الإلكتروني الإضافي يظهر عند إنشاء حساب جديد -->
           <div class="shawy-input-group hidden" id="group-signup-email">
             <label>البريد الإلكتروني (Gmail)</label>
             <div class="input-with-icon">
@@ -880,7 +917,6 @@
             </div>
           </div>
 
-          <!-- حقل تسجيل الدخول: يقبل الإيميل أو اسم المستخدم -->
           <div class="shawy-input-group">
             <label id="auth-identifier-label">اسم المستخدم أو البريد الإلكتروني</label>
             <div class="input-with-icon">
@@ -902,19 +938,16 @@
           </button>
         </form>
 
-        <!-- رابط نسيت كلمة السر -->
         <div class="forgot-pass-wrap" id="forgot-pass-container">
           <button type="button" class="btn-forgot-pass" onclick="handleForgotPassword()">
             نسيت كلمة السر؟
           </button>
         </div>
 
-        <!-- فاصل أو -->
         <div class="auth-divider">
           <span>أو</span>
         </div>
 
-        <!-- زر تسجيل الدخول المباشر بحساب Google الحقيقي عبر Firebase -->
         <button type="button" class="btn-google-login" onclick="loginWithGoogle()">
           <svg width="20" height="20" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M23.745 12.27c0-.79-.07-1.54-.19-2.27h-11.3v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/>
@@ -1054,7 +1087,7 @@
             <div class="form-group"><label>رقم الحساب / عنوان المحفظة:</label><input type="text" id="method-account" required></div>
             <div class="form-group"><label>العملة الأساسية:</label><input type="text" id="method-currency" required placeholder="USD"></div>
             <div class="form-group"><label>سعر الصرف (كم يساوي 1$):</label><input type="number" id="method-rate" required placeholder="15000"></div>
-            <div class="form-group"><label>رابط صورة الباركود QR (اختياري - يُولّد تلقائياً من الحساب إن تُرك فارغاً):</label><input type="text" id="method-qr" placeholder="https://i.postimg.cc/... أو اتركه فارغاً"></div>
+            <div class="form-group"><label>رابط صورة الباركود QR (اختياري):</label><input type="text" id="method-qr" placeholder="https://i.postimg.cc/... أو اتركه فارغاً"></div>
             <div class="form-group"><label>رابط أيقونة الوسيلة (اختياري):</label><input type="text" id="method-icon" placeholder="رابط الأيقونة (اختياري)"></div>
             <button type="submit" class="btn-submit">حفظ الطريقة</button>
           </form>
@@ -1063,7 +1096,7 @@
     </div>
   </div>
 
-  <!-- مكتبات Firebase الرسمية للربط المباشر مع Google -->
+  <!-- مكتبات Firebase الرسمية -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 
@@ -1081,10 +1114,10 @@
     }
   </script>
 
-  <!-- ملفات السكربت مع رقم إصدار v=112 لكسر الكاش فوراً -->
-  <script src="data.js?v=112"></script>
-  <script src="auth.js?v=112"></script>
-  <script src="store.js?v=112"></script>
-  <script src="admin.js?v=112"></script>
+  <!-- ملفات السكربت مع رقم إصدار v=115 لكسر الكاش فوراً -->
+  <script src="data.js?v=115"></script>
+  <script src="auth.js?v=115"></script>
+  <script src="store.js?v=115"></script>
+  <script src="admin.js?v=115"></script>
 </body>
 </html>
