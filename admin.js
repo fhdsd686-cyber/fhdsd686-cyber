@@ -1,4 +1,4 @@
-// --- منطق لوحة إدارة النظام والتحكم بوضع الصيانة والبيانات والطلبات ---
+// --- منطق لوحة إدارة النظام والتحكم بوضع الصيانة والبيانات والطلبات والمستخدمين ---
 
 document.addEventListener("DOMContentLoaded", () => {
   updateMaintenanceBtnUI();
@@ -92,6 +92,7 @@ function switchAdminSection(secId) {
   if (secId === 'add-category') loadParentCategoriesSelect('cat-parent-select');
   if (secId === 'deposit-requests') renderAdminDepositRequests();
   if (secId === 'deposit-methods') renderAdminDepositMethods();
+  if (secId === 'users') renderAdminUsers();
 }
 
 function renderAdminStats() {
@@ -344,7 +345,6 @@ function handleAddDepositMethod(e) {
   const qrInput = document.getElementById("method-qr") ? document.getElementById("method-qr").value.trim() : "";
   const icon = document.getElementById("method-icon").value.trim();
 
-  // إذا تركت حقل الباركود فارغاً يتم توليده تلقائياً من عنوان الحساب
   const qrImage = qrInput.length > 5
     ? qrInput
     : `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(account)}`;
@@ -375,15 +375,169 @@ function deleteAdminDepositMethod(id) {
   renderAdminDepositMethods();
 }
 
+// --- إدارة المستخدمين المتقدمة (عرض المواصفات + حظر + حذف + تعديل الرصيد) ---
 function renderAdminUsers() {
   const container = document.getElementById("admin-users-list");
   if (!container) return;
   const users = getDB("users", []);
-  container.innerHTML = users.map(u => `
-    <div style="background:#162444; padding:10px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-      <div><strong>${u.name}</strong> (${u.email || "بدون إيميل"}) - الرتبة: ${u.role || "عضو"} - الرصيد: $${Number(u.balanceUSD || 0).toFixed(2)}</div>
+
+  if (!Array.isArray(users) || users.length === 0) {
+    container.innerHTML = `<p style="color:#94a3b8; text-align:center; padding:20px;">لا يوجد مستخدمون مسجلون حالياً.</p>`;
+    return;
+  }
+
+  container.innerHTML = users.map((u, idx) => {
+    const isBanned = Boolean(u.isBanned);
+    const displayName = u.fullname || u.name || "مستخدم";
+    const statusBadge = isBanned
+      ? `<span style="background:#ef4444; color:#fff; font-size:0.7rem; padding:2px 8px; border-radius:20px; margin-right:6px;">محظور 🚫</span>`
+      : `<span style="background:#10b981; color:#fff; font-size:0.7rem; padding:2px 8px; border-radius:20px; margin-right:6px;">نشط ✓</span>`;
+
+    return `
+      <div style="background:#162444; border: 1px solid ${isBanned ? '#ef4444' : 'rgba(56,189,248,0.2)'}; padding:14px; border-radius:14px; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:800; color:#fff; font-size:0.95rem;">
+              ${displayName} ${statusBadge}
+            </div>
+            <div style="font-size:0.8rem; color:#94a3b8; margin-top:4px;">
+              ${u.email || "بدون إيميل"} | الرتبة: <strong style="color:#38bdf8;">${u.role || "عضو"}</strong> | الرصيد: <strong style="color:#10b981;">$${Number(u.balanceUSD || 0).toFixed(2)}</strong>
+            </div>
+          </div>
+
+          <button onclick="openUserDetailsModal(${idx})" style="background:#0284c7; border:none; color:#fff; padding:8px 14px; border-radius:10px; cursor:pointer; font-weight:800; font-size:0.82rem; display:flex; align-items:center; gap:6px;">
+            <i class="fa-solid fa-eye"></i> عرض المواصفات وإدارة
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// نافذة منبثقة لعرض جميع مواصفات ومميزات الحساب مع أزرار الحظر والحذف
+function openUserDetailsModal(userIndex) {
+  const users = getDB("users", []);
+  const u = users[userIndex];
+  if (!u) return;
+
+  // إزالة أي نافذة سابقة إن وجدت
+  const oldModal = document.getElementById("admin-user-inspect-modal");
+  if (oldModal) oldModal.remove();
+
+  const isBanned = Boolean(u.isBanned);
+  const isProtectedAdmin = (u.email && u.email.toLowerCase() === "fhdsd686@gmail.com") || u.role === "الأسطورة";
+
+  const modal = document.createElement("div");
+  modal.id = "admin-user-inspect-modal";
+  modal.style.cssText = "position:fixed; inset:0; background:rgba(3,7,18,0.88); backdrop-filter:blur(6px); z-index:100000; display:flex; align-items:center; justify-content:center; padding:16px;";
+
+  modal.innerHTML = `
+    <div style="width:100%; max-width:410px; background:#0b1329; border:1.5px solid #38bdf8; border-radius:22px; padding:22px 18px; color:#fff; position:relative; box-shadow:0 20px 50px rgba(0,0,0,0.7);">
+      <button onclick="document.getElementById('admin-user-inspect-modal').remove()" style="position:absolute; top:14px; left:14px; background:rgba(255,255,255,0.1); border:none; color:#fff; width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:1rem;">✕</button>
+
+      <div style="text-align:center; margin-bottom:16px;">
+        <img src="${u.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}" style="width:68px; height:68px; border-radius:50%; object-fit:cover; border:2.5px solid #38bdf8; margin-bottom:8px;">
+        <h3 style="font-size:1.15rem; font-weight:900; margin:0;">${u.fullname || u.name || "مستخدم"}</h3>
+        <span style="display:inline-block; margin-top:4px; font-size:0.78rem; padding:3px 12px; border-radius:20px; background:${isBanned ? '#ef4444' : '#10b981'}; font-weight:bold;">
+          ${isBanned ? 'الحساب محظور حالياً 🚫' : 'الحساب نشط ومفعّل ✓'}
+        </span>
+      </div>
+
+      <div style="background:#050b18; border:1px solid rgba(56,189,248,0.2); border-radius:14px; padding:12px 14px; font-size:0.85rem; line-height:1.9; margin-bottom:14px;">
+        <div><span style="color:#94a3b8;">اسم المستخدم:</span> <strong>${u.name || "غير محدد"}</strong></div>
+        <div><span style="color:#94a3b8;">البريد الإلكتروني:</span> <strong dir="ltr">${u.email || "بدون إيميل"}</strong></div>
+        <div><span style="color:#94a3b8;">المستوى / الرتبة:</span> <strong style="color:#f59e0b;">${u.role || "عضو"}</strong></div>
+        <div><span style="color:#94a3b8;">الرصيد المتوفر:</span> <strong style="color:#10b981;">$${Number(u.balanceUSD || 0).toFixed(3)}</strong></div>
+        <div><span style="color:#94a3b8;">عدد الطلبات المنفذة:</span> <strong>${u.ordersCount || 0} طلب</strong></div>
+        <div><span style="color:#94a3b8;">صلاحية الإدارة:</span> <strong>${isProtectedAdmin ? "مدير النظام (كاملة)" : "مستخدم متجر"}</strong></div>
+      </div>
+
+      <!-- تعديل الرصيد السريع -->
+      <div style="display:flex; gap:8px; margin-bottom:14px;">
+        <input type="number" step="any" id="quick-edit-balance" value="${Number(u.balanceUSD || 0)}" placeholder="الرصيد الجديد ($)" style="flex:1; background:#050b18; border:1px solid #38bdf8; border-radius:10px; padding:9px 12px; color:#fff; font-weight:bold;">
+        <button onclick="adminUpdateUserBalance(${userIndex})" style="background:#10b981; border:none; color:#fff; padding:0 14px; border-radius:10px; font-weight:800; cursor:pointer;">حفظ الرصيد</button>
+      </div>
+
+      <!-- أزرار الحظر والحذف -->
+      <div style="display:flex; gap:10px;">
+        <button onclick="adminToggleBanUser(${userIndex})" style="flex:1; background:${isBanned ? '#10b981' : '#f59e0b'}; border:none; color:#fff; padding:11px; border-radius:12px; font-weight:800; font-size:0.88rem; cursor:pointer;">
+          <i class="fa-solid ${isBanned ? 'fa-unlock' : 'fa-ban'}"></i> ${isBanned ? 'فك الحظر' : 'حظر الحساب'}
+        </button>
+        <button onclick="adminDeleteUser(${userIndex})" style="flex:1; background:#ef4444; border:none; color:#fff; padding:11px; border-radius:12px; font-weight:800; font-size:0.88rem; cursor:pointer;">
+          <i class="fa-solid fa-trash"></i> حذف الحساب
+        </button>
+      </div>
     </div>
-  `).join("");
+  `;
+
+  document.body.appendChild(modal);
+}
+
+function adminUpdateUserBalance(userIndex) {
+  const input = document.getElementById("quick-edit-balance");
+  if (!input) return;
+  const newVal = parseFloat(input.value);
+  if (isNaN(newVal) || newVal < 0) {
+    alert("يرجى إدخال رصيد صحيح!");
+    return;
+  }
+
+  const users = getDB("users", []);
+  if (!users[userIndex]) return;
+
+  users[userIndex].balanceUSD = Number(newVal.toFixed(3));
+  setDB("users", users);
+  alert(`✅ تم تحديث رصيد ${users[userIndex].name} إلى $${users[userIndex].balanceUSD} بنجاح!`);
+  renderAdminUsers();
+  openUserDetailsModal(userIndex);
+  if (typeof updateUserUI === "function") updateUserUI();
+}
+
+function adminToggleBanUser(userIndex) {
+  const users = getDB("users", []);
+  const u = users[userIndex];
+  if (!u) return;
+
+  if (u.email && u.email.toLowerCase() === "fhdsd686@gmail.com") {
+    alert("لا يمكن حظر حساب المدير الأساسي للمتجر!");
+    return;
+  }
+
+  const nextBanState = !Boolean(u.isBanned);
+  const confirmMsg = nextBanState
+    ? `هل أنت متأكد من حظر حساب "${u.fullname || u.name}" ومنعه من استخدام المتجر؟`
+    : `هل تريد فك الحظر عن حساب "${u.fullname || u.name}"؟`;
+
+  if (!confirm(confirmMsg)) return;
+
+  u.isBanned = nextBanState;
+  setDB("users", users);
+  alert(nextBanState ? "🚫 تم حظر الحساب بنجاح!" : "✅ تم فك الحظر عن الحساب بنجاح!");
+  renderAdminUsers();
+  openUserDetailsModal(userIndex);
+}
+
+function adminDeleteUser(userIndex) {
+  const users = getDB("users", []);
+  const u = users[userIndex];
+  if (!u) return;
+
+  if (u.email && u.email.toLowerCase() === "fhdsd686@gmail.com") {
+    alert("لا يمكن حذف حساب المدير الأساسي للمتجر!");
+    return;
+  }
+
+  if (!confirm(`⚠️ تحذير: هل أنت متأكد من حذف حساب "${u.fullname || u.name}" نهائياً؟`)) return;
+
+  users.splice(userIndex, 1);
+  setDB("users", users);
+
+  const modal = document.getElementById("admin-user-inspect-modal");
+  if (modal) modal.remove();
+
+  alert("🗑️ تم حذف الحساب نهائياً.");
+  renderAdminUsers();
+  if (typeof updateUserUI === "function") updateUserUI();
 }
 
 function submitUserUpgrade() {
