@@ -1,4 +1,4 @@
-// --- إدارة الحسابات: تسجيل الدخول بالاسم أو الإيميل، Google، نسيت كلمة السر، وحساب الآدمن ---
+// --- إدارة الحسابات: تسجيل الدخول الحقيقي بحسابات Google عبر Firebase، الاسم/الإيميل، وحساب الآدمن ---
 
 let isSignUpMode = false;
 
@@ -99,7 +99,7 @@ function setAuthMode(signUp) {
   }
 }
 
-// معالجة نموذج الدخول وإنشاء الحساب
+// معالجة نموذج الدخول وإنشاء الحساب التقليدي
 function handleAuthSubmit(e) {
   e.preventDefault();
 
@@ -110,7 +110,6 @@ function handleAuthSubmit(e) {
   if (!Array.isArray(users)) users = [];
 
   if (isSignUpMode) {
-    // 1. إنشاء حساب جديد
     const fullname = document.getElementById("auth-fullname").value.trim();
     const email = document.getElementById("auth-email").value.trim();
 
@@ -147,10 +146,9 @@ function handleAuthSubmit(e) {
     alert(`🎉 أهلاً بك يا ${fullname}! تم إنشاء حسابك بنجاح.`);
     finishLoginSuccess();
   } else {
-    // 2. تسجيل الدخول
     const lowerId = identifier.toLowerCase();
 
-    // التحقق من حساب الآدمن المحدد (fhdsd686@gmail.com وكلمة السر f123456f)
+    // التحقق من حساب الآدمن (fhdsd686@gmail.com وكلمة السر f123456f)
     if (lowerId === ADMIN_EMAIL.toLowerCase() || lowerId === "mohannad") {
       if (password !== ADMIN_PASS) {
         alert("❌ كلمة المرور غير صحيحة لحساب الإدارة!");
@@ -191,7 +189,6 @@ function handleAuthSubmit(e) {
       return;
     }
 
-    // البحث عن مستخدم مسجل بالاسم أو الإيميل
     const user = users.find(u => 
       (u.name && u.name.toLowerCase() === lowerId) ||
       (u.email && u.email.toLowerCase() === lowerId)
@@ -219,51 +216,72 @@ function handleAuthSubmit(e) {
   }
 }
 
-// تسجيل الدخول المباشر بحساب Google
+// تسجيل الدخول الحقيقي عبر نافذة حسابات Google في الهاتف (Firebase Google Auth)
 function loginWithGoogle() {
-  const googleEmail = prompt("أدخل بريدك الإلكتروني في Google للمتابعة السريعة:\n(مثال: name@gmail.com)");
-  if (!googleEmail || !googleEmail.trim()) return;
-
-  const cleanEmail = googleEmail.trim().toLowerCase();
-  if (!cleanEmail.includes("@")) {
-    alert("يرجى إدخال بريد إلكتروني صحيح!");
+  if (typeof firebase === "undefined" || !firebase.auth) {
+    alert("جاري تحميل خدمة Google، يرجى المحاولة بعد ثوانٍ...");
     return;
   }
 
-  let users = getDB("users", []);
-  if (!Array.isArray(users)) users = [];
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
 
-  const isAdmin = (cleanEmail === ADMIN_EMAIL.toLowerCase());
-  let existingUser = users.find(u => u.email && u.email.toLowerCase() === cleanEmail);
+  firebase.auth().signInWithPopup(provider)
+    .then((result) => {
+      const gUser = result.user;
+      const email = (gUser.email || "").toLowerCase();
+      const displayName = gUser.displayName || email.split("@")[0];
+      const photoURL = gUser.photoURL || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
 
-  if (existingUser) {
-    if (isAdmin) existingUser.role = "الأسطورة";
-    const idx = users.indexOf(existingUser);
-    if (idx > 0) {
-      users.splice(idx, 1);
-      users.unshift(existingUser);
-    }
-    setDB("users", users);
-    alert(`✅ تم تسجيل الدخول بحساب Google بنجاح! أهلاً بك يا ${existingUser.name}`);
-  } else {
-    const derivedName = isAdmin ? "Mohannad" : cleanEmail.split("@")[0];
-    const newGoogleUser = {
-      id: "u_g_" + Date.now(),
-      name: derivedName,
-      fullname: isAdmin ? "مهند" : derivedName,
-      email: cleanEmail,
-      password: isAdmin ? ADMIN_PASS : "google_auth",
-      balanceUSD: isAdmin ? 1415.613 : 0.00,
-      role: isAdmin ? "الأسطورة" : "VIP 1",
-      ordersCount: 0,
-      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"
-    };
-    users.unshift(newGoogleUser);
-    setDB("users", users);
-    alert(`🎉 تم ربط حساب Google والدخول بنجاح! أهلاً بك يا ${derivedName}`);
-  }
+      const isAdmin = (email === ADMIN_EMAIL.toLowerCase());
 
-  finishLoginSuccess();
+      let users = getDB("users", []);
+      if (!Array.isArray(users)) users = [];
+
+      let existingUser = users.find(u => u.email && u.email.toLowerCase() === email);
+
+      if (existingUser) {
+        if (isAdmin) existingUser.role = "الأسطورة";
+        existingUser.avatar = photoURL;
+        existingUser.fullname = displayName;
+        users = users.filter(u => !u.email || u.email.toLowerCase() !== email);
+        users.unshift(existingUser);
+      } else {
+        users.unshift({
+          id: "u_" + gUser.uid,
+          name: isAdmin ? "Mohannad" : displayName,
+          fullname: displayName,
+          email: email,
+          password: isAdmin ? ADMIN_PASS : "google_auth",
+          balanceUSD: isAdmin ? 1415.613 : 0.00,
+          role: isAdmin ? "الأسطورة" : "VIP 1",
+          ordersCount: 0,
+          avatar: photoURL
+        });
+      }
+
+      setDB("users", users);
+      alert(isAdmin 
+        ? `👑 أهلاً بك يا مهند! تم الدخول بحساب الإدارة عبر Google.` 
+        : `✅ أهلاً بك يا ${displayName}! تم تسجيل الدخول بحساب Google بنجاح.`
+      );
+      finishLoginSuccess();
+    })
+    .catch((error) => {
+      console.error("Google Auth Error:", error);
+      if (error.code === "auth/popup-closed-by-user") {
+        return; // أغلق المستخدم النافذة بنفسه
+      }
+      if (error.code === "auth/unauthorized-domain") {
+        alert("⚠️ يجب إضافة رابط الموقع (fhdsd686-cyber.github.io) في قائمة النطاقات المصرح بها (Authorized domains) داخل إعدادات Firebase Authentication.");
+        return;
+      }
+      if (error.code === "auth/operation-not-allowed") {
+        alert("⚠️ يجب تفعيل خيار Google في قسم Sign-in method داخل لوحة تحكم Firebase Authentication.");
+        return;
+      }
+      alert("تعذر إتمام الدخول عبر Google: " + error.message);
+    });
 }
 
 // استعادة / تغيير كلمة السر (نسيت كلمة السر؟)
@@ -274,7 +292,7 @@ function handleForgotPassword() {
   const cleanTarget = targetInput.trim().toLowerCase();
 
   if (cleanTarget === ADMIN_EMAIL.toLowerCase() || cleanTarget === "mohannad") {
-    alert("لحماية حساب الإدارة، يرجى التواصل مع الدعم الفني أو استخدام بريد الإدارة المعتمد.");
+    alert("لحماية حساب الإدارة، يمكنك الدخول مباشرة عبر زر Google بحسابك أو التواصل مع الدعم الفني.");
     return;
   }
 
@@ -330,6 +348,11 @@ function closeLogoutModal() {
 
 function confirmLogoutAction() {
   closeLogoutModal();
+
+  // تسجيل الخروج من جلسة Firebase أيضاً إن وجدت
+  if (typeof firebase !== "undefined" && firebase.auth) {
+    firebase.auth().signOut().catch(() => {});
+  }
   
   let users = getDB("users", []);
   if (users.length > 0) {
