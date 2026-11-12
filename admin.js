@@ -9,7 +9,14 @@ function openAdminPanel() {
   const users = getDB("users", []);
   const currentUser = (Array.isArray(users) && users.length > 0) ? users[0] : null;
 
-  if (!currentUser || (currentUser.role !== "الأسطورة" && currentUser.role !== "Admin" && currentUser.name !== "Mohannad")) {
+  const isAdmin = currentUser && (
+    currentUser.role === "الأسطورة" || 
+    currentUser.role === "Admin" || 
+    (currentUser.email && currentUser.email.toLowerCase() === "fhdsd686@gmail.com") ||
+    (currentUser.name && currentUser.name.toLowerCase() === "mohannad")
+  );
+
+  if (!isAdmin) {
     alert("عذراً، هذه اللوحة مخصصة لإدارة المتجر فقط!");
     return;
   }
@@ -65,7 +72,6 @@ function updateMaintenanceBtnUI() {
   }
 }
 
-// التنقل بين أقسام لوحة التحكم
 function switchAdminSection(secId) {
   const sections = document.querySelectorAll(".admin-content-area section");
   sections.forEach(s => s.classList.add("hidden"));
@@ -87,7 +93,6 @@ function switchAdminSection(secId) {
   if (secId === 'deposit-requests') renderAdminDepositRequests();
 }
 
-// 1. الإحصائيات
 function renderAdminStats() {
   const orders = getDB("orders", []);
   const deposits = getDB("deposit_requests", []);
@@ -104,7 +109,6 @@ function renderAdminStats() {
   if (sDeposits) sDeposits.innerText = `$${totalDeposits.toFixed(2)}`;
 }
 
-// 2. تحديث هوية المتجر
 function handleSiteSettingsUpdate(e) {
   e.preventDefault();
   const name = document.getElementById("setting-site-name").value.trim();
@@ -121,7 +125,6 @@ function handleSiteSettingsUpdate(e) {
   if (typeof loadSiteSettings === "function") loadSiteSettings();
 }
 
-// 3. إدارة المنتجات
 function renderAdminProducts() {
   const tbody = document.getElementById("admin-products-table");
   if (!tbody) return;
@@ -182,7 +185,6 @@ function loadCategoriesIntoSelect(selectId) {
   select.innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
 }
 
-// 4. إدارة الأقسام
 function renderAdminCategories() {
   const tbody = document.getElementById("admin-categories-table");
   if (!tbody) return;
@@ -236,7 +238,6 @@ function loadParentCategoriesSelect(selectId) {
     categories.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
 }
 
-// 5. إدارة طلبات الإيداع المباشرة
 function renderAdminDepositRequests() {
   const container = document.getElementById("deposit-requests-container");
   if (!container) return;
@@ -257,7 +258,7 @@ function renderAdminDepositRequests() {
         المبلغ: <span style="color:#38bdf8; font-weight:bold;">$${r.amountUSD}</span> (${Number(r.amountSYP).toLocaleString()} ل.س)
       </div>
       <div style="font-size:0.85rem; color:#cbd5e1; margin-bottom:8px;">
-        الحساب المحول منه: <span dir="ltr">${r.sender}</span> | ملاحظة: ${r.note || "لا يوجد"}
+        اسم المرسل: <span style="color:#fff; font-weight:bold;">${r.sender}</span> | ملاحظة: ${r.note || "لا يوجد"}
       </div>
       ${r.receipt ? `<div style="margin-bottom:8px;"><a href="${r.receipt}" target="_blank" style="color:#38bdf8; font-size:0.85rem; text-decoration:underline;">عرض صورة الإشعار</a></div>` : ''}
       <div style="display:flex; gap:8px;">
@@ -301,7 +302,6 @@ function rejectDepositRequest(reqId) {
   renderAdminDepositRequests();
 }
 
-// 6. إدارة طرق الإيداع
 function renderAdminDepositMethods() {
   const container = document.getElementById("admin-methods-container");
   if (!container) return;
@@ -338,14 +338,13 @@ function deleteAdminDepositMethod(id) {
   renderAdminDepositMethods();
 }
 
-// 7. إدارة المستخدمين والترقيات
 function renderAdminUsers() {
   const container = document.getElementById("admin-users-list");
   if (!container) return;
   const users = getDB("users", []);
   container.innerHTML = users.map(u => `
     <div style="background:#162444; padding:10px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-      <div><strong>${u.name}</strong> - الرتبة: ${u.role || "عضو"} - الرصيد: $${Number(u.balanceUSD || 0).toFixed(2)}</div>
+      <div><strong>${u.name}</strong> (${u.email || "بدون إيميل"}) - الرتبة: ${u.role || "عضو"} - الرصيد: $${Number(u.balanceUSD || 0).toFixed(2)}</div>
     </div>
   `).join("");
 }
@@ -355,7 +354,11 @@ function submitUserUpgrade() {
   const newRole = document.getElementById("upgrade-role-select").value;
 
   let users = getDB("users", []);
-  const user = users.find(u => (u.name && u.name.toLowerCase() === search) || (u.fullname && u.fullname.toLowerCase() === search));
+  const user = users.find(u => 
+    (u.name && u.name.toLowerCase() === search) || 
+    (u.email && u.email.toLowerCase() === search) || 
+    (u.fullname && u.fullname.toLowerCase() === search)
+  );
 
   if (!user) {
     alert("لم يتم العثور على المستخدم!");
