@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=111">
+  <link rel="stylesheet" href="style.css?v=112">
 
   <style>
     /* تنسيقات أساسية وإجبارية للنوافذ */
@@ -85,7 +85,7 @@
       position: absolute;
       top: 14px;
       left: 14px;
-      background: rgba(0, 0, 0, 0.2);
+      background: rgba(0, 0, 0, 0.25);
       border: none;
       width: 32px;
       height: 32px;
@@ -352,51 +352,144 @@
       cursor: pointer;
     }
 
-    /* بطاقة الإيداع بنمط Shawy-Kartd - شام كاش سوري */
+    /* بطاقة الإيداع الديناميكية مع الباركود */
     .shawy-deposit-card {
       width: 100%;
-      max-width: 400px;
+      max-width: 410px;
       background: #0b1329;
-      border: 1px solid rgba(56, 189, 248, 0.2);
+      border: 1px solid rgba(56, 189, 248, 0.25);
       border-radius: 24px;
-      padding: 24px 20px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      padding: 22px 18px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
       position: relative;
       color: #fff;
       animation: authPop 0.25s ease-out;
+      margin: auto;
+    }
+
+    .deposit-methods-pills {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      margin-bottom: 14px;
+      scrollbar-width: none;
+    }
+    .deposit-methods-pills::-webkit-scrollbar {
+      display: none;
+    }
+
+    .method-pill-btn {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #0f172a;
+      border: 1.5px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      padding: 8px 14px;
+      border-radius: 14px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .method-pill-btn.active {
+      background: rgba(2, 132, 199, 0.2);
+      border-color: #38bdf8;
+      color: #ffffff;
     }
 
     .deposit-method-header {
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
       align-items: center;
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 16px;
-      padding: 12px 16px;
-      margin-bottom: 20px;
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(56, 189, 248, 0.15);
+      border-radius: 18px;
+      padding: 14px;
+      margin-bottom: 16px;
+      text-align: center;
     }
 
-    .deposit-method-info {
+    .deposit-method-top-row {
       display: flex;
       align-items: center;
-      gap: 12px;
+      justify-content: center;
+      gap: 10px;
       width: 100%;
+      margin-bottom: 10px;
     }
 
     .deposit-method-logo {
-      width: 52px;
-      height: 52px;
-      border-radius: 12px;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
       background: #fff;
       object-fit: contain;
-      padding: 4px;
+      padding: 3px;
     }
 
     .deposit-method-title {
-      font-size: 1.15rem;
+      font-size: 1.1rem;
       font-weight: 800;
       color: #ffffff;
+    }
+
+    .deposit-qr-box {
+      background: #ffffff;
+      padding: 10px;
+      border-radius: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin: 6px 0 10px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    }
+
+    .deposit-qr-box img {
+      width: 155px;
+      height: 155px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .deposit-account-copy-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: #050b18;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      padding: 8px 12px;
+      border-radius: 12px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .deposit-account-text {
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: #38bdf8;
+      word-break: break-all;
+      text-align: left;
+      flex: 1;
+    }
+
+    .btn-copy-wallet {
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
 
     .deposit-currency-switch {
@@ -405,7 +498,7 @@
       border-radius: 12px;
       padding: 4px;
       gap: 4px;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
@@ -428,16 +521,16 @@
     }
 
     .deposit-input-group {
-      margin-bottom: 14px;
+      margin-bottom: 12px;
       text-align: right;
     }
 
     .deposit-label {
       display: block;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-weight: 700;
       color: #cbd5e1;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
     }
 
     .deposit-field {
@@ -445,9 +538,9 @@
       background: #050b18;
       border: 1.5px solid rgba(56, 189, 248, 0.25);
       border-radius: 14px;
-      padding: 12px 14px;
+      padding: 11px 14px;
       color: #fff;
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       font-weight: 600;
       outline: none;
       box-sizing: border-box;
@@ -458,9 +551,9 @@
     }
 
     .deposit-rate-hint {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: #38bdf8;
-      margin-top: 6px;
+      margin-top: 5px;
       display: flex;
       justify-content: space-between;
     }
@@ -472,9 +565,9 @@
       background: #050b18;
       border: 1.5px dashed rgba(56, 189, 248, 0.3);
       border-radius: 14px;
-      padding: 12px 14px;
+      padding: 11px 14px;
       cursor: pointer;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       color: #94a3b8;
     }
 
@@ -488,12 +581,12 @@
       background: #0284c7;
       color: #ffffff;
       border: none;
-      padding: 14px;
+      padding: 13px;
       border-radius: 14px;
-      font-size: 1rem;
+      font-size: 0.98rem;
       font-weight: 800;
       cursor: pointer;
-      margin-top: 10px;
+      margin-top: 8px;
       box-shadow: 0 4px 15px rgba(2, 132, 199, 0.35);
       transition: opacity 0.2s;
     }
@@ -666,24 +759,36 @@
     </div>
   </div>
 
-  <!-- نافذة الإيداع التفاعلية بنمط Shawy-Kartd - شام كاش سوري (اسم المرسل فقط) -->
+  <!-- نافذة الإيداع التفاعلية الديناميكية + عرض الباركود -->
   <div id="deposit-modal" class="modal-overlay hidden">
     <div class="shawy-deposit-card">
       <button class="auth-top-close" onclick="closeDepositModal()">✕</button>
 
-      <!-- وسيلة الدفع شام كاش سوري -->
+      <h3 style="font-size: 1.05rem; font-weight: 800; margin-bottom: 12px; text-align: center; color: #fff;">
+        اختر وسيلة الإيداع
+      </h3>
+
+      <!-- أزرار اختيار طريقة الدفع الديناميكية (يتم تعبئتها من لوحة التحكم) -->
+      <div class="deposit-methods-pills" id="deposit-methods-selector"></div>
+
+      <!-- بطاقة تفاصيل وسيلة الدفع المختارة + الباركود -->
       <div class="deposit-method-header">
-        <div class="deposit-method-info">
-          <img src="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=100&q=80" id="deposit-active-logo" class="deposit-method-logo" alt="شام كاش">
-          <div style="flex: 1;">
-            <div class="deposit-method-title" id="deposit-active-name">شام كاش سوري</div>
-            <div style="font-size: 0.8rem; color: #38bdf8; margin-top: 4px;">
-              رقم الحساب: <span id="deposit-display-account" dir="ltr" style="font-weight: 800; color: #fff;">0957455972</span>
-              <button type="button" onclick="copyDepositNumber()" style="background: none; border: none; color: #38bdf8; cursor: pointer; font-size: 0.85rem; margin-right: 4px;">
-                <i class="fa-regular fa-copy"></i>
-              </button>
-            </div>
-          </div>
+        <div class="deposit-method-top-row">
+          <img src="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=100&q=80" id="deposit-active-logo" class="deposit-method-logo" alt="وسيلة الدفع">
+          <div class="deposit-method-title" id="deposit-active-name">شام كاش سوري</div>
+        </div>
+
+        <!-- صورة الباركود (QR Code) -->
+        <div class="deposit-qr-box" id="deposit-qr-wrapper">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=b7a6624b69166fb60e741400cee2b8bd" id="deposit-active-qr" alt="باركود الدفع">
+        </div>
+
+        <!-- رقم الحساب أو عنوان المحفظة مع زر النسخ -->
+        <div class="deposit-account-copy-bar">
+          <span class="deposit-account-text" id="deposit-display-account" dir="ltr">b7a6624b69166fb60e741400cee2b8bd</span>
+          <button type="button" class="btn-copy-wallet" onclick="copyDepositNumber()">
+            <i class="fa-regular fa-copy"></i> نسخ
+          </button>
         </div>
       </div>
 
@@ -943,13 +1048,14 @@
         <section id="sec-deposit-requests" class="hidden"><div id="deposit-requests-container"></div></section>
         <section id="sec-deposit-methods" class="hidden"><div id="admin-methods-container"></div></section>
         <section id="sec-add-deposit-method" class="hidden">
-          <h4>إضافة طريقة إيداع</h4>
+          <h4>إضافة طريقة إيداع جديدة</h4>
           <form onsubmit="handleAddDepositMethod(event)">
-            <div class="form-group"><label>اسم الطريقة:</label><input type="text" id="method-name" required></div>
-            <div class="form-group"><label>الحساب:</label><input type="text" id="method-account" required></div>
-            <div class="form-group"><label>العملة:</label><input type="text" id="method-currency" required placeholder="USD"></div>
-            <div class="form-group"><label>سعر الصرف:</label><input type="number" id="method-rate" required placeholder="1"></div>
-            <div class="form-group"><label>الصورة / الأيقونة:</label><input type="text" id="method-icon" placeholder="رابط الأيقونة (اختياري)"></div>
+            <div class="form-group"><label>اسم الطريقة (مثال: شام كاش، USDT):</label><input type="text" id="method-name" required></div>
+            <div class="form-group"><label>رقم الحساب / عنوان المحفظة:</label><input type="text" id="method-account" required></div>
+            <div class="form-group"><label>العملة الأساسية:</label><input type="text" id="method-currency" required placeholder="USD"></div>
+            <div class="form-group"><label>سعر الصرف (كم يساوي 1$):</label><input type="number" id="method-rate" required placeholder="15000"></div>
+            <div class="form-group"><label>رابط صورة الباركود QR (اختياري - يُولّد تلقائياً من الحساب إن تُرك فارغاً):</label><input type="text" id="method-qr" placeholder="https://i.postimg.cc/... أو اتركه فارغاً"></div>
+            <div class="form-group"><label>رابط أيقونة الوسيلة (اختياري):</label><input type="text" id="method-icon" placeholder="رابط الأيقونة (اختياري)"></div>
             <button type="submit" class="btn-submit">حفظ الطريقة</button>
           </form>
         </section>
@@ -975,10 +1081,10 @@
     }
   </script>
 
-  <!-- ملفات السكربت مع رقم إصدار v=111 لكسر الكاش فوراً -->
-  <script src="data.js?v=111"></script>
-  <script src="auth.js?v=111"></script>
-  <script src="store.js?v=111"></script>
-  <script src="admin.js?v=111"></script>
+  <!-- ملفات السكربت مع رقم إصدار v=112 لكسر الكاش فوراً -->
+  <script src="data.js?v=112"></script>
+  <script src="auth.js?v=112"></script>
+  <script src="store.js?v=112"></script>
+  <script src="admin.js?v=112"></script>
 </body>
 </html>
