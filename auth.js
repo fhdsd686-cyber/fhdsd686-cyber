@@ -1,10 +1,37 @@
-// --- إدارة الحسابات: تسجيل الدخول الحقيقي بحسابات Google (Popup + Redirect للهواتف)، الاسم/الإيميل، وحساب الآدمن ---
+// --- إدارة الحسابات: تسجيل الدخول عبر Google والاسم/الإيميل + إشعار واتساب عند إنشاء حساب جديد ---
 
 let isSignUpMode = false;
 
-// بيانات الإدارة المعتمدة
+// بيانات الإدارة ورقم واتساب الإدارة لاستقبال إشعارات الحسابات الجديدة
 const ADMIN_EMAIL = "fhdsd686@gmail.com";
 const ADMIN_PASS = "f123456f";
+const ADMIN_WHATSAPP = "963957455972";
+
+// إرسال إشعار واتساب تلقائي عند إنشاء حساب جديد بالموقع
+function sendNewAccountWhatsappAlert(userObj, methodLabel) {
+  const waMsg = encodeURIComponent(
+    `🆕 *تسجيل حساب جديد في متجر Mohannad kard*\n\n` +
+    `👤 الاسم: ${userObj.fullname || userObj.name}\n` +
+    `🆔 اسم المستخدم: ${userObj.name}\n` +
+    `📧 البريد: ${userObj.email || "غير مضاف"}\n` +
+    `📱 واتساب العضو: ${userObj.whatsapp || "غير مضاف"}\n` +
+    `🔐 طريقة التسجيل: ${methodLabel}\n` +
+    `⏰ الوقت: ${new Date().toLocaleString("ar-SY")}`
+  );
+
+  // حفظ إشعار ترحيبي داخل المتجر أيضاً
+  if (typeof pushUserNotification === "function") {
+    pushUserNotification(
+      userObj.name,
+      "🎉 تم إنشاء حسابك بنجاح!",
+      `أهلاً بك يا ${userObj.fullname || userObj.name} في متجر Mohannad kard. نتمنى لك تجربة مميزة!`,
+      "success"
+    );
+  }
+
+  // فتح واتساب لإرسال إشعار الحساب الجديد إلى رقم الإدارة
+  window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${waMsg}`, "_blank");
+}
 
 // التقاط نتيجة تسجيل الدخول عبر Google تلقائياً عند العودة من صفحة Google على الهاتف
 document.addEventListener("DOMContentLoaded", () => {
@@ -43,6 +70,8 @@ function processGoogleFirebaseUser(gUser, showAlertMsg = true) {
   if (!Array.isArray(users)) users = [];
 
   let existingUser = users.find(u => u.email && u.email.toLowerCase() === email);
+  let isBrandNewUser = false;
+  let activeUserObj = null;
 
   if (existingUser) {
     if (existingUser.isBanned && !isAdmin) {
@@ -55,20 +84,24 @@ function processGoogleFirebaseUser(gUser, showAlertMsg = true) {
     if (isAdmin) existingUser.role = "الأسطورة";
     existingUser.avatar = photoURL;
     existingUser.fullname = displayName;
+    activeUserObj = existingUser;
     users = users.filter(u => !u.email || u.email.toLowerCase() !== email);
     users.unshift(existingUser);
   } else {
-    users.unshift({
+    isBrandNewUser = true;
+    activeUserObj = {
       id: "u_" + gUser.uid,
       name: isAdmin ? "Mohannad" : displayName,
       fullname: displayName,
       email: email,
+      whatsapp: "",
       password: isAdmin ? ADMIN_PASS : "google_auth",
       balanceUSD: isAdmin ? 1415.613 : 0.00,
       role: isAdmin ? "الأسطورة" : "VIP 1",
       ordersCount: 0,
       avatar: photoURL
-    });
+    };
+    users.unshift(activeUserObj);
   }
 
   setDB("users", users);
@@ -81,6 +114,11 @@ function processGoogleFirebaseUser(gUser, showAlertMsg = true) {
   }
 
   finishLoginSuccess();
+
+  // إذا كان حساباً جديداً عبر Google ولم يكن حساب الإدارة، أرسل إشعار واتساب فوراً
+  if (isBrandNewUser && !isAdmin && activeUserObj) {
+    sendNewAccountWhatsappAlert(activeUserObj, "حساب Google");
+  }
 }
 
 // فحص أمني إجباري عند فتح الموقع
@@ -143,6 +181,7 @@ function setAuthMode(signUp) {
   const switchBtn = document.getElementById("auth-switch-btn");
   const groupName = document.getElementById("group-signup-name");
   const groupEmail = document.getElementById("group-signup-email");
+  const groupWhatsapp = document.getElementById("group-signup-whatsapp");
   const idLabel = document.getElementById("auth-identifier-label");
   const idInput = document.getElementById("auth-identifier");
   const forgotWrap = document.getElementById("forgot-pass-container");
@@ -157,6 +196,7 @@ function setAuthMode(signUp) {
     if (switchBtn) switchBtn.innerText = "تسجيل الدخول";
     if (groupName) groupName.classList.remove("hidden");
     if (groupEmail) groupEmail.classList.remove("hidden");
+    if (groupWhatsapp) groupWhatsapp.classList.remove("hidden");
     if (idLabel) idLabel.innerText = "اسم المستخدم";
     if (idInput) idInput.placeholder = "اختر اسم مستخدم";
     if (forgotWrap) forgotWrap.classList.add("hidden");
@@ -170,6 +210,7 @@ function setAuthMode(signUp) {
     if (switchBtn) switchBtn.innerText = "إنشاء حساب جديد";
     if (groupName) groupName.classList.add("hidden");
     if (groupEmail) groupEmail.classList.add("hidden");
+    if (groupWhatsapp) groupWhatsapp.classList.add("hidden");
     if (idLabel) idLabel.innerText = "اسم المستخدم أو البريد الإلكتروني";
     if (idInput) idInput.placeholder = "أدخل اسم المستخدم أو الإيميل";
     if (forgotWrap) forgotWrap.classList.remove("hidden");
@@ -189,6 +230,8 @@ function handleAuthSubmit(e) {
   if (isSignUpMode) {
     const fullname = document.getElementById("auth-fullname").value.trim();
     const email = document.getElementById("auth-email").value.trim();
+    const whatsappInput = document.getElementById("auth-whatsapp");
+    const whatsapp = whatsappInput ? whatsappInput.value.trim() : "";
 
     if (!fullname || !identifier || !password) {
       alert("يرجى ملء جميع الحقول المطلوبة");
@@ -210,6 +253,7 @@ function handleAuthSubmit(e) {
       name: identifier,
       fullname: fullname,
       email: email || "",
+      whatsapp: whatsapp,
       password: password,
       balanceUSD: isAdmin ? 1415.613 : 0.00,
       role: isAdmin ? "الأسطورة" : "VIP 1",
@@ -222,6 +266,11 @@ function handleAuthSubmit(e) {
     
     alert(`🎉 أهلاً بك يا ${fullname}! تم إنشاء حسابك بنجاح.`);
     finishLoginSuccess();
+
+    // إرسال إشعار واتساب تلقائي عند إنشاء الحساب الجديد
+    if (!isAdmin) {
+      sendNewAccountWhatsappAlert(newUser, "تسجيل مباشر في الموقع");
+    }
   } else {
     const lowerId = identifier.toLowerCase();
 
@@ -298,7 +347,7 @@ function handleAuthSubmit(e) {
   }
 }
 
-// تسجيل الدخول الحقيقي عبر نافذة حسابات Google (يعمل بسلاسة على الهاتف والكمبيوتر)
+// تسجيل الدخول الحقيقي عبر نافذة حسابات Google
 function loginWithGoogle() {
   if (typeof firebase === "undefined" || !firebase.auth) {
     alert("جاري تحميل خدمة Google، يرجى المحاولة بعد ثوانٍ...");
@@ -316,7 +365,6 @@ function loginWithGoogle() {
     })
     .catch((error) => {
       console.error("Google Popup Error:", error);
-      // على متصفحات الهواتف إذا أُغلقت النافذة المنبثقة أو حُظرت، نستخدم إعادة التوجيه الآمنة تلقائياً
       if (
         error.code === "auth/popup-blocked" ||
         error.code === "auth/popup-closed-by-user" ||
@@ -381,6 +429,7 @@ function finishLoginSuccess() {
 
   if (typeof updateUserUI === "function") updateUserUI();
   if (typeof checkMaintenanceGate === "function") checkMaintenanceGate();
+  if (typeof checkIncomingNotifications === "function") checkIncomingNotifications();
 }
 
 // نافذة تأكيد تسجيل الخروج
