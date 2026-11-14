@@ -1,8 +1,39 @@
-// --- منطق لوحة إدارة النظام، التسعير التلقائي والعروض، وإدارة المستخدمين والطلبات ---
+// --- منطق لوحة إدارة النظام، التسعير التلقائي والعروض، وإشعارات الموافقة على واتساب والمتجر ---
 
 document.addEventListener("DOMContentLoaded", () => {
   updateMaintenanceBtnUI();
 });
+
+// دالة مساعدة لإرسال إشعار فوري للمستخدم وحفظه في سجل إشعاراته داخل المتجر
+function pushUserNotification(targetUserName, title, message, type = "success") {
+  const notifications = getDB("user_notifications", []);
+  notifications.unshift({
+    id: "notif_" + Date.now(),
+    userName: targetUserName,
+    title: title,
+    message: message,
+    type: type, // success | danger | info
+    date: new Date().toLocaleString("ar-SY"),
+    read: false
+  });
+  setDB("user_notifications", notifications);
+
+  if (typeof checkIncomingNotifications === "function") {
+    checkIncomingNotifications();
+  }
+}
+
+// تنسيق رقم الهاتف السوري لفتح محادثة واتساب مباشرة
+function formatSyrianWhatsapp(phone) {
+  if (!phone) return "";
+  let clean = phone.replace(/\D/g, "");
+  if (clean.startsWith("09")) {
+    clean = "963" + clean.substring(1);
+  } else if (clean.startsWith("9") && clean.length === 9) {
+    clean = "963" + clean;
+  }
+  return clean;
+}
 
 // فتح وإغلاق لوحة الإدارة
 function openAdminPanel() {
@@ -125,7 +156,7 @@ function renderAdminPricingOffers() {
         <div style="display:flex; align-items:center; gap:6px;">
           <input type="number" step="any" id="cat-offer-input-${cat.id}" value="${currentVal}" placeholder="عام (${globalPercent}%)" style="width:105px; background:#050b18; border:1px solid #38bdf8; border-radius:8px; padding:7px 8px; color:#fff; font-size:0.82rem; font-weight:bold;">
           <button type="button" onclick="saveCategoryOfferPercent('${cat.id}')" style="background:#10b981; border:none; color:#fff; padding:7px 12px; border-radius:8px; font-weight:bold; font-size:0.8rem; cursor:pointer;">حفظ</button>
-          ${hasCustom ? `<button type="button" onclick="resetCategoryOfferPercent('${cat.id}')" style="background:#ef4444; border:none; color:#fff; padding:7px 10px; border-radius:8px; font-weight:bold; font-size:0.8rem; cursor:pointer;" title="إلغاء النسبة الخاصة والعودة للعامة">✕</button>` : ''}
+          ${hasCustom ? `<button type="button" onclick="resetCategoryOfferPercent('${cat.id}')" style="background:#ef4444; border:none; color:#fff; padding:7px 10px; border-radius:8px; font-weight:bold; font-size:0.8rem; cursor:pointer;" title="إلغاء النسبة الخاصة">✕</button>` : ''}
         </div>
       </div>
     `;
@@ -137,7 +168,7 @@ function saveGlobalProfitPercent() {
   if (!input) return;
   const val = parseFloat(input.value);
   if (isNaN(val) || val < 0) {
-    alert("يرجى إدخال نسبة مئوية صحيحة (مثلاً 0 أو 10)!");
+    alert("يرجى إدخال نسبة مئوية صحيحة!");
     return;
   }
 
@@ -264,7 +295,7 @@ function handleAddProduct(e) {
     image
   });
   setDB("products", products);
-  alert("✅ تمت إضافة المنتج بنجاح وسيتم تسعيره تلقائياً حسب النسبة!");
+  alert("✅ تمت إضافة المنتج بنجاح!");
   e.target.reset();
   renderAdminProducts();
   switchAdminSection("products");
@@ -338,6 +369,7 @@ function loadParentCategoriesSelect(selectId) {
     categories.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
 }
 
+// --- إدارة طلبات الإيداع + إرسال إشعار واتساب والمتجر عند الموافقة أو الرفض ---
 function renderAdminDepositRequests() {
   const container = document.getElementById("deposit-requests-container");
   if (!container) return;
@@ -358,8 +390,9 @@ function renderAdminDepositRequests() {
         المبلغ: <span style="color:#38bdf8; font-weight:bold;">$${r.amountUSD}</span> (${Number(r.amountSYP).toLocaleString()} ل.س)
       </div>
       <div style="font-size:0.85rem; color:#cbd5e1; margin-bottom:8px;">
-        اسم المرسل: <span style="color:#fff; font-weight:bold;">${r.sender}</span> | ملاحظة: ${r.note || "لا يوجد"}
+        اسم المرسل: <span style="color:#fff; font-weight:bold;">${r.sender}</span> | واتساب: <span style="color:#10b981;" dir="ltr">${r.userWhatsapp || "غير مضاف"}</span>
       </div>
+      ${r.note ? `<div style="font-size:0.8rem; color:#94a3b8; margin-bottom:8px;">ملاحظة: ${r.note}</div>` : ''}
       ${r.receipt ? `<div style="margin-bottom:8px;"><a href="${r.receipt}" target="_blank" style="color:#38bdf8; font-size:0.85rem; text-decoration:underline;">عرض صورة الإشعار</a></div>` : ''}
       <div style="display:flex; gap:8px;">
         ${r.status === 'معلق' ? `
@@ -378,17 +411,45 @@ function approveDepositRequest(reqId) {
 
   let users = getDB("users", []);
   const user = users.find(u => u.name === req.userName);
+  let newBalance = 0;
+
   if (user) {
     user.balanceUSD = Number(((user.balanceUSD || 0) + Number(req.amountUSD)).toFixed(3));
+    newBalance = user.balanceUSD;
     setDB("users", users);
   }
 
   req.status = "مقبول";
   setDB("deposit_requests", requests);
-  alert(`✅ تم شحن $${req.amountUSD} في حساب ${req.userName} بنجاح!`);
+
+  // إشعار داخلي في المتجر وإشعار المتصفح
+  pushUserNotification(
+    req.userName,
+    "✅ تمت الموافقة على طلب الشحن",
+    `تم قبول إيداعك بقيمة $${req.amountUSD} (${req.methodName || "شام كاش"}) وإضافة الرصيد إلى حسابك بنجاح.`,
+    "success"
+  );
+
   renderAdminDepositRequests();
   renderAdminStats();
   if (typeof updateUserUI === "function") updateUserUI();
+
+  // تجهيز رسالة واتساب لإرسال إشعار القبول للزبون فوراً
+  const waMsg = encodeURIComponent(
+    `✅ *تمت الموافقة على طلب شحن الرصيد - Mohannad kard*\n\n` +
+    `👤 الاسم: ${req.userName}\n` +
+    `💳 وسيلة الدفع: ${req.methodName || "شام كاش"}\n` +
+    `💵 المبلغ المضاف: ${req.amountUSD} $\n` +
+    `💰 رصيدك الحالي: ${newBalance} $\n\n` +
+    `شكراً لتعاملك معنا 🇸🇾`
+  );
+
+  const waPhone = formatSyrianWhatsapp(req.userWhatsapp || (user ? user.whatsapp : ""));
+  if (waPhone) {
+    window.open(`https://wa.me/${waPhone}?text=${waMsg}`, "_blank");
+  } else {
+    window.open(`https://wa.me/?text=${waMsg}`, "_blank");
+  }
 }
 
 function rejectDepositRequest(reqId) {
@@ -398,11 +459,19 @@ function rejectDepositRequest(reqId) {
 
   req.status = "مرفوض";
   setDB("deposit_requests", requests);
-  alert("تم رفض طلب الشحن.");
+
+  pushUserNotification(
+    req.userName,
+    "❌ تم رفض طلب الإيداع",
+    `نعتذر، تم رفض طلب الإيداع بقيمة $${req.amountUSD}. يرجى التأكد من بيانات الإشعار والمحاولة مجدداً.`,
+    "danger"
+  );
+
+  alert("تم رفض طلب الشحن وإرسال إشعار للمستخدم.");
   renderAdminDepositRequests();
 }
 
-// --- إدارة طرق الإيداع والباركود من لوحة التحكم ---
+// --- إدارة طرق الإيداع والباركود ---
 function renderAdminDepositMethods() {
   const container = document.getElementById("admin-methods-container");
   if (!container) return;
@@ -542,6 +611,7 @@ function openUserDetailsModal(userIndex) {
       <div style="background:#050b18; border:1px solid rgba(56,189,248,0.2); border-radius:14px; padding:12px 14px; font-size:0.85rem; line-height:1.9; margin-bottom:14px;">
         <div><span style="color:#94a3b8;">اسم المستخدم:</span> <strong>${u.name || "غير محدد"}</strong></div>
         <div><span style="color:#94a3b8;">البريد الإلكتروني:</span> <strong dir="ltr">${u.email || "بدون إيميل"}</strong></div>
+        <div><span style="color:#94a3b8;">رقم الواتساب:</span> <strong dir="ltr">${u.whatsapp || "غير مضاف"}</strong></div>
         <div><span style="color:#94a3b8;">المستوى / الرتبة:</span> <strong style="color:#f59e0b;">${u.role || "عضو"}</strong></div>
         <div><span style="color:#94a3b8;">الرصيد المتوفر:</span> <strong style="color:#10b981;">$${Number(u.balanceUSD || 0).toFixed(3)}</strong></div>
         <div><span style="color:#94a3b8;">عدد الطلبات المنفذة:</span> <strong>${u.ordersCount || 0} طلب</strong></div>
@@ -652,6 +722,14 @@ function submitUserUpgrade() {
 
   user.role = newRole;
   setDB("users", users);
+
+  pushUserNotification(
+    user.name,
+    "👑 مبروك! تمت ترقية مستواك",
+    `تمت ترقية حسابك في المتجر إلى مستوى (${newRole}) بنجاح!`,
+    "success"
+  );
+
   alert(`تمت ترقية المستخدم ${user.name} إلى ${newRole} بنجاح!`);
   renderAdminUsers();
   if (typeof updateUserUI === "function") updateUserUI();
