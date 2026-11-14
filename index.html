@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=117">
+  <link rel="stylesheet" href="style.css?v=118">
 
   <style>
     /* تنسيقات أساسية وإجبارية للنوافذ */
@@ -64,7 +64,7 @@
       100% { transform: rotate(360deg); }
     }
 
-    /* بطاقة الدخول وإنشاء الحساب المحدثة */
+    /* بطاقة الدخول وإنشاء الحساب */
     .shawy-auth-card {
       width: 100%;
       max-width: 380px;
@@ -855,6 +855,11 @@
         </div>
 
         <div class="deposit-input-group">
+          <label class="deposit-label">رقم الواتساب الخاص بك (لإرسال إشعار الموافقة):</label>
+          <input type="tel" id="deposit-user-whatsapp" class="deposit-field" placeholder="مثال: 09xxxxxxxx" required dir="ltr">
+        </div>
+
+        <div class="deposit-input-group">
           <label class="deposit-label">اسم المرسل المحول منه:</label>
           <input type="text" id="deposit-sender-info" class="deposit-field" placeholder="أدخل اسم صاحب الحساب" required>
         </div>
@@ -911,6 +916,14 @@
             <div class="input-with-icon">
               <input type="email" id="auth-email" placeholder="example@gmail.com" dir="ltr">
               <i class="fa-regular fa-envelope"></i>
+            </div>
+          </div>
+
+          <div class="shawy-input-group hidden" id="group-signup-whatsapp">
+            <label>رقم الواتساب (اختياري)</label>
+            <div class="input-with-icon">
+              <input type="tel" id="auth-whatsapp" placeholder="09xxxxxxxx" dir="ltr">
+              <i class="fa-brands fa-whatsapp"></i>
             </div>
           </div>
 
@@ -1130,10 +1143,10 @@
     }
   </script>
 
-  <!-- ملفات السكربت مع رقم إصدار v=117 -->
-  <script src="data.js?v=117"></script>
-  <script src="auth.js?v=117"></script>
-  <script src="store.js?v=117"></script>
-  <script src="admin.js?v=117"></script>
+  <!-- ملفات السكربت مع رقم إصدار v=118 -->
+  <script src="data.js?v=118"></script>
+  <script src="auth.js?v=118"></script>
+  <script src="store.js?v=118"></script>
+  <script src="admin.js?v=118"></script>
 </body>
 </html>
