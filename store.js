@@ -1,4 +1,4 @@
-// --- منطق المتجر، التسعير التلقائي والعروض (سعر المورد + النسبة)، وتبديل العملات ---
+// --- منطق المتجر، الإشعارات الفورية، التسعير التلقائي والعروض، وتبديل العملات ---
 
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
@@ -12,6 +12,11 @@ document.addEventListener("DOMContentLoaded", () => {
   renderCategories();
   updateUserUI();
   initSavedTheme();
+  requestBrowserNotificationPermission();
+  checkIncomingNotifications();
+
+  // فحص الإشعارات الجديدة تلقائياً كل 4 ثوانٍ
+  setInterval(checkIncomingNotifications, 4000);
 
   if (typeof checkMaintenanceGate === "function") {
     checkMaintenanceGate();
@@ -22,25 +27,126 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// محرك حساب السعر النهائي للزبون:
-// السعر = سعر المورد + النسبة (تُطبق النسبة العامة على الكل إلا إذا وُجدت نسبة عرض خاصة للمنتج أو التطبيق)
+// طلب إذن إشعارات المتصفح من المستخدم
+function requestBrowserNotificationPermission() {
+  if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission().catch(() => {});
+  }
+}
+
+// فحص الإشعارات غير المقروءة وعرض تنبيه فوري للمستخدم
+function checkIncomingNotifications() {
+  const users = getDB("users", []);
+  const currentUser = (Array.isArray(users) && users.length > 0 && users[0].name !== "زائر") ? users[0] : null;
+  if (!currentUser) return;
+
+  const notifications = getDB("user_notifications", []);
+  const myUnread = notifications.filter(n => n.userName === currentUser.name && !n.read);
+
+  // تحديث شارة الجرس الحمراء
+  updateBellBadge(myUnread.length);
+
+  // عرض آخر إشعار غير معروض كبطاقة منبثقة في أعلى الشاشة
+  const unshown = myUnread.find(n => !n.toastShown);
+  if (unshown) {
+    unshown.toastShown = true;
+    setDB("user_notifications", notifications);
+
+    showInAppNotificationToast(unshown.title, unshown.message, unshown.type);
+
+    // إرسال إشعار متصفح حقيقي على الهاتف/الكمبيوتر
+    if ("Notification" in window && Notification.permission === "granted") {
+      try {
+        new Notification(unshown.title, {
+          body: unshown.message,
+          icon: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80"
+        });
+      } catch (e) {}
+    }
+  }
+}
+
+// رسم عداد الإشعارات على أيقونة الجرس
+function updateBellBadge(count) {
+  const bellIcons = document.querySelectorAll(".fa-bell");
+  bellIcons.forEach(icon => {
+    const parent = icon.parentElement;
+    if (!parent) return;
+    parent.style.position = "relative";
+
+    let badge = parent.querySelector(".notif-red-dot");
+    if (count > 0) {
+      if (!badge) {
+        badge = document.createElement("span");
+        badge.className = "notif-red-dot";
+        badge.style.cssText = "position:absolute; top:-4px; right:-4px; background:#ef4444; color:#fff; font-size:0.65rem; font-weight:900; min-width:16px; height:16px; border-radius:50%; display:flex; align-items:center; justify-content:center; padding:0 3px; border:1.5px solid #0b1329;";
+        parent.appendChild(badge);
+      }
+      badge.innerText = count;
+    } else if (badge) {
+      badge.remove();
+    }
+  });
+}
+
+// إظهار بطاقة الإشعار الفورية في أعلى الشاشة
+function showInAppNotificationToast(title, message, type = "success") {
+  const oldToast = document.getElementById("live-notif-toast");
+  if (oldToast) oldToast.remove();
+
+  const borderColor = type === "danger" ? "#ef4444" : "#10b981";
+  const toast = document.createElement("div");
+  toast.id = "live-notif-toast";
+  toast.style.cssText = `
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 92%;
+    max-width: 390px;
+    background: #0b1329;
+    border: 1.5px solid ${borderColor};
+    border-radius: 18px;
+    padding: 14px 16px;
+    color: #fff;
+    z-index: 999999;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    animation: authPop 0.25s ease-out;
+  `;
+
+  toast.innerHTML = `
+    <div style="text-align:right; flex:1; cursor:pointer;" onclick="this.parentElement.remove(); openFeatureModal('notifications');">
+      <div style="font-weight:900; font-size:0.92rem; color:${borderColor}; margin-bottom:4px;">${title}</div>
+      <div style="font-size:0.8rem; color:#e2e8f0; line-height:1.5;">${message}</div>
+    </div>
+    <button onclick="this.parentElement.remove()" style="background:rgba(255,255,255,0.1); border:none; color:#fff; width:26px; height:26px; border-radius:50%; cursor:pointer; flex-shrink:0;">✕</button>
+  `;
+
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    if (toast && toast.parentElement) toast.remove();
+  }, 7000);
+}
+
+// محرك حساب السعر النهائي للزبون (سعر المورد + النسبة العامة أو الخاصة)
 function calculateProductFinalPrice(product) {
   if (!product) return 0;
 
-  // سعر المورد الأساسي (إن لم يكن محدداً نأخذ السعر المحفوظ كسعر مورد)
   const supplierPrice = Number(product.supplierPriceUSD !== undefined ? product.supplierPriceUSD : (product.priceUSD || 0));
-
   const globalPercent = Number(getDB("global_profit_percent", 0));
   const categoryOffers = getDB("category_profit_percents", {});
 
   let appliedPercent = globalPercent;
 
-  // 1. إذا كان للتطبيق/القسم نسبة عرض خاصة، تتجاوز النسبة العامة
   if (product.categoryId && categoryOffers[product.categoryId] !== undefined && categoryOffers[product.categoryId] !== null && categoryOffers[product.categoryId] !== "") {
     appliedPercent = Number(categoryOffers[product.categoryId]);
   }
 
-  // 2. إذا كان للمنتج نفسه نسبة عرض خاصة، تتجاوز نسبة القسم والنسبة العامة
   if (product.customPercent !== undefined && product.customPercent !== null && product.customPercent !== "") {
     appliedPercent = Number(product.customPercent);
   }
@@ -49,7 +155,6 @@ function calculateProductFinalPrice(product) {
   return Number(finalUSD.toFixed(3));
 }
 
-// معرفة النسبة المطبقة حالياً على المنتج لعرض شارة "عرض خاص" إن وجدت
 function getProductAppliedOfferInfo(product) {
   const globalPercent = Number(getDB("global_profit_percent", 0));
   const categoryOffers = getDB("category_profit_percents", {});
@@ -65,7 +170,6 @@ function getProductAppliedOfferInfo(product) {
   return { percent: globalPercent, isSpecialOffer: false };
 }
 
-// تبديل عملة عرض الرصيد والأسعار بين الدولار ($) والليرة السورية (ل.س)
 function toggleDisplayCurrency(e) {
   if (e) e.stopPropagation();
   displayCurrency = (displayCurrency === "USD") ? "SYP" : "USD";
@@ -86,7 +190,6 @@ function formatStoreAmount(usdAmount) {
   return `${val.toFixed(3)} $`;
 }
 
-// استعادة وضع المظهر المحفوظ (مظلم / نهاري)
 function initSavedTheme() {
   const savedTheme = getDB("site_theme", "dark");
   const icon = document.getElementById("theme-icon");
@@ -250,25 +353,44 @@ function openFeatureModal(type) {
     iconEl.style.color = "#f59e0b";
     titleEl.innerText = "الإشعارات والتنبيهات";
 
-    const deposits = getDB("deposit_requests", []);
-    const userDeposits = currentUser ? deposits.filter(d => d.userName === currentUser.name) : [];
+    const allNotifs = getDB("user_notifications", []);
+    const myNotifs = currentUser ? allNotifs.filter(n => n.userName === currentUser.name) : [];
 
-    let html = `
-      <div style="background:#0f172a; border-right:3px solid #38bdf8; padding:12px; border-radius:12px; margin-bottom:10px;">
-        <div style="font-weight:800; font-size:0.88rem; color:#fff;">أهلاً بك في متجر Mohannad kard 🇸🇾</div>
-        <div style="font-size:0.78rem; color:#94a3b8; margin-top:4px;">يمكنك شحن رصيدك فوراً عبر شام كاش والباركود والاستمتاع بالشحن السريع.</div>
-      </div>
-    `;
+    // تعليم جميع إشعارات المستخدم كمقروءة عند فتح النافذة
+    if (currentUser && myNotifs.some(n => !n.read)) {
+      allNotifs.forEach(n => {
+        if (n.userName === currentUser.name) n.read = true;
+      });
+      setDB("user_notifications", allNotifs);
+      updateBellBadge(0);
+    }
 
-    userDeposits.forEach(d => {
-      const color = d.status === "مقبول" ? "#10b981" : (d.status === "مرفوض" ? "#ef4444" : "#f59e0b");
+    const permBtn = ("Notification" in window && Notification.permission !== "granted")
+      ? `<button onclick="Notification.requestPermission().then(() => openFeatureModal('notifications'))" style="width:100%; background:#0284c7; border:none; color:#fff; padding:10px; border-radius:12px; font-weight:800; font-size:0.84rem; margin-bottom:12px; cursor:pointer;">
+           <i class="fa-solid fa-bell"></i> اضغط هنا لتفعيل إشعارات الهاتف الفورية
+         </button>`
+      : `<div style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; padding:8px 12px; border-radius:10px; font-size:0.8rem; font-weight:bold; margin-bottom:12px; text-align:center;">
+           <i class="fa-solid fa-circle-check"></i> إشعارات الموقع مفعلة على جهازك
+         </div>`;
+
+    let html = permBtn;
+    myNotifs.forEach(n => {
+      const color = n.type === "danger" ? "#ef4444" : "#10b981";
       html += `
         <div style="background:#0f172a; border-right:3px solid ${color}; padding:12px; border-radius:12px; margin-bottom:10px;">
-          <div style="font-weight:800; font-size:0.85rem; color:#fff;">طلب إيداع بقيمة $${d.amountUSD} (${d.methodName || "شام كاش"})</div>
-          <div style="font-size:0.78rem; color:${color}; font-weight:bold; margin-top:4px;">الحالة: ${d.status} • <span style="color:#94a3b8; font-weight:normal;">${d.date}</span></div>
+          <div style="font-weight:900; font-size:0.88rem; color:${color};">${n.title}</div>
+          <div style="font-size:0.8rem; color:#e2e8f0; margin-top:4px; line-height:1.5;">${n.message}</div>
+          <div style="font-size:0.72rem; color:#94a3b8; margin-top:5px;">${n.date}</div>
         </div>
       `;
     });
+
+    html += `
+      <div style="background:#0f172a; border-right:3px solid #38bdf8; padding:12px; border-radius:12px; margin-bottom:10px;">
+        <div style="font-weight:800; font-size:0.88rem; color:#fff;">أهلاً بك في متجر Mohannad kard 🇸🇾</div>
+        <div style="font-size:0.78rem; color:#94a3b8; margin-top:4px;">سيصلك إشعار فوري هنا وعلى واتساب فور الموافقة على طلباتك.</div>
+      </div>
+    `;
 
     bodyEl.innerHTML = html;
   }
@@ -435,6 +557,12 @@ function openDepositModal() {
 
   renderDepositMethodsSelector();
 
+  // تعبئة رقم الواتساب تلقائياً إذا كان محفوظاً في حساب المستخدم
+  const waInput = document.getElementById("deposit-user-whatsapp");
+  if (waInput && users[0].whatsapp && !waInput.value) {
+    waInput.value = users[0].whatsapp;
+  }
+
   const modal = document.getElementById("deposit-modal");
   if (modal) modal.classList.remove("hidden");
 }
@@ -593,6 +721,9 @@ function handleDepositSubmit(e) {
   }
 
   const inputVal = parseFloat(document.getElementById("deposit-input-val").value) || 0;
+  const userWhatsapp = document.getElementById("deposit-user-whatsapp")
+    ? document.getElementById("deposit-user-whatsapp").value.trim()
+    : "";
   const senderInfo = document.getElementById("deposit-sender-info").value.trim();
   const note = document.getElementById("deposit-note").value.trim();
 
@@ -607,10 +738,15 @@ function handleDepositSubmit(e) {
   const amountSYP = currentDepositCurrency === "SYP" ? inputVal : Math.round(inputVal * rate);
 
   const currentUser = users[0] || { name: "زائر" };
+  if (users[0] && userWhatsapp) {
+    users[0].whatsapp = userWhatsapp;
+    setDB("users", users);
+  }
 
   const newDepositRequest = {
     id: "dep_" + Date.now(),
     userName: currentUser.name,
+    userWhatsapp: userWhatsapp,
     methodName: methodName,
     amountUSD: amountUSD,
     amountSYP: amountSYP,
@@ -629,6 +765,7 @@ function handleDepositSubmit(e) {
   const waMsg = encodeURIComponent(
     `طلب شحن رصيد جديد (${methodName}):\n` +
     `👤 المستخدم: ${currentUser.name}\n` +
+    `📱 واتساب الزبون: ${userWhatsapp || "غير مضاف"}\n` +
     `💵 المبلغ بالدولار: ${amountUSD} $\n` +
     `🇸🇾 المبلغ بالليرة: ${amountSYP.toLocaleString()} ل.س\n` +
     `👤 اسم المرسل: ${senderInfo}\n` +
@@ -671,7 +808,6 @@ function renderCategories(filterText = "") {
 
     const imgSrc = (cat.image && cat.image.trim().length > 10) ? cat.image : defaultImg;
 
-    // إظهار شارة "عرض 🔥" إذا كان القسم لديه نسبة خاصة أقل من النسبة العامة
     const hasOffer = categoryOffers[cat.id] !== undefined && categoryOffers[cat.id] !== "" && Number(categoryOffers[cat.id]) < globalPercent;
     const offerBadge = hasOffer
       ? `<span style="position:absolute; top:-4px; left:6px; background:#ef4444; color:#fff; font-size:0.65rem; font-weight:900; padding:2px 7px; border-radius:10px; z-index:2; box-shadow:0 2px 6px rgba(239,68,68,0.5);">عرض 🔥</span>`
@@ -827,7 +963,6 @@ function handleServiceOrder(e, catId, catName) {
   if (!product) return;
 
   const currentUser = users[0];
-  // السعر النهائي المحسوب حسب (سعر المورد + النسبة العامة أو الخاصة)
   const price = calculateProductFinalPrice(product);
 
   if ((currentUser.balanceUSD || 0) < price) {
