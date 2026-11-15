@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=125">
+  <link rel="stylesheet" href="style.css?v=126">
 
   <style>
     /* تنسيقات أساسية وإجبارية للنوافذ */
@@ -37,6 +37,16 @@
       z-index: 99999 !important;
       padding: 16px;
       overflow-y: auto;
+    }
+
+    /* ضمان قابلية التمرير السلس في لوحة الإدارة على الهواتف */
+    .admin-wrapper {
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .admin-content-area {
+      padding-bottom: 110px !important;
     }
 
     /* نافذة وضع الصيانة للزوار */
@@ -1128,19 +1138,23 @@
           <div id="supplier-results-container" style="display:flex; flex-direction:column; gap:10px;"></div>
         </section>
 
-        <section id="sec-add-product" class="hidden">
+        <!-- قسم إضافة منتج مع زر حفظ واضح مباشرة بعد السعر -->
+        <section id="sec-add-product" class="hidden" style="padding-bottom: 100px;">
           <h4>إضافة منتج (حساب السعر تلقائياً من سعر المورد + النسبة)</h4>
           <form onsubmit="handleAddProduct(event)">
             <div class="form-group"><label>القسم:</label><select id="prod-category-select"></select></div>
             <div class="form-group"><label>الاسم:</label><input type="text" id="prod-name" required></div>
             <div class="form-group"><label>سعر المورد الأساسي ($):</label><input type="number" step="any" id="prod-price-usd" required placeholder="مثال: 10"></div>
+            <button type="submit" class="btn-submit" style="margin: 12px 0; background: #10b981;">
+              <i class="fa-solid fa-check"></i> حفظ المنتج
+            </button>
             <div class="form-group"><label>نسبة عرض خاصة لهذا المنتج فقط % (اختياري - اتركه فارغاً ليأخذ نسبة التطبيق أو النسبة العامة):</label><input type="number" step="any" id="prod-custom-percent" placeholder="مثال: 2"></div>
             <div class="form-group"><label>السعر (ل.س - اختياري):</label><input type="number" id="prod-price-syp" placeholder="يحسب تلقائياً"></div>
-            <div class="form-group"><label>الوصف:</label><textarea id="prod-desc"></textarea></div>
-            <div class="form-group"><label>الصورة:</label><input type="text" id="prod-image" placeholder="رابط الصورة (اختياري)"></div>
-            <button type="submit" class="btn-submit">حفظ المنتج</button>
+            <div class="form-group"><label>الوصف (اختياري):</label><textarea id="prod-desc"></textarea></div>
+            <div class="form-group"><label>الصورة (اختياري):</label><input type="text" id="prod-image" placeholder="رابط الصورة (اختياري)"></div>
           </form>
         </section>
+
         <section id="sec-categories" class="hidden">
           <table class="data-table"><thead><tr><th>القسم</th><th>النوع</th><th>إجراء</th></tr></thead><tbody id="admin-categories-table"></tbody></table>
         </section>
@@ -1190,10 +1204,10 @@
     }
   </script>
 
-  <!-- ملفات السكربت مع رقم إصدار v=125 -->
-  <script src="data.js?v=125"></script>
-  <script src="auth.js?v=125"></script>
-  <script src="store.js?v=125"></script>
-  <script src="admin.js?v=125"></script>
+  <!-- ملفات السكربت مع رقم إصدار v=126 -->
+  <script src="data.js?v=126"></script>
+  <script src="auth.js?v=126"></script>
+  <script src="store.js?v=126"></script>
+  <script src="admin.js?v=126"></script>
 </body>
 </html>
