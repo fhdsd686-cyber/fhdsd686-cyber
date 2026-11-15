@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=121">
+  <link rel="stylesheet" href="style.css?v=122">
 
   <style>
     /* تنسيقات أساسية وإجبارية للنوافذ */
@@ -1017,6 +1017,9 @@
         <button class="admin-nav-item" onclick="switchAdminSection('upgrade-user')">رفع مستوى مستخدم</button>
         <button class="admin-nav-item" onclick="switchAdminSection('products')">المنتجات</button>
         <button class="admin-nav-item" onclick="switchAdminSection('add-product')">إضافة منتج</button>
+        <button class="admin-nav-item" onclick="switchAdminSection('import-supplier')" style="color:#38bdf8; font-weight:800;">
+          <i class="fa-solid fa-cloud-arrow-down"></i> جلب المنتجات من المورد
+        </button>
         <button class="admin-nav-item" onclick="switchAdminSection('categories')">الأقسام الحالية</button>
         <button class="admin-nav-item" onclick="switchAdminSection('add-category')">إضافة قسم</button>
         <button class="admin-nav-item" onclick="switchAdminSection('deposit-requests')">طلبات الإيداع</button>
@@ -1082,6 +1085,49 @@
         <section id="sec-products" class="hidden">
           <table class="data-table"><thead><tr><th>الاسم</th><th>القسم</th><th>المورد / النهائي</th><th>إجراء</th></tr></thead><tbody id="admin-products-table"></tbody></table>
         </section>
+
+        <!-- قسم جلب المنتجات من المورد -->
+        <section id="sec-import-supplier" class="hidden">
+          <h4><i class="fa-solid fa-cloud-arrow-down" style="color:#38bdf8;"></i> جلب المنتجات من المورد</h4>
+
+          <div style="background:#0c1527; padding:16px; border-radius:14px; margin-bottom:16px; border:1px solid rgba(56,189,248,0.25);">
+            <div class="form-group">
+              <label>1. اختر القسم في موقعك لإضافة المنتجات إليه:</label>
+              <select id="supplier-target-category" onchange="searchSupplierCatalog()"></select>
+            </div>
+
+            <details style="margin-bottom:12px; background:#070e1a; padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
+              <summary style="cursor:pointer; font-size:0.82rem; color:#38bdf8; font-weight:700;">
+                <i class="fa-solid fa-link"></i> ربط API مورد خارجي (اضغط هنا لإدخال رابط المورد والمفتاح)
+              </summary>
+              <div style="margin-top:10px;">
+                <div class="form-group">
+                  <label>رابط API المورد (Endpoint URL):</label>
+                  <input type="text" id="supplier-api-url" placeholder="https://api.supplier.com/v2/services" dir="ltr">
+                </div>
+                <div class="form-group">
+                  <label>مفتاح المورد (API Key):</label>
+                  <input type="text" id="supplier-api-key" placeholder="أدخل مفتاح API الخاص بحسابك لدى المورد" dir="ltr">
+                </div>
+                <button type="button" class="btn-submit" style="background:#0284c7;" onclick="fetchFromExternalSupplierAPI()">
+                  <i class="fa-solid fa-rotate"></i> جلب وتحديث قائمة المورد الآن
+                </button>
+              </div>
+            </details>
+
+            <div class="form-group" style="margin-bottom:0;">
+              <label>2. اكتب اسم التطبيق أو المنتج للبحث في المورد (مثال: PUBG، TikTok، Netflix):</label>
+              <div style="display:flex; gap:8px;">
+                <input type="text" id="supplier-search-input" placeholder="اكتب اسم التطبيق هنا..." oninput="searchSupplierCatalog()">
+                <button type="button" class="btn-submit" style="width:auto; padding:0 18px;" onclick="searchSupplierCatalog()">بحث</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="supplier-results-info" style="font-size:0.82rem; color:#94a3b8; margin-bottom:10px;"></div>
+          <div id="supplier-results-container" style="display:flex; flex-direction:column; gap:10px;"></div>
+        </section>
+
         <section id="sec-add-product" class="hidden">
           <h4>إضافة منتج (حساب السعر تلقائياً من سعر المورد + النسبة)</h4>
           <form onsubmit="handleAddProduct(event)">
@@ -1144,10 +1190,10 @@
     }
   </script>
 
-  <!-- ملفات السكربت مع رقم إصدار v=121 -->
-  <script src="data.js?v=121"></script>
-  <script src="auth.js?v=121"></script>
-  <script src="store.js?v=121"></script>
-  <script src="admin.js?v=121"></script>
+  <!-- ملفات السكربت مع رقم إصدار v=122 -->
+  <script src="data.js?v=122"></script>
+  <script src="auth.js?v=122"></script>
+  <script src="store.js?v=122"></script>
+  <script src="admin.js?v=122"></script>
 </body>
 </html>
