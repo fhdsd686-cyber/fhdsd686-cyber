@@ -1,59 +1,18 @@
-// --- قاعدة البيانات الأولية المعتمدة لجميع المستخدمين والزوار ---
-
-const DEFAULT_BANNER = "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80";
+// --- قاعدة البيانات السحابية المتزامنة (Firebase Firestore + LocalStorage Cache) ---
 
 const initialCategories = [
-  {
-    id: "cat_syriatel",
-    name: "رصيد سيريتل كاش",
-    parentId: null,
-    image: "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=300&q=80"
-  },
-  {
-    id: "cat_mtn",
-    name: "رصيد MTN كاش",
-    parentId: null,
-    image: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=300&q=80"
-  },
-  {
-    id: "cat_superlive",
-    name: "شحن منصة SuperLive",
-    parentId: null,
-    image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80"
-  },
-  {
-    id: "cat_apple",
-    name: "خدمات أبل وآيكلاود",
-    parentId: null,
-    image: "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?auto=format&fit=crop&w=300&q=80"
-  },
-  {
-    id: "cat_social",
-    name: "خدمات السوشال ميديا",
-    parentId: null,
-    image: "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?auto=format&fit=crop&w=300&q=80"
-  },
-  {
-    id: "cat_cards",
-    name: "قسم بطاقات المنصات والمحافظ",
-    parentId: null,
-    image: "https://images.unsplash.com/photo-1556742049-0a67c5574f73?auto=format&fit=crop&w=300&q=80"
-  }
+  { id: "cat_subs", name: "قسم الاشتراكات", parentId: null, image: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=300&q=80" },
+  { id: "cat_syria_telecom", name: "خدمات شركات الاتصالات السورية", parentId: null, image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=300&q=80" },
+  { id: "cat_social", name: "خدمات السوشال ميديا", parentId: null, image: "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?auto=format&fit=crop&w=300&q=80" },
+  { id: "cat_games", name: "قسم شحن جميع الألعاب", parentId: null, image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=300&q=80" },
+  { id: "cat_live", name: "قسم شحن عملات لمنصات البثوث", parentId: null, image: "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80" }
 ];
 
-const initialProducts = [
-  { id: "p1", categoryId: "cat_syriatel", name: "شحن 10,000 ل.س سيريتل", priceUSD: 0.70, priceSYP: 10000 },
-  { id: "p2", categoryId: "cat_syriatel", name: "شحن 25,000 ل.س سيريتل", priceUSD: 1.75, priceSYP: 25000 },
-  { id: "p3", categoryId: "cat_syriatel", name: "شحن 50,000 ل.س سيريتل", priceUSD: 3.50, priceSYP: 50000 },
-  { id: "p4", categoryId: "cat_mtn", name: "شحن 10,000 ل.س MTN", priceUSD: 0.70, priceSYP: 10000 },
-  { id: "p5", categoryId: "cat_superlive", name: "1,000 ماسة SuperLive", priceUSD: 1.20, priceSYP: 17000 },
-  { id: "p6", categoryId: "cat_apple", name: "بطاقة آيتونز 5$", priceUSD: 5.00, priceSYP: 75000 }
-];
+const initialProducts = [];
 
-// طرق الإيداع الافتراضية (تشمل شام كاش بباركود حسابك الرسمي)
 const initialDepositMethods = [
   {
-    id: "method_shamcash",
+    id: "dm_shamcash",
     name: "شام كاش سوري",
     account: "b7a6624b69166fb60e741400cee2b8bd",
     currency: "USD",
@@ -63,39 +22,155 @@ const initialDepositMethods = [
   }
 ];
 
-// دالة آمنة تقرأ البيانات دون أخطاء برمجية
-function getDB(key, defaultVal) {
+// قائمة المفاتيح المشتركة التي تتزامن بين جميع الهواتف عبر السحابة
+const CLOUD_SHARED_KEYS = [
+  "site_settings",
+  "categories",
+  "products",
+  "depositMethods",
+  "deposit_requests",
+  "orders",
+  "global_profit_percent",
+  "category_profit_percents",
+  "maintenance_mode",
+  "user_notifications",
+  "cloud_users_registry"
+];
+
+let firestoreDB = null;
+let isApplyingRemoteSnapshot = false;
+
+// تهيئة الاتصال مع Firestore بمجرد تحميل الصفحة
+(function initCloudSync() {
+  if (typeof firebase !== "undefined" && firebase.firestore) {
+    firestoreDB = firebase.firestore();
+    startRealtimeCloudListeners();
+  }
+})();
+
+// قراءة البيانات محلياً مع ضمان السرعة الفائقة
+function getDB(key, defaultValue) {
   try {
-    const data = localStorage.getItem(key);
-    if (!data || data === "undefined" || data === "null") {
-      if (key === "categories") return initialCategories;
-      if (key === "products") return initialProducts;
-      if (key === "depositMethods") return initialDepositMethods;
-      return defaultVal;
-    }
-    const parsed = JSON.parse(data);
-    if (key === "categories" && (!Array.isArray(parsed) || parsed.length === 0)) {
-      return initialCategories;
-    }
-    if (key === "products" && (!Array.isArray(parsed) || parsed.length === 0)) {
-      return initialProducts;
-    }
-    if (key === "depositMethods" && (!Array.isArray(parsed) || parsed.length === 0)) {
-      return initialDepositMethods;
-    }
-    return parsed;
+    const raw = localStorage.getItem("mk_" + key);
+    if (raw === null || raw === undefined) return defaultValue;
+    return JSON.parse(raw);
   } catch (e) {
-    if (key === "categories") return initialCategories;
-    if (key === "products") return initialProducts;
-    if (key === "depositMethods") return initialDepositMethods;
-    return defaultVal;
+    return defaultValue;
   }
 }
 
-function setDB(key, val) {
+// حفظ البيانات محلياً ومزامنتها فوراً مع السحابة لجميع الهواتف
+function setDB(key, value) {
   try {
-    localStorage.setItem(key, JSON.stringify(val));
+    localStorage.setItem("mk_" + key, JSON.stringify(value));
   } catch (e) {
-    console.error("Storage error:", e);
+    console.error("Local Save Error:", e);
+  }
+
+  // إذا تم تحديث قائمة المستخدمين المحلية، نرفع بيانات المستخدم النشط إلى السجل السحابي المشترك
+  if (key === "users" && Array.isArray(value) && value.length > 0 && value[0].name !== "زائر") {
+    syncCurrentUserToCloudRegistry(value[0]);
+  }
+
+  // رفع المفتاح إلى Firestore إذا كان ضمن المفاتيح المشتركة ولم يكن قادماً من تحديث سحابي
+  if (firestoreDB && !isApplyingRemoteSnapshot && CLOUD_SHARED_KEYS.includes(key)) {
+    firestoreDB.collection("store_data").doc(key).set({
+      payload: JSON.stringify(value),
+      updatedAt: Date.now()
+    }).catch(err => console.warn("Cloud Sync Write Warning:", err));
+  }
+}
+
+// مزامنة بيانات المستخدم الحالي (رصيده، رتبته، حالة الحظر) مع السجل السحابي
+function syncCurrentUserToCloudRegistry(localUser) {
+  if (!firestoreDB || !localUser || !localUser.name || localUser.name === "زائر") return;
+
+  const registry = getDB("cloud_users_registry", {});
+  const userKey = (localUser.email || localUser.name).toLowerCase().trim();
+
+  registry[userKey] = {
+    ...registry[userKey],
+    ...localUser,
+    lastSeen: Date.now()
+  };
+
+  isApplyingRemoteSnapshot = true;
+  localStorage.setItem("mk_cloud_users_registry", JSON.stringify(registry));
+  isApplyingRemoteSnapshot = false;
+
+  firestoreDB.collection("store_data").doc("cloud_users_registry").set({
+    payload: JSON.stringify(registry),
+    updatedAt: Date.now()
+  }).catch(() => {});
+}
+
+// الاستماع اللحظي لأي تغيير يحدث من أي هاتف وتحديث الشاشة فوراً
+function startRealtimeCloudListeners() {
+  if (!firestoreDB) return;
+
+  CLOUD_SHARED_KEYS.forEach((key) => {
+    firestoreDB.collection("store_data").doc(key).onSnapshot((doc) => {
+      if (!doc.exists) {
+        // إذا كانت السحابة فارغة لأول مرة، ارفع البيانات الموجودة على هذا الهاتف إليها
+        const existingLocal = getDB(key, null);
+        if (existingLocal !== null) {
+          firestoreDB.collection("store_data").doc(key).set({
+            payload: JSON.stringify(existingLocal),
+            updatedAt: Date.now()
+          }).catch(() => {});
+        }
+        return;
+      }
+
+      const data = doc.data();
+      if (!data || !data.payload) return;
+
+      try {
+        const parsed = JSON.parse(data.payload);
+        isApplyingRemoteSnapshot = true;
+        localStorage.setItem("mk_" + key, JSON.stringify(parsed));
+        isApplyingRemoteSnapshot = false;
+
+        // تحديث واجهة المتجر تلقائياً حسب البيانات الجديدة
+        refreshUIAfterCloudSync(key, parsed);
+      } catch (e) {
+        isApplyingRemoteSnapshot = false;
+      }
+    });
+  });
+}
+
+// تحديث عناصر الواجهة فور وصول بيانات جديدة من السحابة
+function refreshUIAfterCloudSync(key, parsedData) {
+  if (key === "site_settings" && typeof loadSiteSettings === "function") {
+    loadSiteSettings();
+  }
+  if ((key === "categories" || key === "category_profit_percents" || key === "global_profit_percent") && typeof renderCategories === "function") {
+    renderCategories();
+  }
+  if (key === "maintenance_mode" && typeof checkMaintenanceGate === "function") {
+    checkMaintenanceGate();
+  }
+  if (key === "user_notifications" && typeof checkIncomingNotifications === "function") {
+    checkIncomingNotifications();
+  }
+  if (key === "deposit_requests" && typeof renderAdminDepositRequests === "function") {
+    renderAdminDepositRequests();
+  }
+
+  // تحديث رصيد ورتبة وحالة حظر المستخدم الحالي إذا عدّلها المدير من هاتف آخر
+  if (key === "cloud_users_registry" && parsedData) {
+    const users = getDB("users", []);
+    if (Array.isArray(users) && users.length > 0 && users[0].name !== "زائر") {
+      const userKey = (users[0].email || users[0].name).toLowerCase().trim();
+      const cloudProfile = parsedData[userKey];
+      if (cloudProfile) {
+        users[0].balanceUSD = cloudProfile.balanceUSD;
+        users[0].role = cloudProfile.role;
+        users[0].isBanned = cloudProfile.isBanned;
+        localStorage.setItem("mk_users", JSON.stringify(users));
+        if (typeof updateUserUI === "function") updateUserUI();
+      }
+    }
   }
 }
