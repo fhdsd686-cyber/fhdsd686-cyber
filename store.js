@@ -836,6 +836,43 @@ function filterCategories() {
   }
 }
 
+// تحديد عنوان الحقل ومثاله تلقائياً حسب اسم القسم (رابط صفحة / رقم هاتف / ID لاعب)
+function getTargetFieldConfig(catName) {
+  const nameLower = (catName || "").toLowerCase();
+  if (
+    nameLower.includes("متابع") ||
+    nameLower.includes("فيسبوك") ||
+    nameLower.includes("تيك") ||
+    nameLower.includes("انست") ||
+    nameLower.includes("يوتيوب") ||
+    nameLower.includes("تيلي") ||
+    nameLower.includes("صفح") ||
+    nameLower.includes("لايك") ||
+    nameLower.includes("مشاهد")
+  ) {
+    return {
+      label: "رابط الصفحة أو الحساب",
+      placeholder: "ضع رابط الصفحة أو الحساب هنا (https://...)"
+    };
+  }
+  if (
+    nameLower.includes("mtn") ||
+    nameLower.includes("سيرياتيل") ||
+    nameLower.includes("رصيد") ||
+    nameLower.includes("كاش") ||
+    nameLower.includes("وحدات")
+  ) {
+    return {
+      label: "رقم الهاتف",
+      placeholder: "أدخل رقم الهاتف المطلوب (مثال: 09xxxxxxxx)"
+    };
+  }
+  return {
+    label: "معرف اللاعب (ID) أو الحساب",
+    placeholder: "أدخل المعرف (ID) المطلوب"
+  };
+}
+
 function openCategory(catId, catName, catImage, parentInfo = null) {
   const users = getDB("users", []);
   const hasValidUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
@@ -928,6 +965,8 @@ function openCategory(catId, catName, catImage, parentInfo = null) {
     </option>`;
   });
 
+  const fieldCfg = getTargetFieldConfig(catName);
+
   container.className = "service-order-wrapper";
   container.innerHTML = `
     <div class="service-top-card">
@@ -939,8 +978,8 @@ function openCategory(catId, catName, catImage, parentInfo = null) {
 
     <form class="service-order-form" onsubmit="handleServiceOrder(event, '${catId}', '${catName.replace(/'/g, "\\'")}')">
       <div class="field-block">
-        <label class="field-label">رقم الهاتف أو المعرف (ID اللاعب)</label>
-        <input type="text" id="srv-target-input" class="field-input" placeholder="أدخل الرقم أو المعرف المطلوب" required dir="ltr">
+        <label class="field-label">${fieldCfg.label}</label>
+        <input type="text" id="srv-target-input" class="field-input" placeholder="${fieldCfg.placeholder}" required dir="ltr">
       </div>
 
       <div class="field-block">
@@ -1043,7 +1082,7 @@ async function handleServiceOrder(e, catId, catName) {
 
       const result = await response.json();
 
-      // التحقق من رفض المورد للطلب (مثل عدم كفاية رصيد التاجر أو خطأ في ID اللاعب)
+      // التحقق من رفض المورد للطلب (مثل عدم كفاية رصيد التاجر أو خطأ في البيانات)
       if (!response.ok || result.status === false || result.error || (result.code && result.code !== 200 && result.code !== 0 && !result.data)) {
         const errMsg = result.msg || result.message || result.error || "تعذر تنفيذ الطلب من سيرفر المورد.";
         alert(`⚠️ لم يتم الشحن من المورد:\n${errMsg}\n\nلم يتم خصم أي مبلغ من رصيدك.`);
@@ -1092,7 +1131,7 @@ async function handleServiceOrder(e, catId, catName) {
   updateUserUI();
   alert(
     `✅ تم تنفيذ طلب الشحن بنجاح!\n` +
-    `المستلم (ID): ${targetInput}\n` +
+    `المستلم: ${targetInput}\n` +
     `الباقة: ${product.name}\n` +
     (supplierOrderId ? `رقم العملية: #${supplierOrderId}\n` : "") +
     `المبلغ المخصوم: ${formatStoreAmount(price)}`
