@@ -1138,10 +1138,11 @@
   <!-- ملفات السكربت -->
   <script src="data.js?v=129"></script>
   <script src="auth.js?v=129"></script>
-  <script src="store.js?v=129"></script>
+  <script src="store.js?v=136"></script>
   <script src="admin.js?v=999"></script>
 
   <script>
+    // 1. دالة جلب المنتجات من المورد عبر الوسيط
     window.fetchFromExternalSupplierAPI = async function() {
       const url = (document.getElementById("supplier-api-url")?.value || "https://api.shams4store.com/client/api/products").trim();
       const key = (document.getElementById("supplier-api-key")?.value || "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427").trim();
@@ -1181,6 +1182,121 @@
       } catch (err) {
         alert("خطأ في الاتصال: " + err.message);
       }
+    };
+
+    // 2. دالة تنفيذ طلبات الشحن الفوري بصيغة GET متجاوزة الكاش
+    window.handleServiceOrder = async function(e, catId, catName) {
+      e.preventDefault();
+
+      let users = getDB("users", []);
+      if (!Array.isArray(users) || users.length === 0 || !users[0].name || users[0].name === "زائر") {
+        alert("يرجى تسجيل الدخول أو إنشاء حساب لإتمام عملية الشحن.");
+        if (typeof openAuthModal === "function") openAuthModal();
+        return;
+      }
+
+      if (users[0] && users[0].isBanned) {
+        alert("🚫 عذراً، تم حظر حسابك من قبل إدارة المتجر.");
+        return;
+      }
+
+      const targetInput = document.getElementById("srv-target-input").value.trim();
+      const select = document.getElementById("srv-package-select");
+      const prodId = select.value;
+
+      if (!prodId) {
+        alert("يرجى اختيار الباقة أولاً");
+        return;
+      }
+
+      const products = getDB("products", initialProducts);
+      const product = products.find(p => p.id === prodId);
+      if (!product) return;
+
+      const currentUser = users[0];
+      const price = calculateProductFinalPrice(product);
+
+      if ((currentUser.balanceUSD || 0) < price) {
+        alert(`عذراً، رصيدك الحالي (${formatStoreAmount(currentUser.balanceUSD || 0)}) لا يكفي لشراء هذه الباقة (${formatStoreAmount(price)})!`);
+        return;
+      }
+
+      const submitBtn = document.getElementById("btn-submit-service-order");
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> جاري إرسال الطلب بصيغة GET...`;
+      }
+
+      const supplierProductId = product.supplierId || "";
+      const apiToken = (getDB("supplier_api_key", "") || "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427").trim();
+      const orderReference = "ORD-" + Date.now();
+
+      let supplierOrderId = "";
+      let orderStatus = "مكتمل";
+
+      if (supplierProductId) {
+        try {
+          const targetUrl = `https://api.shams4store.com/client/api/newOrder/${encodeURIComponent(supplierProductId)}/params?qty=1&playerId=${encodeURIComponent(targetInput)}&order_uuid=${encodeURIComponent(orderReference)}`;
+          const workerRequestUrl = `https://rapid-dew-4b71.fhdsd686.workers.dev/?url=${encodeURIComponent(targetUrl)}&token=${encodeURIComponent(apiToken)}`;
+
+          const response = await fetch(workerRequestUrl, {
+            method: "GET",
+            headers: {
+              "Accept": "application/json",
+              "api-token": apiToken,
+              "Authorization": `Bearer ${apiToken}`
+            }
+          });
+
+          const result = await response.json();
+
+          if (!response.ok || result.status === false || result.error || (result.code && result.code !== 200 && result.code !== 0 && !result.data)) {
+            const errMsg = result.msg || result.message || result.error || JSON.stringify(result);
+            alert(`⚠️ رد سيرفر المورد:\n${errMsg}\n\nلم يتم خصم أي مبلغ من رصيدك.`);
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> تأكيد الطلب والشحن الفوري`;
+            }
+            return;
+          }
+
+          supplierOrderId = (result.data && (result.data.order_id || result.data.id)) || result.order_id || result.id || orderReference;
+          orderStatus = "تم الإرسال للمورد ✓";
+        } catch (err) {
+          alert(`⚠️ خطأ في الاتصال:\n${err.message}`);
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> تأكيد الطلب والشحن الفوري`;
+          }
+          return;
+        }
+      }
+
+      currentUser.balanceUSD = Number((currentUser.balanceUSD - price).toFixed(3));
+      currentUser.ordersCount = (currentUser.ordersCount || 0) + 1;
+      setDB("users", users);
+
+      const orders = getDB("orders", []);
+      orders.unshift({
+        id: "ord_" + Date.now(),
+        supplierOrderId: supplierOrderId,
+        categoryName: catName,
+        packageName: product.name,
+        target: targetInput,
+        price: price,
+        date: new Date().toLocaleString("ar-SY"),
+        status: orderStatus
+      });
+      setDB("orders", orders);
+
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> تأكيد الطلب والشحن الفوري`;
+      }
+
+      updateUserUI();
+      alert(`✅ تم تنفيذ طلب الشحن بنجاح!\nالمستلم: ${targetInput}\nالباقة: ${product.name}\nرقم العملية: #${supplierOrderId}`);
+      backToCategories();
     };
   </script>
 </body>
