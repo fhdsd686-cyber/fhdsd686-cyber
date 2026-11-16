@@ -1142,7 +1142,31 @@
   <script src="admin.js?v=999"></script>
 
   <script>
-    // 1. دالة جلب المنتجات من المورد عبر الوسيط
+    // 1. دالة فتح وإغلاق لوحة الإدارة بشكل فوري ومضمون
+    window.openAdminPanel = function() {
+      if (typeof toggleSidebar === "function") toggleSidebar(false);
+      const adminWrap = document.getElementById("admin-wrapper");
+      if (adminWrap) {
+        adminWrap.classList.remove("hidden");
+        adminWrap.style.display = "block";
+      }
+      if (typeof loadAdminData === "function") {
+        try { loadAdminData(); } catch (e) {}
+      }
+      if (typeof renderCategoryOffers === "function") {
+        try { renderCategoryOffers(); } catch (e) {}
+      }
+    };
+
+    window.closeAdminPanel = function() {
+      const adminWrap = document.getElementById("admin-wrapper");
+      if (adminWrap) {
+        adminWrap.classList.add("hidden");
+        adminWrap.style.display = "none";
+      }
+    };
+
+    // 2. دالة جلب المنتجات من المورد عبر الوسيط
     window.fetchFromExternalSupplierAPI = async function() {
       const url = (document.getElementById("supplier-api-url")?.value || "https://api.shams4store.com/client/api/products").trim();
       const key = (document.getElementById("supplier-api-key")?.value || "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427").trim();
@@ -1184,7 +1208,7 @@
       }
     };
 
-    // 2. دالة تنفيذ طلبات الشحن الفوري بصيغة GET متجاوزة الكاش
+    // 3. دالة تنفيذ طلبات الشحن الفوري بصيغة GET متجاوزة الكاش
     window.handleServiceOrder = async function(e, catId, catName) {
       e.preventDefault();
 
@@ -1295,9 +1319,3 @@
       }
 
       updateUserUI();
-      alert(`✅ تم تنفيذ طلب الشحن بنجاح!\nالمستلم: ${targetInput}\nالباقة: ${product.name}\nرقم العملية: #${supplierOrderId}`);
-      backToCategories();
-    };
-  </script>
-</body>
-</html>
