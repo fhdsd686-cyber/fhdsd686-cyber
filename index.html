@@ -1135,10 +1135,53 @@
     }
   </script>
 
-  <!-- ملفات السكربت مع رقم إصدار محدث -->
+  <!-- ملفات السكربت -->
   <script src="data.js?v=129"></script>
   <script src="auth.js?v=129"></script>
   <script src="store.js?v=129"></script>
-  <script src="admin.js?v=132"></script>
+  <script src="admin.js?v=999"></script>
+
+  <script>
+    window.fetchFromExternalSupplierAPI = async function() {
+      const url = (document.getElementById("supplier-api-url")?.value || "https://api.shams4store.com/client/api/products").trim();
+      const key = (document.getElementById("supplier-api-key")?.value || "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427").trim();
+      const infoEl = document.getElementById("supplier-results-info");
+      if (infoEl) infoEl.innerHTML = `<span style="color:#10b981; font-weight:bold;">✅ جاري السحب المباشر عبر وسيطك الخاص...</span>`;
+
+      try {
+        const workerUrl = `https://rapid-dew-4b71.fhdsd686.workers.dev/?url=${encodeURIComponent(url)}&token=${encodeURIComponent(key)}`;
+        const res = await fetch(workerUrl, {
+          method: "GET",
+          headers: {
+            "Accept": "application/json",
+            "api-token": key,
+            "Authorization": `Bearer ${key}`
+          }
+        });
+        const data = await res.json();
+        const rawList = Array.isArray(data) ? data : (data.products || data.services || (data.data && Array.isArray(data.data) ? data.data : (data.data?.products || data.data?.data || [])));
+
+        if (!rawList || rawList.length === 0) {
+          alert("رد السيرفر: " + JSON.stringify(data).slice(0, 300));
+          return;
+        }
+
+        const mapped = rawList.map((item, idx) => ({
+          supplierId: String(item.id || item.service || item.product_id || `SHAMS-${idx + 1}`),
+          app: item.category_name || item.category?.name || item.category || item.group || "Shams4Store",
+          name: item.name || item.title || item.service_name || `منتج #${idx + 1}`,
+          supplierPriceUSD: parseFloat(item.price || item.rate || item.cost || 0),
+          image: item.image || item.icon || item.category?.image || "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80",
+          desc: item.desc || item.description || item.notes || ""
+        }));
+
+        setDB("supplier_catalog", mapped);
+        alert(`🎉 مبروك! تم جلب ${mapped.length} منتج من Shams4Store بنجاح!`);
+        if (typeof searchSupplierCatalog === "function") searchSupplierCatalog();
+      } catch (err) {
+        alert("خطأ في الاتصال: " + err.message);
+      }
+    };
+  </script>
 </body>
 </html>
