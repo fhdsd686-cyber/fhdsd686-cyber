@@ -1,4 +1,4 @@
-// --- منطق المتجر، الإشعارات الفورية، التسعير التلقائي والعروض، وتبديل العملات ---
+// --- منطق المتجر، الإشعارات الفورية، التسعير التلقائي والعروض، والشحن التلقائي عبر المورد ---
 
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
@@ -7,6 +7,11 @@ let depositReceiptBase64 = "";
 let displayCurrency = getDB("display_currency", "USD");
 const STORE_EXCHANGE_RATE = 15000;
 let currentParentCategory = null;
+
+// إعدادات وسيط Cloudflare ومورد Shams4Store للشحن التلقائي
+const SUPPLIER_WORKER_URL = "https://rapid-dew-4b71.fhdsd686.workers.dev/";
+const SHAMS_ORDER_ENDPOINT = "https://api.shams4store.com/client/api/newOrder";
+const SHAMS_DEFAULT_TOKEN = "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427";
 
 document.addEventListener("DOMContentLoaded", () => {
   loadSiteSettings();
@@ -44,10 +49,8 @@ function checkIncomingNotifications() {
   const notifications = getDB("user_notifications", []);
   const myUnread = notifications.filter(n => n.userName === currentUser.name && !n.read);
 
-  // تحديث شارة الجرس الحمراء
   updateBellBadge(myUnread.length);
 
-  // عرض آخر إشعار غير معروض كبطاقة منبثقة في أعلى الشاشة
   const unshown = myUnread.find(n => !n.toastShown);
   if (unshown) {
     unshown.toastShown = true;
@@ -55,7 +58,6 @@ function checkIncomingNotifications() {
 
     showInAppNotificationToast(unshown.title, unshown.message, unshown.type);
 
-    // إرسال إشعار متصفح حقيقي على الهاتف/الكمبيوتر
     if ("Notification" in window && Notification.permission === "granted") {
       try {
         new Notification(unshown.title, {
@@ -357,7 +359,6 @@ function openFeatureModal(type) {
     const allNotifs = getDB("user_notifications", []);
     const myNotifs = currentUser ? allNotifs.filter(n => n.userName === currentUser.name) : [];
 
-    // تعليم جميع إشعارات المستخدم كمقروءة عند فتح النافذة
     if (currentUser && myNotifs.some(n => !n.read)) {
       allNotifs.forEach(n => {
         if (n.userName === currentUser.name) n.read = true;
@@ -414,6 +415,7 @@ function openFeatureModal(type) {
           <div style="font-size:0.78rem; color:#94a3b8; margin-top:4px;">
             القسم: ${o.categoryName} | المستلم: <strong style="color:#fff;">${o.target}</strong>
           </div>
+          ${o.supplierOrderId ? `<div style="font-size:0.74rem; color:#38bdf8; margin-top:3px;">رقم طلب المورد: #${o.supplierOrderId}</div>` : ""}
           <div style="font-size:0.74rem; color:#10b981; margin-top:4px;">الحالة: ${o.status} • ${o.date}</div>
         </div>
       `).join("");
@@ -560,7 +562,6 @@ function openDepositModal() {
 
   renderDepositMethodsSelector();
 
-  // تعبئة رقم الواتساب تلقائياً إذا كان محفوظاً في حساب المستخدم
   const waInput = document.getElementById("deposit-user-whatsapp");
   if (waInput && users[0].whatsapp && !waInput.value) {
     waInput.value = users[0].whatsapp;
@@ -867,7 +868,6 @@ function openCategory(catId, catName, catImage, parentInfo = null) {
   const fallbackImg = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80";
   const defaultImg = (catImage && catImage.trim().length > 10) ? catImage : fallbackImg;
 
-  // 1. عرض الأقسام الفرعية كمربعات صور إذا كانت موجودة
   const allCategories = getDB("categories", initialCategories);
   const subCategories = Array.isArray(allCategories) ? allCategories.filter(c => c.parentId === catId) : [];
 
@@ -902,7 +902,6 @@ function openCategory(catId, catName, catImage, parentInfo = null) {
     return;
   }
 
-  // 2. عرض نموذج الشحن والباقات للقسم المختار
   const products = getDB("products", initialProducts);
   const catProducts = Array.isArray(products) ? products.filter(p => p.categoryId === catId) : [];
 
@@ -940,7 +939,7 @@ function openCategory(catId, catName, catImage, parentInfo = null) {
 
     <form class="service-order-form" onsubmit="handleServiceOrder(event, '${catId}', '${catName.replace(/'/g, "\\'")}')">
       <div class="field-block">
-        <label class="field-label">رقم الهاتف أو المعرف</label>
+        <label class="field-label">رقم الهاتف أو المعرف (ID اللاعب)</label>
         <input type="text" id="srv-target-input" class="field-input" placeholder="أدخل الرقم أو المعرف المطلوب" required dir="ltr">
       </div>
 
@@ -958,7 +957,7 @@ function openCategory(catId, catName, catImage, parentInfo = null) {
         <strong id="srv-price-display" style="color: var(--accent-cyan); font-size: 1.1rem;">${formatStoreAmount(0)}</strong>
       </div>
 
-      <button type="submit" class="btn-confirm-order">
+      <button type="submit" id="btn-submit-service-order" class="btn-confirm-order">
         <i class="fa-solid fa-paper-plane"></i> تأكيد الطلب والشحن الفوري
       </button>
     </form>
@@ -977,7 +976,8 @@ function onPackageSelectChange() {
   }
 }
 
-function handleServiceOrder(e, catId, catName) {
+// --- إرسال طلب الشحن تلقائياً إلى Shams4Store عبر وسيط Cloudflare ---
+async function handleServiceOrder(e, catId, catName) {
   e.preventDefault();
 
   let users = getDB("users", []);
@@ -1013,6 +1013,66 @@ function handleServiceOrder(e, catId, catName) {
     return;
   }
 
+  const submitBtn = document.getElementById("btn-submit-service-order");
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> جاري إرسال الطلب والشحن الفوري...`;
+  }
+
+  const supplierProductId = product.supplierId || "";
+  const apiToken = (getDB("supplier_api_key", "") || SHAMS_DEFAULT_TOKEN).trim();
+  const orderReference = "ORD-" + Date.now();
+
+  let supplierOrderId = "";
+  let orderStatus = "مكتمل";
+
+  // إذا كان المنتج مرتبطاً بمورد Shams4Store، نرسل الطلب تلقائياً عبر الوسيط
+  if (supplierProductId) {
+    try {
+      const targetUrl = `${SHAMS_ORDER_ENDPOINT}/${encodeURIComponent(supplierProductId)}/params`;
+      const workerRequestUrl = `${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(targetUrl)}&token=${encodeURIComponent(apiToken)}`;
+
+      const response = await fetch(workerRequestUrl, {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "api-token": apiToken,
+          "Authorization": `Bearer ${apiToken}`
+        },
+        body: JSON.stringify({
+          qty: 1,
+          playerId: targetInput,
+          order_uuid: orderReference
+        })
+      });
+
+      const result = await response.json();
+
+      // التحقق من رفض المورد للطلب (مثل عدم كفاية رصيد التاجر أو خطأ في ID اللاعب)
+      if (!response.ok || result.status === false || result.error || (result.code && result.code !== 200 && result.code !== 0 && !result.data)) {
+        const errMsg = result.msg || result.message || result.error || "تعذر تنفيذ الطلب من سيرفر المورد.";
+        alert(`⚠️ لم يتم الشحن من المورد:\n${errMsg}\n\nلم يتم خصم أي مبلغ من رصيدك.`);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> تأكيد الطلب والشحن الفوري`;
+        }
+        return;
+      }
+
+      supplierOrderId = (result.data && (result.data.order_id || result.data.id)) || result.order_id || result.id || orderReference;
+      orderStatus = "تم الإرسال للمورد ✓";
+    } catch (err) {
+      alert(`⚠️ خطأ في الاتصال بسيرفر الشحن:\n${err.message}\n\nلم يتم خصم أي مبلغ من رصيدك.`);
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> تأكيد الطلب والشحن الفوري`;
+      }
+      return;
+    }
+  }
+
+  // خصم الرصيد بعد نجاح الإرسال
   currentUser.balanceUSD = Number((currentUser.balanceUSD - price).toFixed(3));
   currentUser.ordersCount = (currentUser.ordersCount || 0) + 1;
   setDB("users", users);
@@ -1020,17 +1080,29 @@ function handleServiceOrder(e, catId, catName) {
   const orders = getDB("orders", []);
   orders.unshift({
     id: "ord_" + Date.now(),
+    supplierOrderId: supplierOrderId,
     categoryName: catName,
     packageName: product.name,
     target: targetInput,
     price: price,
     date: new Date().toLocaleString("ar-SY"),
-    status: "مكتمل"
+    status: orderStatus
   });
   setDB("orders", orders);
 
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> تأكيد الطلب والشحن الفوري`;
+  }
+
   updateUserUI();
-  alert(`✅ تم تنفيذ طلب الشحن بنجاح!\nالرقم: ${targetInput}\nالباقة: ${product.name}\nالمبلغ المخصوم: ${formatStoreAmount(price)}`);
+  alert(
+    `✅ تم تنفيذ طلب الشحن بنجاح!\n` +
+    `المستلم (ID): ${targetInput}\n` +
+    `الباقة: ${product.name}\n` +
+    (supplierOrderId ? `رقم العملية: #${supplierOrderId}\n` : "") +
+    `المبلغ المخصوم: ${formatStoreAmount(price)}`
+  );
   backToCategories();
 }
 
