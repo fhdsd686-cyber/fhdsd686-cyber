@@ -1168,30 +1168,53 @@
       if (typeof loadSiteSettings === "function") loadSiteSettings();
     };
 
-    // 2. تغيير عنوان الحقل تلقائياً حسب نوع القسم (رابط صفحة / رقم هاتف / ID لاعب)
-    const originalOpenCategory = window.openCategory;
-    window.openCategory = function(catId, catName, catImage, parentInfo) {
-      if (typeof originalOpenCategory === "function") {
-        originalOpenCategory(catId, catName, catImage, parentInfo);
-      }
-      setTimeout(() => {
+    // 2. مراقب ذكي يغيّر عنوان الحقل ومثاله تلقائياً فور ظهور اسم القسم على الشاشة
+    (function() {
+      function autoUpdateTargetFieldLabel() {
+        const titleEl = document.getElementById("current-category-title");
         const labelEl = document.querySelector("#products-container .field-label");
         const inputEl = document.getElementById("srv-target-input");
-        if (!labelEl || !inputEl) return;
+        if (!titleEl || !labelEl || !inputEl) return;
 
-        const nameLower = (catName || "").toLowerCase();
-        if (nameLower.includes("متابع") || nameLower.includes("فيسبوك") || nameLower.includes("تيك") || nameLower.includes("انست") || nameLower.includes("يوتيوب") || nameLower.includes("تيلي") || nameLower.includes("صفح") || nameLower.includes("لايك") || nameLower.includes("مشاهد")) {
-          labelEl.innerText = "رابط الصفحة أو الحساب";
-          inputEl.placeholder = "ضع رابط الصفحة أو الحساب هنا (https://...)";
-        } else if (nameLower.includes("mtn") || nameLower.includes("سيرياتيل") || nameLower.includes("رصيد") || nameLower.includes("كاش") || nameLower.includes("وحدات")) {
-          labelEl.innerText = "رقم الهاتف";
-          inputEl.placeholder = "أدخل رقم الهاتف المطلوب (مثال: 09xxxxxxxx)";
+        const nameLower = (titleEl.innerText || "").toLowerCase();
+        if (
+          nameLower.includes("متابع") ||
+          nameLower.includes("فيسبوك") ||
+          nameLower.includes("تيك") ||
+          nameLower.includes("انست") ||
+          nameLower.includes("يوتيوب") ||
+          nameLower.includes("تيلي") ||
+          nameLower.includes("صفح") ||
+          nameLower.includes("لايك") ||
+          nameLower.includes("مشاهد")
+        ) {
+          if (labelEl.innerText !== "رابط الصفحة أو الحساب") {
+            labelEl.innerText = "رابط الصفحة أو الحساب";
+            inputEl.placeholder = "ضع رابط الصفحة أو الحساب هنا (https://...)";
+          }
+        } else if (
+          nameLower.includes("mtn") ||
+          nameLower.includes("سيرياتيل") ||
+          nameLower.includes("رصيد") ||
+          nameLower.includes("كاش") ||
+          nameLower.includes("وحدات")
+        ) {
+          if (labelEl.innerText !== "رقم الهاتف") {
+            labelEl.innerText = "رقم الهاتف";
+            inputEl.placeholder = "أدخل رقم الهاتف المطلوب (مثال: 09xxxxxxxx)";
+          }
         } else {
-          labelEl.innerText = "معرف اللاعب (ID) أو الحساب";
-          inputEl.placeholder = "أدخل المعرف (ID) المطلوب";
+          if (labelEl.innerText !== "معرف اللاعب (ID) أو الحساب") {
+            labelEl.innerText = "معرف اللاعب (ID) أو الحساب";
+            inputEl.placeholder = "أدخل المعرف (ID) المطلوب";
+          }
         }
-      }, 30);
-    };
+      }
+
+      const observer = new MutationObserver(autoUpdateTargetFieldLabel);
+      observer.observe(document.body, { childList: true, subtree: true });
+      setInterval(autoUpdateTargetFieldLabel, 400);
+    })();
 
     // 3. دالة جلب المنتجات من المورد عبر الوسيط
     window.fetchFromExternalSupplierAPI = async function() {
@@ -1288,17 +1311,4 @@
       if (supplierProductId) {
         try {
           const targetUrl = `https://api.shams4store.com/client/api/newOrder/${encodeURIComponent(supplierProductId)}/params?qty=1&playerId=${encodeURIComponent(targetInput)}&order_uuid=${encodeURIComponent(orderReference)}`;
-          const workerRequestUrl = `https://rapid-dew-4b71.fhdsd686.workers.dev/?url=${encodeURIComponent(targetUrl)}&token=${encodeURIComponent(apiToken)}`;
-
-          const response = await fetch(workerRequestUrl, {
-            method: "GET",
-            headers: {
-              "Accept": "application/json",
-              "api-token": apiToken,
-              "Authorization": `Bearer ${apiToken}`
-            }
-          });
-
-          const result = await response.json();
-
-          if (!response.ok || result.status === false || result.error || (result.code && result.code !== 200 && re
+          const workerRequestUrl = `https://rapid-dew-4b71.fhdsd686.workers.dev/?url=${encodeURIComponent(targetUrl)}&token=${enc
