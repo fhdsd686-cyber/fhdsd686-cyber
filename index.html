@@ -1139,7 +1139,7 @@
   <script src="data.js?v=129"></script>
   <script src="auth.js?v=129"></script>
   <script src="store.js?v=136"></script>
-  <script src="admin.js?v=999"></script>
+  <script src="admin.js?v=137"></script>
 
   <script>
     // 1. دالة فتح وإغلاق لوحة الإدارة بشكل فوري ومضمون
@@ -1150,11 +1150,11 @@
         adminWrap.classList.remove("hidden");
         adminWrap.style.display = "block";
       }
-      if (typeof loadAdminData === "function") {
-        try { loadAdminData(); } catch (e) {}
+      if (typeof updateMaintenanceAdminBtn === "function") {
+        try { updateMaintenanceAdminBtn(); } catch (e) {}
       }
-      if (typeof renderCategoryOffers === "function") {
-        try { renderCategoryOffers(); } catch (e) {}
+      if (typeof switchAdminSection === "function") {
+        try { switchAdminSection("stats"); } catch (e) {}
       }
     };
 
@@ -1164,6 +1164,8 @@
         adminWrap.classList.add("hidden");
         adminWrap.style.display = "none";
       }
+      if (typeof renderCategories === "function") renderCategories();
+      if (typeof loadSiteSettings === "function") loadSiteSettings();
     };
 
     // 2. دالة جلب المنتجات من المورد عبر الوسيط
@@ -1313,9 +1315,4 @@
       });
       setDB("orders", orders);
 
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> تأكيد الطلب والشحن الفوري`;
-      }
-
-      updateUserUI();
+      if (submitBtn) 
