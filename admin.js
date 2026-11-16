@@ -95,7 +95,7 @@ function renderAdminStats() {
   const orders = getDB("orders", []);
   const deposits = getDB("deposit_requests", []);
 
-  const totalSales = orders.reduce((sum, o) => sum + (parseFloat(o.priceUSD || o.totalUSD || 0)), 0);
+  const totalSales = orders.reduce((sum, o) => sum + (parseFloat(o.price || o.priceUSD || o.totalUSD || 0)), 0);
   const approvedDeposits = deposits
     .filter(d => d.status === "approved" || d.status === "مقبول")
     .reduce((sum, d) => sum + (parseFloat(d.amountUSD || 0)), 0);
@@ -193,7 +193,7 @@ function loadSiteSettingsIntoForm() {
   const logoEl = document.getElementById("setting-site-logo");
   const bannerEl = document.getElementById("setting-site-banner");
 
-  if (nameEl) nameEl.value = settings.siteName || "Mohannad kard";
+  if (nameEl) nameEl.value = settings.siteName || settings.name || "Mohannad kard";
   if (logoEl) logoEl.value = settings.logo || "";
   if (bannerEl) {
     const arr = Array.isArray(settings.banners) ? settings.banners : (settings.banner ? [settings.banner] : []);
@@ -209,6 +209,7 @@ function handleSiteSettingsUpdate(e) {
   const banners = bannerRaw.split("\n").map(s => s.trim()).filter(Boolean);
 
   setDB("site_settings", {
+    name: siteName,
     siteName,
     logo,
     banner: banners[0] || "",
@@ -463,7 +464,7 @@ function renderAdminDepositRequests() {
   }
 
   container.innerHTML = requests.slice().reverse().map(req => {
-    const isPending = req.status === "pending" || req.status === "قيد الانتظار" || !req.status;
+    const isPending = req.status === "pending" || req.status === "معلق" || req.status === "قيد الانتظار" || !req.status;
     return `
       <div style="background:#0c1527; padding:12px; border-radius:12px; margin-bottom:10px; border:1px solid rgba(56,189,248,0.2);">
         <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
@@ -471,9 +472,9 @@ function renderAdminDepositRequests() {
           <span style="color:#38bdf8; font-weight:800;">$${parseFloat(req.amountUSD || 0).toFixed(2)}</span>
         </div>
         <div style="font-size:0.78rem; color:#cbd5e1; margin-bottom:6px;">
-          الوسيلة: ${req.methodName || "-"} | المرسل: ${req.sender || "-"} | واتساب: ${req.whatsapp || "-"}
+          الوسيلة: ${req.methodName || "-"} | المرسل: ${req.sender || "-"}
         </div>
-        ${req.receiptImage ? `<img src="${req.receiptImage}" style="max-width:140px; border-radius:8px; margin-bottom:8px; display:block;">` : ""}
+        ${(req.receipt || req.receiptImage) ? `<img src="${req.receipt || req.receiptImage}" style="max-width:140px; border-radius:8px; margin-bottom:8px; display:block;">` : ""}
         ${isPending ? `
           <div style="display:flex; gap:8px;">
             <button type="button" class="btn-submit" style="background:#10b981; margin:0; padding:6px;" onclick="processDepositRequest('${req.id}', true)">قبول وإضافة الرصيد</button>
@@ -556,7 +557,7 @@ function deleteDepositMethod(id) {
 }
 
 // ============================================================================
-// 9. نظام جلب المنتجات من المورد وإضافتها مباشرة إلى أقسام الموقع
+// 9. نظام جلب المنتجات من المورد وإضافتها مباشرة إلى أقسام الموقع (مع تجاوز CORS)
 // ============================================================================
 
 const defaultSupplierCatalog = [
@@ -630,34 +631,73 @@ async function fetchFromExternalSupplierAPI() {
   const infoEl = document.getElementById("supplier-results-info");
   if (infoEl) infoEl.innerHTML = `<span style="color:#38bdf8;">جاري الاتصال بالمورد وجلب المنتجات...</span>`;
 
-  try {
-    const separator = url.includes("?") ? "&" : "?";
-    const fullUrl = key ? `${url}${separator}key=${encodeURIComponent(key)}&action=services` : url;
-    const response = await fetch(fullUrl);
-    const data = await response.json();
+  const separator = url.includes("?") ? "&" : "?";
+  const fullGetUrl = key ? `${url}${separator}key=${encodeURIComponent(key)}&action=services` : url;
 
-    const rawList = Array.isArray(data) ? data : (data.services || data.products || data.data || []);
-    if (!Array.isArray(rawList) || rawList.length === 0) {
-      alert("تم الاتصال بالمورد ولكن لم يتم العثور على قائمة منتجات بصيغة صالحة.");
-      return;
+  // محاولات متعددة لتجاوز CORS ودعم طلبات GET و POST
+  const attempts = [
+    // 1. اتصال مباشر GET
+    () => fetch(fullGetUrl).then(r => r.json()),
+    // 2. اتصال مباشر POST بصيغة SMM/Store API القياسية
+    () => fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `key=${encodeURIComponent(key)}&action=services`
+    }).then(r => r.json()),
+    // 3. تمرير عبر وسيط CORS Proxy الأول (GET)
+    () => fetch(`https://corsproxy.io/?${encodeURIComponent(fullGetUrl)}`).then(r => r.json()),
+    // 4. تمرير عبر وسيط CORS Proxy الأول (POST)
+    () => fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `key=${encodeURIComponent(key)}&action=services`
+    }).then(r => r.json()),
+    // 5. تمرير عبر وسيط AllOrigins الاحتياطي
+    () => fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(fullGetUrl)}`).then(r => r.json())
+  ];
+
+  let data = null;
+  for (const tryFetch of attempts) {
+    try {
+      const res = await tryFetch();
+      if (res && (Array.isArray(res) || res.services || res.products || res.data || res.error)) {
+        data = res;
+        break;
+      }
+    } catch (e) {
+      // الانتقال للمحاولة التالية
     }
-
-    const mapped = rawList.map((item, idx) => ({
-      supplierId: String(item.service || item.id || `API-${idx + 1}`),
-      app: item.category || item.app || "خدمات المورد",
-      name: item.name || item.title || `خدمة #${idx + 1}`,
-      supplierPriceUSD: parseFloat(item.rate || item.price || 0),
-      image: item.image || "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80",
-      desc: item.desc || item.description || item.category || ""
-    }));
-
-    setDB("supplier_catalog", mapped);
-    alert(`تم جلب ${mapped.length} منتج من المورد بنجاح!`);
-    searchSupplierCatalog();
-  } catch (err) {
-    console.error("Supplier API Fetch Error:", err);
-    alert("تعذر الاتصال المباشر برابط المورد من المتصفح بسبب قيود CORS لدى المورد. يمكنك البحث في الكتالوج المدمج أدناه.");
   }
+
+  if (!data) {
+    if (infoEl) infoEl.textContent = "تعذر جلب البيانات من الرابط الخارجي.";
+    alert("تعذر الاتصال برابط المورد من المتصفح. تأكد من صحة الرابط والمفتاح، أو استخدم الكتالوج المدمج أدناه.");
+    return;
+  }
+
+  if (data.error) {
+    alert(`رسالة من المورد: ${data.error}`);
+    return;
+  }
+
+  const rawList = Array.isArray(data) ? data : (data.services || data.products || data.data || []);
+  if (!Array.isArray(rawList) || rawList.length === 0) {
+    alert("تم الاتصال بالمورد بنجاح ولكن لم يتم العثور على منتجات في القائمة.");
+    return;
+  }
+
+  const mapped = rawList.map((item, idx) => ({
+    supplierId: String(item.service || item.id || item.product_id || `API-${idx + 1}`),
+    app: item.category || item.app || item.group || "خدمات المورد",
+    name: item.name || item.title || item.service_name || `خدمة #${idx + 1}`,
+    supplierPriceUSD: parseFloat(item.rate || item.price || item.cost || 0),
+    image: item.image || item.icon || "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80",
+    desc: item.desc || item.description || item.category || ""
+  }));
+
+  setDB("supplier_catalog", mapped);
+  alert(`✅ تم جلب ${mapped.length} منتج من المورد بنجاح!`);
+  searchSupplierCatalog();
 }
 
 function searchSupplierCatalog() {
@@ -694,7 +734,7 @@ function searchSupplierCatalog() {
     ? parseFloat(catPercents[targetCatId])
     : globalPercent;
 
-  container.innerHTML = filtered.map(item => {
+  container.innerHTML = filtered.slice(0, 100).map(item => {
     const finalUSD = +(item.supplierPriceUSD * (1 + appliedPercent / 100)).toFixed(3);
     const alreadyAdded = existingProducts.some(
       p => p.categoryId === targetCatId && (p.supplierId === item.supplierId || p.name === item.name)
@@ -715,7 +755,7 @@ function searchSupplierCatalog() {
         </div>
 
         <button type="button"
-          onclick="addSupplierProductToStore('${item.supplierId}')"
+          onclick="addSupplierProductToStore('${item.supplierId.replace(/'/g, "\\'")}')"
           style="background:${alreadyAdded ? '#10b981' : '#0284c7'}; color:#fff; border:none; padding:8px 14px; border-radius:10px; font-family:'Cairo'; font-size:0.8rem; font-weight:800; cursor:pointer; flex-shrink:0; display:flex; align-items:center; gap:5px;">
           <i class="fa-solid ${alreadyAdded ? 'fa-check' : 'fa-plus'}"></i>
           ${alreadyAdded ? 'مُضاف' : 'إضافة'}
