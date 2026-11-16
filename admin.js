@@ -1,5 +1,5 @@
 // ============================================================================
-// لوحة تحكم الإدارة الكاملة + نظام جلب المنتجات من المورد (admin.js - v131)
+// لوحة تحكم الإدارة الكاملة + نظام جلب المنتجات من المورد (admin.js - v137)
 // ============================================================================
 
 const ADMIN_SECTIONS = [
@@ -26,13 +26,17 @@ function openAdminPanel() {
     if (drawer && drawer.classList.contains("open")) toggleSidebar();
   }
   wrapper.classList.remove("hidden");
+  wrapper.style.display = "block";
   updateMaintenanceAdminBtn();
   switchAdminSection("stats");
 }
 
 function closeAdminPanel() {
   const wrapper = document.getElementById("admin-wrapper");
-  if (wrapper) wrapper.classList.add("hidden");
+  if (wrapper) {
+    wrapper.classList.add("hidden");
+    wrapper.style.display = "none";
+  }
   if (typeof renderCategories === "function") renderCategories();
   if (typeof loadSiteSettings === "function") loadSiteSettings();
 }
@@ -493,11 +497,12 @@ function deleteDepositMethod(id) {
 }
 
 // ============================================================================
-// 9. نظام جلب المنتجات من المورد (Shams4Store - نسخة v131 المحدثة)
+// 9. نظام جلب المنتجات من المورد (Shams4Store عبر وسيط Cloudflare)
 // ============================================================================
 
-const SHAMS_DEFAULT_URL = "https://api.shams4store.com/client/api/products";
-const SHAMS_DEFAULT_TOKEN = "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427";
+const ADMIN_SHAMS_URL = "https://api.shams4store.com/client/api/products";
+const ADMIN_SHAMS_TOKEN = "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427";
+const ADMIN_WORKER_URL = "https://rapid-dew-4b71.fhdsd686.workers.dev/";
 
 const defaultSupplierCatalog = [
   { supplierId: "SUP-101", app: "PUBG Mobile", name: "شحن 60 شدة ببجي عالمية (ID)", supplierPriceUSD: 0.92, image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=300&q=80", desc: "شحن فوري عبر الآيدي (ID) خلال ثوانٍ" },
@@ -529,103 +534,61 @@ function populateSupplierCategoriesDropdown() {
   }).join("");
 
   const savedCfg = getDB("supplier_api_config", {
-    url: SHAMS_DEFAULT_URL,
-    key: SHAMS_DEFAULT_TOKEN
+    url: ADMIN_SHAMS_URL,
+    key: ADMIN_SHAMS_TOKEN
   });
-
-  let cleanUrl = savedCfg.url || SHAMS_DEFAULT_URL;
-  if (cleanUrl.endsWith("/product")) cleanUrl += "s";
 
   const urlInput = document.getElementById("supplier-api-url");
   const keyInput = document.getElementById("supplier-api-key");
-  if (urlInput) urlInput.value = cleanUrl;
-  if (keyInput) keyInput.value = savedCfg.key || SHAMS_DEFAULT_TOKEN;
+  if (urlInput) urlInput.value = savedCfg.url || ADMIN_SHAMS_URL;
+  if (keyInput) keyInput.value = savedCfg.key || ADMIN_SHAMS_TOKEN;
 
   searchSupplierCatalog();
 }
 
 async function fetchFromExternalSupplierAPI() {
-  let url = (document.getElementById("supplier-api-url")?.value || SHAMS_DEFAULT_URL).trim();
-  const key = (document.getElementById("supplier-api-key")?.value || SHAMS_DEFAULT_TOKEN).trim();
-
-  if (url.endsWith("/product")) {
-    url = url + "s";
-    const urlInput = document.getElementById("supplier-api-url");
-    if (urlInput) urlInput.value = url;
-  }
-
-  if (!url) {
-    alert("يرجى إدخال رابط API المورد أولاً.");
-    return;
-  }
+  const url = (document.getElementById("supplier-api-url")?.value || ADMIN_SHAMS_URL).trim();
+  const key = (document.getElementById("supplier-api-key")?.value || ADMIN_SHAMS_TOKEN).trim();
 
   setDB("supplier_api_config", { url, key });
   const infoEl = document.getElementById("supplier-results-info");
-  if (infoEl) infoEl.innerHTML = `<span style="color:#38bdf8;">[v131] جاري الاتصال بمورد Shams4Store...</span>`;
+  if (infoEl) infoEl.innerHTML = `<span style="color:#10b981; font-weight:bold;">✅ جاري السحب المباشر عبر وسيطك الخاص...</span>`;
 
-  const shamsHeaders = {
-    "Accept": "application/json",
-    "api-token": key,
-    "Authorization": `Bearer ${key}`
-  };
-
-  const attempts = [
-    // 1. اتصال مباشر بالرابط مع ترويسة api-token
-    () => fetch(url, { method: "GET", headers: shamsHeaders }).then(r => r.json()),
-    // 2. وسيط cors.lol (يمرر الترويسات والهيدرز بالكامل مجاناً)
-    () => fetch(`https://api.cors.lol/?url=${encodeURIComponent(url)}`, { method: "GET", headers: shamsHeaders }).then(r => r.json()),
-    // 3. وسيط thingproxy (يمرر الترويسات والهيدرز بالكامل)
-    () => fetch(`https://thingproxy.freeboard.io/fetch/${url}`, { method: "GET", headers: shamsHeaders }).then(r => r.json()),
-    // 4. وسيط cors-anywhere البديل
-    () => fetch(`https://cors-anywhere.herokuapp.com/${url}`, { method: "GET", headers: shamsHeaders }).then(r => r.json())
-  ];
-
-  let data = null;
-  let lastError = "";
-  for (const tryFetch of attempts) {
-    try {
-      const res = await tryFetch();
-      if (res && (Array.isArray(res) || res.products || res.services || res.data || res.message || res.error)) {
-        data = res;
-        break;
+  try {
+    const workerUrl = `${ADMIN_WORKER_URL}?url=${encodeURIComponent(url)}&token=${encodeURIComponent(key)}`;
+    const res = await fetch(workerUrl, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "api-token": key,
+        "Authorization": `Bearer ${key}`
       }
-    } catch (e) {
-      lastError = e.message || String(e);
+    });
+    const data = await res.json();
+    const rawList = Array.isArray(data)
+      ? data
+      : (data.products || data.services || (data.data && Array.isArray(data.data) ? data.data : (data.data?.products || data.data?.data || [])));
+
+    if (!Array.isArray(rawList) || rawList.length === 0) {
+      alert("رد السيرفر: " + JSON.stringify(data).slice(0, 300));
+      return;
     }
+
+    const mapped = rawList.map((item, idx) => ({
+      supplierId: String(item.id || item.service || item.product_id || `SHAMS-${idx + 1}`),
+      app: item.category_name || item.category?.name || item.category || item.group || "Shams4Store",
+      name: item.name || item.title || item.service_name || `منتج #${idx + 1}`,
+      supplierPriceUSD: parseFloat(item.price || item.rate || item.cost || 0),
+      image: item.image || item.icon || item.category?.image || "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80",
+      desc: item.desc || item.description || item.notes || ""
+    }));
+
+    setDB("supplier_catalog", mapped);
+    alert(`🎉 مبروك! تم جلب ${mapped.length} منتج من Shams4Store بنجاح!`);
+    searchSupplierCatalog();
+  } catch (err) {
+    alert("خطأ في الاتصال: " + err.message);
   }
-
-  if (!data) {
-    if (infoEl) infoEl.textContent = "تعذر الاتصال بالمورد.";
-    alert(`تعذر الوصول لسيرفر Shams4Store من المتصفح (${lastError}).\n\nملاحظة: إذا استمر حظر المتصفح من جهة المورد، أخبرني وسأعطيك كود وسيط Cloudflare مجاني خاص بك في دقيقة واحدة.`);
-    return;
-  }
-
-  if (data.error || (data.status === false && data.message)) {
-    alert(`استجابة المورد: ${data.error || data.message}`);
-    return;
-  }
-
-  const rawList = Array.isArray(data)
-    ? data
-    : (data.products || data.services || (data.data && Array.isArray(data.data) ? data.data : (data.data?.products || data.data?.data || [])));
-
-  if (!Array.isArray(rawList) || rawList.length === 0) {
-    alert("تم الاتصال بالمورد بنجاح ولكن القائمة فارغة.");
-    return;
-  }
-
-  const mapped = rawList.map((item, idx) => ({
-    supplierId: String(item.id || item.service || item.product_id || `SHAMS-${idx + 1}`),
-    app: item.category_name || item.category?.name || item.category || item.group || "Shams4Store",
-    name: item.name || item.title || item.service_name || `منتج #${idx + 1}`,
-    supplierPriceUSD: parseFloat(item.price || item.rate || item.cost || 0),
-    image: item.image || item.icon || item.category?.image || "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80",
-    desc: item.desc || item.description || item.notes || ""
-  }));
-
-  setDB("supplier_catalog", mapped);
-  alert(`✅ تم ربط Shams4Store وجلب ${mapped.length} منتج بنجاح!`);
-  searchSupplierCatalog();
 }
 
 function searchSupplierCatalog() {
