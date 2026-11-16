@@ -976,7 +976,7 @@ function onPackageSelectChange() {
   }
 }
 
-// --- إرسال طلب الشحن تلقائياً إلى Shams4Store عبر وسيط Cloudflare ---
+// --- إرسال طلب الشحن تلقائياً إلى Shams4Store عبر وسيط Cloudflare بصيغة GET ---
 async function handleServiceOrder(e, catId, catName) {
   e.preventDefault();
 
@@ -1026,25 +1026,19 @@ async function handleServiceOrder(e, catId, catName) {
   let supplierOrderId = "";
   let orderStatus = "مكتمل";
 
-  // إذا كان المنتج مرتبطاً بمورد Shams4Store، نرسل الطلب تلقائياً عبر الوسيط
+  // إذا كان المنتج مرتبطاً بمورد Shams4Store، نرسل الطلب تلقائياً عبر الوسيط بصيغة GET
   if (supplierProductId) {
     try {
-      const targetUrl = `${SHAMS_ORDER_ENDPOINT}/${encodeURIComponent(supplierProductId)}/params`;
+      const targetUrl = `${SHAMS_ORDER_ENDPOINT}/${encodeURIComponent(supplierProductId)}/params?qty=1&playerId=${encodeURIComponent(targetInput)}&order_uuid=${encodeURIComponent(orderReference)}`;
       const workerRequestUrl = `${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(targetUrl)}&token=${encodeURIComponent(apiToken)}`;
 
       const response = await fetch(workerRequestUrl, {
-        method: "POST",
+        method: "GET",
         headers: {
           "Accept": "application/json",
-          "Content-Type": "application/json",
           "api-token": apiToken,
           "Authorization": `Bearer ${apiToken}`
-        },
-        body: JSON.stringify({
-          qty: 1,
-          playerId: targetInput,
-          order_uuid: orderReference
-        })
+        }
       });
 
       const result = await response.json();
