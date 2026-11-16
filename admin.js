@@ -557,35 +557,18 @@ function deleteDepositMethod(id) {
 }
 
 // ============================================================================
-// 9. نظام جلب المنتجات من المورد وإضافتها مباشرة إلى أقسام الموقع (مع تجاوز CORS)
+// 9. نظام جلب المنتجات من المورد (Shams4Store + دعم CORS وترويسات التوكن)
 // ============================================================================
 
+const SHAMS_DEFAULT_URL = "https://api.shams4store.com/client/api/products";
+const SHAMS_DEFAULT_TOKEN = "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427";
+
 const defaultSupplierCatalog = [
-  // PUBG Mobile
   { supplierId: "SUP-101", app: "PUBG Mobile", name: "شحن 60 شدة ببجي عالمية (ID)", supplierPriceUSD: 0.92, image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=300&q=80", desc: "شحن فوري عبر الآيدي (ID) خلال ثوانٍ" },
   { supplierId: "SUP-102", app: "PUBG Mobile", name: "شحن 325 شدة ببجي عالمية (ID)", supplierPriceUSD: 4.55, image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=300&q=80", desc: "شحن مباشر بالآيدي لجميع الحسابات العالمية" },
   { supplierId: "SUP-103", app: "PUBG Mobile", name: "شحن 660 شدة ببجي عالمية (ID)", supplierPriceUSD: 9.10, image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=300&q=80", desc: "شحن فوري وآمن 100% بالآيدي" },
-  { supplierId: "SUP-104", app: "PUBG Mobile", name: "شحن 1800 شدة ببجي عالمية (ID)", supplierPriceUSD: 22.80, image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=300&q=80", desc: "شحن مباشر وسريع عبر معرف اللاعب" },
-
-  // Free Fire
   { supplierId: "SUP-201", app: "Free Fire", name: "شحن 100 جوهرة فري فاير (ID)", supplierPriceUSD: 1.05, image: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=300&q=80", desc: "شحن مباشر بالآيدي خلال دقيقة" },
-  { supplierId: "SUP-202", app: "Free Fire", name: "شحن 310 جوهرة فري فاير (ID)", supplierPriceUSD: 3.10, image: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=300&q=80", desc: "شحن سريع ومضمون" },
-  { supplierId: "SUP-203", app: "Free Fire", name: "عضوية أسبوعية فري فاير (ID)", supplierPriceUSD: 1.85, image: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=300&q=80", desc: "تفعيل العضوية الأسبوعية بالآيدي" },
-
-  // TikTok & Social Media
-  { supplierId: "SUP-301", app: "TikTok", name: "1000 متابع تيك توك حقيقي ومستقر", supplierPriceUSD: 1.40, image: "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?auto=format&fit=crop&w=300&q=80", desc: "ضع رابط الحساب - تنفيذ تلقائي سريع" },
-  { supplierId: "SUP-302", app: "TikTok", name: "10,000 مشاهدة فيديو تيك توك فورية", supplierPriceUSD: 0.25, image: "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?auto=format&fit=crop&w=300&q=80", desc: "ضع رابط الفيديو - بدء فوري" },
-  { supplierId: "SUP-303", app: "Instagram", name: "1000 متابع انستغرام (تعويض تلقائي 30 يوم)", supplierPriceUSD: 0.85, image: "https://images.unsplash.com/photo-1611262588024-d12430b98920?auto=format&fit=crop&w=300&q=80", desc: "ضع رابط أو يوزر الحساب" },
-  { supplierId: "SUP-304", app: "Telegram", name: "1000 عضو قناة تيليغرام سريع", supplierPriceUSD: 1.15, image: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=300&q=80", desc: "ضع رابط القناة العامة" },
-
-  // Live Apps (Yalla Ludo, Bigo Live)
-  { supplierId: "SUP-401", app: "Yalla Ludo", name: "شحن 230 ألماسة يلا لودو (ID)", supplierPriceUSD: 1.90, image: "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80", desc: "شحن مباشر بالآيدي خلال ثوانٍ" },
-  { supplierId: "SUP-402", app: "Bigo Live", name: "شحن 100 ألماسة بيجو لايف (ID)", supplierPriceUSD: 2.05, image: "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80", desc: "شحن فوري بالآيدي" },
-
-  // Subscriptions (Netflix, Shahid, ChatGPT)
-  { supplierId: "SUP-501", app: "Netflix", name: "اشتراك نتفلكس 4K شهر كامل (حساب خاص)", supplierPriceUSD: 3.50, image: "https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?auto=format&fit=crop&w=300&q=80", desc: "تسليم فوري مع ضمان كامل المدة" },
-  { supplierId: "SUP-502", app: "Shahid VIP", name: "اشتراك شاهد VIP رياضة + مسلسلات (شهر)", supplierPriceUSD: 2.40, image: "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?auto=format&fit=crop&w=300&q=80", desc: "تفعيل رسمي ومضمون" },
-  { supplierId: "SUP-503", app: "ChatGPT Plus", name: "اشتراك ChatGPT Plus شهر كامل", supplierPriceUSD: 5.50, image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=300&q=80", desc: "وصول كامل لأحدث نماذج الذكاء الاصطناعي" }
+  { supplierId: "SUP-301", app: "TikTok", name: "1000 متابع تيك توك حقيقي ومستقر", supplierPriceUSD: 1.40, image: "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?auto=format&fit=crop&w=300&q=80", desc: "ضع رابط الحساب - تنفيذ تلقائي سريع" }
 ];
 
 function getSupplierCatalog() {
@@ -609,18 +592,22 @@ function populateSupplierCategoriesDropdown() {
     return `<option value="${cat.id}">${label}</option>`;
   }).join("");
 
-  const savedCfg = getDB("supplier_api_config", {});
+  const savedCfg = getDB("supplier_api_config", {
+    url: SHAMS_DEFAULT_URL,
+    key: SHAMS_DEFAULT_TOKEN
+  });
+
   const urlInput = document.getElementById("supplier-api-url");
   const keyInput = document.getElementById("supplier-api-key");
-  if (urlInput && savedCfg.url) urlInput.value = savedCfg.url;
-  if (keyInput && savedCfg.key) keyInput.value = savedCfg.key;
+  if (urlInput) urlInput.value = savedCfg.url || SHAMS_DEFAULT_URL;
+  if (keyInput) keyInput.value = savedCfg.key || SHAMS_DEFAULT_TOKEN;
 
   searchSupplierCatalog();
 }
 
 async function fetchFromExternalSupplierAPI() {
-  const url = (document.getElementById("supplier-api-url")?.value || "").trim();
-  const key = (document.getElementById("supplier-api-key")?.value || "").trim();
+  const url = (document.getElementById("supplier-api-url")?.value || SHAMS_DEFAULT_URL).trim();
+  const key = (document.getElementById("supplier-api-key")?.value || SHAMS_DEFAULT_TOKEN).trim();
 
   if (!url) {
     alert("يرجى إدخال رابط API المورد أولاً.");
@@ -629,38 +616,35 @@ async function fetchFromExternalSupplierAPI() {
 
   setDB("supplier_api_config", { url, key });
   const infoEl = document.getElementById("supplier-results-info");
-  if (infoEl) infoEl.innerHTML = `<span style="color:#38bdf8;">جاري الاتصال بالمورد وجلب المنتجات...</span>`;
+  if (infoEl) infoEl.innerHTML = `<span style="color:#38bdf8;">جاري الاتصال بمورد Shams4Store وجلب المنتجات...</span>`;
+
+  const shamsHeaders = {
+    "Accept": "application/json",
+    "api-token": key,
+    "Authorization": `Bearer ${key}`
+  };
 
   const separator = url.includes("?") ? "&" : "?";
-  const fullGetUrl = key ? `${url}${separator}key=${encodeURIComponent(key)}&action=services` : url;
+  const urlWithToken = key ? `${url}${separator}api_token=${encodeURIComponent(key)}` : url;
 
-  // محاولات متعددة لتجاوز CORS ودعم طلبات GET و POST
   const attempts = [
-    // 1. اتصال مباشر GET
-    () => fetch(fullGetUrl).then(r => r.json()),
-    // 2. اتصال مباشر POST بصيغة SMM/Store API القياسية
-    () => fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: `key=${encodeURIComponent(key)}&action=services`
-    }).then(r => r.json()),
-    // 3. تمرير عبر وسيط CORS Proxy الأول (GET)
-    () => fetch(`https://corsproxy.io/?${encodeURIComponent(fullGetUrl)}`).then(r => r.json()),
-    // 4. تمرير عبر وسيط CORS Proxy الأول (POST)
-    () => fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: `key=${encodeURIComponent(key)}&action=services`
-    }).then(r => r.json()),
+    // 1. اتصال مباشر بصيغة Shams4Store (ترويسة api-token + Bearer)
+    () => fetch(url, { method: "GET", headers: shamsHeaders }).then(r => r.json()),
+    // 2. اتصال مباشر مع تمرير التوكن في الرابط
+    () => fetch(urlWithToken, { method: "GET", headers: { "Accept": "application/json" } }).then(r => r.json()),
+    // 3. تمرير عبر وسيط corsproxy.io مع ترويسات Shams4Store
+    () => fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, { method: "GET", headers: shamsHeaders }).then(r => r.json()),
+    // 4. تمرير عبر وسيط corsproxy.io مع التوكن في الرابط
+    () => fetch(`https://corsproxy.io/?${encodeURIComponent(urlWithToken)}`).then(r => r.json()),
     // 5. تمرير عبر وسيط AllOrigins الاحتياطي
-    () => fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(fullGetUrl)}`).then(r => r.json())
+    () => fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(urlWithToken)}`).then(r => r.json())
   ];
 
   let data = null;
   for (const tryFetch of attempts) {
     try {
       const res = await tryFetch();
-      if (res && (Array.isArray(res) || res.services || res.products || res.data || res.error)) {
+      if (res && (Array.isArray(res) || res.products || res.services || res.data || res.message || res.error)) {
         data = res;
         break;
       }
@@ -670,33 +654,36 @@ async function fetchFromExternalSupplierAPI() {
   }
 
   if (!data) {
-    if (infoEl) infoEl.textContent = "تعذر جلب البيانات من الرابط الخارجي.";
-    alert("تعذر الاتصال برابط المورد من المتصفح. تأكد من صحة الرابط والمفتاح، أو استخدم الكتالوج المدمج أدناه.");
+    if (infoEl) infoEl.textContent = "تعذر الاتصال بالمورد.";
+    alert("تعذر الاتصال بسيرفر المورد. تأكد من تفعيل خيار (السماح لكل الايبيات) وحفظه في حسابك لدى Shams4Store.");
     return;
   }
 
-  if (data.error) {
-    alert(`رسالة من المورد: ${data.error}`);
+  if (data.error || (data.status === false && data.message)) {
+    alert(`رسالة من المورد: ${data.error || data.message}`);
     return;
   }
 
-  const rawList = Array.isArray(data) ? data : (data.services || data.products || data.data || []);
+  const rawList = Array.isArray(data)
+    ? data
+    : (data.products || data.services || (data.data && Array.isArray(data.data) ? data.data : (data.data?.products || data.data?.data || [])));
+
   if (!Array.isArray(rawList) || rawList.length === 0) {
-    alert("تم الاتصال بالمورد بنجاح ولكن لم يتم العثور على منتجات في القائمة.");
+    alert("تم الاتصال بالمورد بنجاح ولكن القائمة فارغة.");
     return;
   }
 
   const mapped = rawList.map((item, idx) => ({
-    supplierId: String(item.service || item.id || item.product_id || `API-${idx + 1}`),
-    app: item.category || item.app || item.group || "خدمات المورد",
-    name: item.name || item.title || item.service_name || `خدمة #${idx + 1}`,
-    supplierPriceUSD: parseFloat(item.rate || item.price || item.cost || 0),
-    image: item.image || item.icon || "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80",
-    desc: item.desc || item.description || item.category || ""
+    supplierId: String(item.id || item.service || item.product_id || `SHAMS-${idx + 1}`),
+    app: item.category_name || item.category?.name || item.category || item.group || "Shams4Store",
+    name: item.name || item.title || item.service_name || `منتج #${idx + 1}`,
+    supplierPriceUSD: parseFloat(item.price || item.rate || item.cost || 0),
+    image: item.image || item.icon || item.category?.image || "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80",
+    desc: item.desc || item.description || item.notes || ""
   }));
 
   setDB("supplier_catalog", mapped);
-  alert(`✅ تم جلب ${mapped.length} منتج من المورد بنجاح!`);
+  alert(`✅ تم ربط Shams4Store وجلب ${mapped.length} منتج بنجاح!`);
   searchSupplierCatalog();
 }
 
@@ -734,7 +721,7 @@ function searchSupplierCatalog() {
     ? parseFloat(catPercents[targetCatId])
     : globalPercent;
 
-  container.innerHTML = filtered.slice(0, 100).map(item => {
+  container.innerHTML = filtered.slice(0, 120).map(item => {
     const finalUSD = +(item.supplierPriceUSD * (1 + appliedPercent / 100)).toFixed(3);
     const alreadyAdded = existingProducts.some(
       p => p.categoryId === targetCatId && (p.supplierId === item.supplierId || p.name === item.name)
@@ -748,7 +735,7 @@ function searchSupplierCatalog() {
             <div style="font-size:0.72rem; color:#38bdf8; font-weight:700;">${item.app}</div>
             <div style="font-size:0.86rem; font-weight:800; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</div>
             <div style="font-size:0.75rem; color:#94a3b8;">
-              سعر المورد: <strong style="color:#f59e0b;">$${item.supplierPriceUSD.toFixed(2)}</strong>
+              سعر المورد: <strong style="color:#f59e0b;">$${item.supplierPriceUSD.toFixed(3)}</strong>
               | سعر البيع: <strong style="color:#10b981;">$${finalUSD.toFixed(3)}</strong>
             </div>
           </div>
