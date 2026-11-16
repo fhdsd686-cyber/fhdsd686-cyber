@@ -1,5 +1,5 @@
 // ============================================================================
-// لوحة تحكم الإدارة الكاملة + نظام جلب المنتجات من المورد (admin.js - v130)
+// لوحة تحكم الإدارة الكاملة + نظام جلب المنتجات من المورد (admin.js - v131)
 // ============================================================================
 
 const ADMIN_SECTIONS = [
@@ -493,7 +493,7 @@ function deleteDepositMethod(id) {
 }
 
 // ============================================================================
-// 9. نظام جلب المنتجات من المورد (Shams4Store - نسخة v130 المحدثة)
+// 9. نظام جلب المنتجات من المورد (Shams4Store - نسخة v131 المحدثة)
 // ============================================================================
 
 const SHAMS_DEFAULT_URL = "https://api.shams4store.com/client/api/products";
@@ -533,17 +533,26 @@ function populateSupplierCategoriesDropdown() {
     key: SHAMS_DEFAULT_TOKEN
   });
 
+  let cleanUrl = savedCfg.url || SHAMS_DEFAULT_URL;
+  if (cleanUrl.endsWith("/product")) cleanUrl += "s";
+
   const urlInput = document.getElementById("supplier-api-url");
   const keyInput = document.getElementById("supplier-api-key");
-  if (urlInput) urlInput.value = savedCfg.url || SHAMS_DEFAULT_URL;
+  if (urlInput) urlInput.value = cleanUrl;
   if (keyInput) keyInput.value = savedCfg.key || SHAMS_DEFAULT_TOKEN;
 
   searchSupplierCatalog();
 }
 
 async function fetchFromExternalSupplierAPI() {
-  const url = (document.getElementById("supplier-api-url")?.value || SHAMS_DEFAULT_URL).trim();
+  let url = (document.getElementById("supplier-api-url")?.value || SHAMS_DEFAULT_URL).trim();
   const key = (document.getElementById("supplier-api-key")?.value || SHAMS_DEFAULT_TOKEN).trim();
+
+  if (url.endsWith("/product")) {
+    url = url + "s";
+    const urlInput = document.getElementById("supplier-api-url");
+    if (urlInput) urlInput.value = url;
+  }
 
   if (!url) {
     alert("يرجى إدخال رابط API المورد أولاً.");
@@ -552,7 +561,7 @@ async function fetchFromExternalSupplierAPI() {
 
   setDB("supplier_api_config", { url, key });
   const infoEl = document.getElementById("supplier-results-info");
-  if (infoEl) infoEl.innerHTML = `<span style="color:#38bdf8;">[v130] جاري الاتصال بمورد Shams4Store...</span>`;
+  if (infoEl) infoEl.innerHTML = `<span style="color:#38bdf8;">[v131] جاري الاتصال بمورد Shams4Store...</span>`;
 
   const shamsHeaders = {
     "Accept": "application/json",
@@ -560,19 +569,19 @@ async function fetchFromExternalSupplierAPI() {
     "Authorization": `Bearer ${key}`
   };
 
-  const separator = url.includes("?") ? "&" : "?";
-  const urlWithToken = key ? `${url}${separator}api_token=${encodeURIComponent(key)}` : url;
-
   const attempts = [
+    // 1. اتصال مباشر بالرابط مع ترويسة api-token
     () => fetch(url, { method: "GET", headers: shamsHeaders }).then(r => r.json()),
-    () => fetch(urlWithToken, { method: "GET", headers: { "Accept": "application/json" } }).then(r => r.json()),
-    () => fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(urlWithToken)}`).then(r => r.json()),
-    () => fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(urlWithToken)}`)
-          .then(r => r.json())
-          .then(d => typeof d.contents === "string" ? JSON.parse(d.contents) : d.contents)
+    // 2. وسيط cors.lol (يمرر الترويسات والهيدرز بالكامل مجاناً)
+    () => fetch(`https://api.cors.lol/?url=${encodeURIComponent(url)}`, { method: "GET", headers: shamsHeaders }).then(r => r.json()),
+    // 3. وسيط thingproxy (يمرر الترويسات والهيدرز بالكامل)
+    () => fetch(`https://thingproxy.freeboard.io/fetch/${url}`, { method: "GET", headers: shamsHeaders }).then(r => r.json()),
+    // 4. وسيط cors-anywhere البديل
+    () => fetch(`https://cors-anywhere.herokuapp.com/${url}`, { method: "GET", headers: shamsHeaders }).then(r => r.json())
   ];
 
   let data = null;
+  let lastError = "";
   for (const tryFetch of attempts) {
     try {
       const res = await tryFetch();
@@ -580,12 +589,14 @@ async function fetchFromExternalSupplierAPI() {
         data = res;
         break;
       }
-    } catch (e) {}
+    } catch (e) {
+      lastError = e.message || String(e);
+    }
   }
 
   if (!data) {
     if (infoEl) infoEl.textContent = "تعذر الاتصال بالمورد.";
-    alert("تعذر الاتصال بسيرفر المورد. تأكد من تفعيل (السماح لكل الايبيات) وحفظه في Shams4Store.");
+    alert(`تعذر الوصول لسيرفر Shams4Store من المتصفح (${lastError}).\n\nملاحظة: إذا استمر حظر المتصفح من جهة المورد، أخبرني وسأعطيك كود وسيط Cloudflare مجاني خاص بك في دقيقة واحدة.`);
     return;
   }
 
