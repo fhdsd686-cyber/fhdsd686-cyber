@@ -1,5 +1,5 @@
 // ============================================================================
-// لوحة تحكم الإدارة الكاملة + نظام جلب المنتجات من المورد (admin.js)
+// لوحة تحكم الإدارة الكاملة + نظام جلب المنتجات من المورد (admin.js - v130)
 // ============================================================================
 
 const ADMIN_SECTIONS = [
@@ -18,7 +18,6 @@ const ADMIN_SECTIONS = [
   "add-deposit-method"
 ];
 
-// فتح لوحة الإدارة
 function openAdminPanel() {
   const wrapper = document.getElementById("admin-wrapper");
   if (!wrapper) return;
@@ -31,7 +30,6 @@ function openAdminPanel() {
   switchAdminSection("stats");
 }
 
-// إغلاق لوحة الإدارة
 function closeAdminPanel() {
   const wrapper = document.getElementById("admin-wrapper");
   if (wrapper) wrapper.classList.add("hidden");
@@ -39,7 +37,6 @@ function closeAdminPanel() {
   if (typeof loadSiteSettings === "function") loadSiteSettings();
 }
 
-// التنقل بين أقسام لوحة الإدارة
 function switchAdminSection(secName) {
   ADMIN_SECTIONS.forEach(id => {
     const el = document.getElementById("sec-" + id);
@@ -69,9 +66,6 @@ function switchAdminSection(secName) {
   if (secName === "deposit-methods") renderAdminDepositMethods();
 }
 
-// ----------------------------------------------------------------------------
-// 1. وضع الصيانة
-// ----------------------------------------------------------------------------
 function toggleMaintenanceMode() {
   const current = !!getDB("maintenance_mode", false);
   const next = !current;
@@ -88,13 +82,9 @@ function updateMaintenanceAdminBtn() {
   btn.innerHTML = `<i class="fa-solid fa-power-off"></i> وضع الصيانة: ${isMaint ? "مفعل" : "معطل"}`;
 }
 
-// ----------------------------------------------------------------------------
-// 2. الإحصائيات العامة
-// ----------------------------------------------------------------------------
 function renderAdminStats() {
   const orders = getDB("orders", []);
   const deposits = getDB("deposit_requests", []);
-
   const totalSales = orders.reduce((sum, o) => sum + (parseFloat(o.price || o.priceUSD || o.totalUSD || 0)), 0);
   const approvedDeposits = deposits
     .filter(d => d.status === "approved" || d.status === "مقبول")
@@ -109,9 +99,6 @@ function renderAdminStats() {
   if (depEl) depEl.textContent = `$${approvedDeposits.toFixed(2)}`;
 }
 
-// ----------------------------------------------------------------------------
-// 3. نظام التسعير والعروض (نسبة عامة + نسب خاصة بالأقسام)
-// ----------------------------------------------------------------------------
 function renderPricingOffersSection() {
   const globalInput = document.getElementById("global-profit-percent");
   const globalPercent = parseFloat(getDB("global_profit_percent", 0)) || 0;
@@ -179,9 +166,6 @@ function recalculateAllProductsPrices() {
   setDB("products", updated);
 }
 
-// ----------------------------------------------------------------------------
-// 4. إعدادات وهوية المتجر (الاسم، اللوجو، البانرات)
-// ----------------------------------------------------------------------------
 function loadSiteSettingsIntoForm() {
   const settings = getDB("site_settings", {
     siteName: "Mohannad kard",
@@ -208,21 +192,11 @@ function handleSiteSettingsUpdate(e) {
   const bannerRaw = document.getElementById("setting-site-banner")?.value || "";
   const banners = bannerRaw.split("\n").map(s => s.trim()).filter(Boolean);
 
-  setDB("site_settings", {
-    name: siteName,
-    siteName,
-    logo,
-    banner: banners[0] || "",
-    banners
-  });
-
+  setDB("site_settings", { name: siteName, siteName, logo, banner: banners[0] || "", banners });
   if (typeof loadSiteSettings === "function") loadSiteSettings();
   alert("تم حفظ إعدادات وهوية المتجر ومزامنتها!");
 }
 
-// ----------------------------------------------------------------------------
-// 5. إدارة المستخدمين والترقيات
-// ----------------------------------------------------------------------------
 function renderAdminUsers() {
   const container = document.getElementById("admin-users-list");
   if (!container) return;
@@ -295,29 +269,19 @@ function adminToggleBanUser(userKey) {
 function submitUserUpgrade() {
   const query = (document.getElementById("upgrade-search-input")?.value || "").trim().toLowerCase();
   const newRole = document.getElementById("upgrade-role-select")?.value || "VIP 1";
-  if (!query) {
-    alert("أدخل اسم أو بريد المستخدم.");
-    return;
-  }
+  if (!query) { alert("أدخل اسم أو بريد المستخدم."); return; }
 
   const registry = getDB("cloud_users_registry", {});
   const foundKey = Object.keys(registry).find(k =>
     k.includes(query) || (registry[k].name && registry[k].name.toLowerCase().includes(query))
   );
 
-  if (!foundKey) {
-    alert("لم يتم العثور على المستخدم.");
-    return;
-  }
-
+  if (!foundKey) { alert("لم يتم العثور على المستخدم."); return; }
   registry[foundKey].role = newRole;
   setDB("cloud_users_registry", registry);
   alert(`تمت ترقية ${registry[foundKey].name} إلى ${newRole} بنجاح!`);
 }
 
-// ----------------------------------------------------------------------------
-// 6. إدارة المنتجات اليدوية
-// ----------------------------------------------------------------------------
 function populateAdminProductCategories() {
   const sel = document.getElementById("prod-category-select");
   if (!sel) return;
@@ -340,9 +304,7 @@ function renderAdminProducts() {
         <td>${p.name}</td>
         <td>${cat ? cat.name : "-"}</td>
         <td>$${sup} / <strong style="color:#38bdf8;">$${fin}</strong></td>
-        <td>
-          <button type="button" style="background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:6px; cursor:pointer;" onclick="deleteAdminProduct('${p.id}')">حذف</button>
-        </td>
+        <td><button type="button" style="background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:6px; cursor:pointer;" onclick="deleteAdminProduct('${p.id}')">حذف</button></td>
       </tr>
     `;
   }).join("");
@@ -388,14 +350,10 @@ function handleAddProduct(e) {
 
 function deleteAdminProduct(prodId) {
   if (!confirm("هل تريد حذف هذا المنتج؟")) return;
-  const products = getDB("products", []).filter(p => p.id !== prodId);
-  setDB("products", products);
+  setDB("products", getDB("products", []).filter(p => p.id !== prodId));
   renderAdminProducts();
 }
 
-// ----------------------------------------------------------------------------
-// 7. إدارة الأقسام
-// ----------------------------------------------------------------------------
 function populateAdminParentCategories() {
   const sel = document.getElementById("cat-parent-select");
   if (!sel) return;
@@ -415,9 +373,7 @@ function renderAdminCategories() {
       <tr>
         <td>${c.name}</td>
         <td>${parent ? `فرعي (${parent.name})` : "رئيسي"}</td>
-        <td>
-          <button type="button" style="background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:6px; cursor:pointer;" onclick="deleteAdminCategory('${c.id}')">حذف</button>
-        </td>
+        <td><button type="button" style="background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:6px; cursor:pointer;" onclick="deleteAdminCategory('${c.id}')">حذف</button></td>
       </tr>
     `;
   }).join("");
@@ -430,12 +386,7 @@ function handleAddCategory(e) {
   const image = document.getElementById("cat-image")?.value.trim() || "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80";
 
   const categories = getDB("categories", typeof initialCategories !== "undefined" ? initialCategories : []);
-  categories.push({
-    id: "cat_" + Date.now(),
-    name,
-    parentId: parentId || null,
-    image
-  });
+  categories.push({ id: "cat_" + Date.now(), name, parentId: parentId || null, image });
 
   setDB("categories", categories);
   e.target.reset();
@@ -445,14 +396,10 @@ function handleAddCategory(e) {
 
 function deleteAdminCategory(catId) {
   if (!confirm("هل تريد حذف هذا القسم؟")) return;
-  const categories = getDB("categories", []).filter(c => c.id !== catId && c.parentId !== catId);
-  setDB("categories", categories);
+  setDB("categories", getDB("categories", []).filter(c => c.id !== catId && c.parentId !== catId));
   renderAdminCategories();
 }
 
-// ----------------------------------------------------------------------------
-// 8. إدارة طلبات وطرق الإيداع
-// ----------------------------------------------------------------------------
 function renderAdminDepositRequests() {
   const container = document.getElementById("deposit-requests-container");
   if (!container) return;
@@ -471,9 +418,7 @@ function renderAdminDepositRequests() {
           <strong>${req.userName || "مستخدم"}</strong>
           <span style="color:#38bdf8; font-weight:800;">$${parseFloat(req.amountUSD || 0).toFixed(2)}</span>
         </div>
-        <div style="font-size:0.78rem; color:#cbd5e1; margin-bottom:6px;">
-          الوسيلة: ${req.methodName || "-"} | المرسل: ${req.sender || "-"}
-        </div>
+        <div style="font-size:0.78rem; color:#cbd5e1; margin-bottom:6px;">الوسيلة: ${req.methodName || "-"} | المرسل: ${req.sender || "-"}</div>
         ${(req.receipt || req.receiptImage) ? `<img src="${req.receipt || req.receiptImage}" style="max-width:140px; border-radius:8px; margin-bottom:8px; display:block;">` : ""}
         ${isPending ? `
           <div style="display:flex; gap:8px;">
@@ -533,15 +478,7 @@ function handleAddDepositMethod(e) {
   const icon = document.getElementById("method-icon")?.value.trim() || "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=100&q=80";
 
   const methods = getDB("depositMethods", typeof initialDepositMethods !== "undefined" ? initialDepositMethods : []);
-  methods.push({
-    id: "dm_" + Date.now(),
-    name,
-    account,
-    currency,
-    rate,
-    qrImage,
-    icon
-  });
+  methods.push({ id: "dm_" + Date.now(), name, account, currency, rate, qrImage, icon });
 
   setDB("depositMethods", methods);
   e.target.reset();
@@ -551,13 +488,12 @@ function handleAddDepositMethod(e) {
 
 function deleteDepositMethod(id) {
   if (!confirm("هل تريد حذف وسيلة الإيداع هذه؟")) return;
-  const methods = getDB("depositMethods", []).filter(m => m.id !== id);
-  setDB("depositMethods", methods);
+  setDB("depositMethods", getDB("depositMethods", []).filter(m => m.id !== id));
   renderAdminDepositMethods();
 }
 
 // ============================================================================
-// 9. نظام جلب المنتجات من المورد (Shams4Store + وسطاء CORS مجانيون بدون قيود)
+// 9. نظام جلب المنتجات من المورد (Shams4Store - نسخة v130 المحدثة)
 // ============================================================================
 
 const SHAMS_DEFAULT_URL = "https://api.shams4store.com/client/api/products";
@@ -616,7 +552,7 @@ async function fetchFromExternalSupplierAPI() {
 
   setDB("supplier_api_config", { url, key });
   const infoEl = document.getElementById("supplier-results-info");
-  if (infoEl) infoEl.innerHTML = `<span style="color:#38bdf8;">جاري الاتصال بمورد Shams4Store وجلب المنتجات...</span>`;
+  if (infoEl) infoEl.innerHTML = `<span style="color:#38bdf8;">[v130] جاري الاتصال بمورد Shams4Store...</span>`;
 
   const shamsHeaders = {
     "Accept": "application/json",
@@ -628,41 +564,33 @@ async function fetchFromExternalSupplierAPI() {
   const urlWithToken = key ? `${url}${separator}api_token=${encodeURIComponent(key)}` : url;
 
   const attempts = [
-    // 1. اتصال مباشر بصيغة Shams4Store (ترويسة api-token + Bearer)
     () => fetch(url, { method: "GET", headers: shamsHeaders }).then(r => r.json()),
-    // 2. اتصال مباشر مع تمرير التوكن في الرابط
     () => fetch(urlWithToken, { method: "GET", headers: { "Accept": "application/json" } }).then(r => r.json()),
-    // 3. وسيط CodeTabs (سريع ومجاني بدون مفتاح)
     () => fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(urlWithToken)}`).then(r => r.json()),
-    // 4. وسيط AllOrigins بصيغة get
     () => fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(urlWithToken)}`)
           .then(r => r.json())
-          .then(d => typeof d.contents === "string" ? JSON.parse(d.contents) : d.contents),
-    // 5. وسيط ThingProxy الاحتياطي
-    () => fetch(`https://thingproxy.freeboard.io/fetch/${urlWithToken}`, { headers: shamsHeaders }).then(r => r.json())
+          .then(d => typeof d.contents === "string" ? JSON.parse(d.contents) : d.contents)
   ];
 
   let data = null;
   for (const tryFetch of attempts) {
     try {
       const res = await tryFetch();
-      if (res && !String(res.error || "").includes("keyless") && (Array.isArray(res) || res.products || res.services || res.data || res.message || res.error)) {
+      if (res && (Array.isArray(res) || res.products || res.services || res.data || res.message || res.error)) {
         data = res;
         break;
       }
-    } catch (e) {
-      // الانتقال للمحاولة التالية
-    }
+    } catch (e) {}
   }
 
   if (!data) {
     if (infoEl) infoEl.textContent = "تعذر الاتصال بالمورد.";
-    alert("تعذر الاتصال بسيرفر المورد. تأكد من تفعيل خيار (السماح لكل الايبيات) وحفظه في حسابك لدى Shams4Store.");
+    alert("تعذر الاتصال بسيرفر المورد. تأكد من تفعيل (السماح لكل الايبيات) وحفظه في Shams4Store.");
     return;
   }
 
   if (data.error || (data.status === false && data.message)) {
-    alert(`رسالة من المورد: ${data.error || data.message}`);
+    alert(`استجابة المورد: ${data.error || data.message}`);
     return;
   }
 
@@ -708,9 +636,7 @@ function searchSupplierCatalog() {
       )
     : catalog;
 
-  if (infoEl) {
-    infoEl.textContent = `عدد المنتجات المطابقة في المورد: ${filtered.length} منتج`;
-  }
+  if (infoEl) infoEl.textContent = `عدد المنتجات المطابقة في المورد: ${filtered.length} منتج`;
 
   if (filtered.length === 0) {
     container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8; background:#0c1527; border-radius:12px;">لا توجد منتجات مطابقة لـ "${query}"</div>`;
@@ -756,10 +682,7 @@ function searchSupplierCatalog() {
 
 function addSupplierProductToStore(supplierId) {
   const targetCatId = document.getElementById("supplier-target-category")?.value;
-  if (!targetCatId) {
-    alert("يرجى اختيار القسم المستهدف في موقعك أولاً!");
-    return;
-  }
+  if (!targetCatId) { alert("يرجى اختيار القسم المستهدف في موقعك أولاً!"); return; }
 
   const catalog = getSupplierCatalog();
   const item = catalog.find(i => i.supplierId === supplierId);
@@ -775,7 +698,7 @@ function addSupplierProductToStore(supplierId) {
   const finalPriceUSD = +(item.supplierPriceUSD * (1 + appliedPercent / 100)).toFixed(3);
   const finalPriceSYP = Math.round(finalPriceUSD * 15000);
 
-  const newProduct = {
+  products.push({
     id: "prod_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
     supplierId: item.supplierId,
     categoryId: targetCatId,
@@ -785,11 +708,9 @@ function addSupplierProductToStore(supplierId) {
     priceSYP: finalPriceSYP,
     desc: item.desc || "",
     image: item.image
-  };
+  });
 
-  products.push(newProduct);
   setDB("products", products);
-
   renderAdminProducts();
   searchSupplierCatalog();
 }
