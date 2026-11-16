@@ -557,7 +557,7 @@ function deleteDepositMethod(id) {
 }
 
 // ============================================================================
-// 9. نظام جلب المنتجات من المورد (Shams4Store + دعم CORS وترويسات التوكن)
+// 9. نظام جلب المنتجات من المورد (Shams4Store + وسطاء CORS مجانيون بدون قيود)
 // ============================================================================
 
 const SHAMS_DEFAULT_URL = "https://api.shams4store.com/client/api/products";
@@ -632,19 +632,21 @@ async function fetchFromExternalSupplierAPI() {
     () => fetch(url, { method: "GET", headers: shamsHeaders }).then(r => r.json()),
     // 2. اتصال مباشر مع تمرير التوكن في الرابط
     () => fetch(urlWithToken, { method: "GET", headers: { "Accept": "application/json" } }).then(r => r.json()),
-    // 3. تمرير عبر وسيط corsproxy.io مع ترويسات Shams4Store
-    () => fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, { method: "GET", headers: shamsHeaders }).then(r => r.json()),
-    // 4. تمرير عبر وسيط corsproxy.io مع التوكن في الرابط
-    () => fetch(`https://corsproxy.io/?${encodeURIComponent(urlWithToken)}`).then(r => r.json()),
-    // 5. تمرير عبر وسيط AllOrigins الاحتياطي
-    () => fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(urlWithToken)}`).then(r => r.json())
+    // 3. وسيط CodeTabs (سريع ومجاني بدون مفتاح)
+    () => fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(urlWithToken)}`).then(r => r.json()),
+    // 4. وسيط AllOrigins بصيغة get
+    () => fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(urlWithToken)}`)
+          .then(r => r.json())
+          .then(d => typeof d.contents === "string" ? JSON.parse(d.contents) : d.contents),
+    // 5. وسيط ThingProxy الاحتياطي
+    () => fetch(`https://thingproxy.freeboard.io/fetch/${urlWithToken}`, { headers: shamsHeaders }).then(r => r.json())
   ];
 
   let data = null;
   for (const tryFetch of attempts) {
     try {
       const res = await tryFetch();
-      if (res && (Array.isArray(res) || res.products || res.services || res.data || res.message || res.error)) {
+      if (res && !String(res.error || "").includes("keyless") && (Array.isArray(res) || res.products || res.services || res.data || res.message || res.error)) {
         data = res;
         break;
       }
