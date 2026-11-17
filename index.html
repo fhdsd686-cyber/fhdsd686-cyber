@@ -39,7 +39,6 @@
       overflow-y: auto;
     }
 
-    /* ضمان قابلية التمرير السلس في لوحة الإدارة على الهواتف */
     .admin-wrapper {
       overflow-y: auto !important;
       -webkit-overflow-scrolling: touch;
@@ -49,7 +48,6 @@
       padding-bottom: 110px !important;
     }
 
-    /* نافذة وضع الصيانة للزوار */
     .maintenance-card {
       width: 100%;
       max-width: 350px;
@@ -74,7 +72,6 @@
       100% { transform: rotate(360deg); }
     }
 
-    /* بطاقة الدخول وإنشاء الحساب */
     .shawy-auth-card {
       width: 100%;
       max-width: 380px;
@@ -259,7 +256,6 @@
       cursor: pointer;
     }
 
-    /* نافذة الخروج */
     .shawy-logout-card {
       width: 100%;
       max-width: 330px;
@@ -321,7 +317,6 @@
       cursor: pointer;
     }
 
-    /* بطاقة الإيداع الديناميكية مع الباركود */
     .shawy-deposit-card {
       width: 100%;
       max-width: 410px;
@@ -564,7 +559,6 @@
       opacity: 0.85;
     }
 
-    /* تنسيق الوضع المظلم للقائمة الجانبية والموقع */
     body.dark-drawer .shawy-side-drawer {
       background: #0b1329 !important;
       color: #ffffff !important;
@@ -978,7 +972,7 @@
           </div>
         </section>
 
-        <!-- قسم التسعير والعروض (السعر = سعر المورد + النسبة العامة أو الخاصة) -->
+        <!-- قسم التسعير والعروض -->
         <section id="sec-pricing-offers" class="hidden">
           <h4>نظام التسعير التلقائي والعروض (سعر المورد + النسبة %)</h4>
           <div style="background:#0c1527; padding:16px; border-radius:14px; margin-bottom:16px; border:1px solid rgba(56,189,248,0.25);">
@@ -1027,9 +1021,9 @@
           <table class="data-table"><thead><tr><th>الاسم</th><th>القسم</th><th>المورد / النهائي</th><th>إجراء</th></tr></thead><tbody id="admin-products-table"></tbody></table>
         </section>
 
-        <!-- قسم جلب المنتجات من المورد -->
+        <!-- قسم جلب المنتجات وتغيير المورد بالكامل -->
         <section id="sec-import-supplier" class="hidden">
-          <h4><i class="fa-solid fa-cloud-arrow-down" style="color:#38bdf8;"></i> جلب المنتجات من المورد</h4>
+          <h4><i class="fa-solid fa-cloud-arrow-down" style="color:#38bdf8;"></i> جلب المنتجات وإعدادات المورد</h4>
 
           <div style="background:#0c1527; padding:16px; border-radius:14px; margin-bottom:16px; border:1px solid rgba(56,189,248,0.25);">
             <div class="form-group">
@@ -1037,21 +1031,21 @@
               <select id="supplier-target-category" onchange="searchSupplierCatalog()"></select>
             </div>
 
-            <details style="margin-bottom:12px; background:#070e1a; padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
-              <summary style="cursor:pointer; font-size:0.82rem; color:#38bdf8; font-weight:700;">
-                <i class="fa-solid fa-link"></i> ربط API مورد خارجي (اضغط هنا لإدخال رابط المورد والمفتاح)
+            <details open style="margin-bottom:12px; background:#070e1a; padding:12px; border-radius:10px; border:1px solid rgba(56,189,248,0.2);">
+              <summary style="cursor:pointer; font-size:0.84rem; color:#38bdf8; font-weight:800;">
+                <i class="fa-solid fa-link"></i> تغيير أو ربط المورد الخارجي (API URL + Key)
               </summary>
               <div style="margin-top:10px;">
                 <div class="form-group">
-                  <label>رابط API المورد (Endpoint URL):</label>
+                  <label>رابط API المورد (يدعم روابط المتاجر مثل Shams4Store وروابط SMM v2):</label>
                   <input type="text" id="supplier-api-url" placeholder="https://api.shams4store.com/client/api/products" dir="ltr">
                 </div>
                 <div class="form-group">
-                  <label>مفتاح المورد (API Key):</label>
+                  <label>مفتاح المورد (API Key / Token):</label>
                   <input type="text" id="supplier-api-key" placeholder="أدخل مفتاح API الخاص بحسابك لدى المورد" dir="ltr">
                 </div>
                 <button type="button" class="btn-submit" style="background:#0284c7;" onclick="fetchFromExternalSupplierAPI()">
-                  <i class="fa-solid fa-rotate"></i> جلب وتحديث قائمة المورد الآن
+                  <i class="fa-solid fa-rotate"></i> حفظ المورد وجلب المنتجات الآن
                 </button>
               </div>
             </details>
@@ -1069,7 +1063,7 @@
           <div id="supplier-results-container" style="display:flex; flex-direction:column; gap:10px;"></div>
         </section>
 
-        <!-- قسم إضافة منتج مع زر حفظ واضح مباشرة بعد السعر -->
+        <!-- قسم إضافة منتج -->
         <section id="sec-add-product" class="hidden" style="padding-bottom: 100px;">
           <h4>إضافة منتج (حساب السعر تلقائياً من سعر المورد + النسبة)</h4>
           <form onsubmit="handleAddProduct(event)">
@@ -1079,7 +1073,7 @@
             <button type="submit" class="btn-submit" style="margin: 12px 0; background: #10b981;">
               <i class="fa-solid fa-check"></i> حفظ المنتج
             </button>
-            <div class="form-group"><label>نسبة عرض خاصة لهذا المنتج فقط % (اختياري - اتركه فارغاً ليأخذ نسبة التطبيق أو النسبة العامة):</label><input type="number" step="any" id="prod-custom-percent" placeholder="مثال: 2"></div>
+            <div class="form-group"><label>نسبة عرض خاصة لهذا المنتج فقط % (اختياري):</label><input type="number" step="any" id="prod-custom-percent" placeholder="مثال: 2"></div>
             <div class="form-group"><label>السعر (ل.س - اختياري):</label><input type="number" id="prod-price-syp" placeholder="يحسب تلقائياً"></div>
             <div class="form-group"><label>الوصف (اختياري):</label><textarea id="prod-desc"></textarea></div>
             <div class="form-group"><label>الصورة (اختياري):</label><input type="text" id="prod-image" placeholder="رابط الصورة (اختياري)"></div>
@@ -1138,11 +1132,10 @@
   <!-- ملفات السكربت -->
   <script src="data.js?v=129"></script>
   <script src="auth.js?v=129"></script>
-  <script src="store.js?v=144"></script>
+  <script src="store.js?v=145"></script>
   <script src="admin.js?v=137"></script>
 
   <script>
-    // 1. دالة فتح وإغلاق لوحة الإدارة بشكل فوري ومضمون
     window.openAdminPanel = function() {
       if (typeof toggleSidebar === "function") toggleSidebar(false);
       const adminWrap = document.getElementById("admin-wrapper");
@@ -1150,6 +1143,11 @@
         adminWrap.classList.remove("hidden");
         adminWrap.style.display = "block";
       }
+      const urlInput = document.getElementById("supplier-api-url");
+      const keyInput = document.getElementById("supplier-api-key");
+      if (urlInput) urlInput.value = getDB("supplier_api_url", "https://api.shams4store.com/client/api/products");
+      if (keyInput) keyInput.value = getDB("supplier_api_key", "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427");
+
       if (typeof updateMaintenanceAdminBtn === "function") {
         try { updateMaintenanceAdminBtn(); } catch (e) {}
       }
@@ -1168,7 +1166,6 @@
       if (typeof loadSiteSettings === "function") loadSiteSettings();
     };
 
-    // 2. مراقب ذكي يغيّر عنوان الحقل ومثاله تلقائياً فور ظهور اسم القسم على الشاشة
     (function() {
       function autoUpdateTargetFieldLabel() {
         const titleEl = document.getElementById("current-category-title");
@@ -1190,7 +1187,7 @@
         ) {
           if (labelEl.innerText !== "رابط الصفحة أو الحساب") {
             labelEl.innerText = "رابط الصفحة أو الحساب";
-            inputEl.placeholder = "ضع رابط الصفحة أو الحساب هنا (https://...)";
+            inputEl.placeholder = "ضع رابط الصفحة أو الحساب المباشر هنا (https://...)";
           }
         } else if (
           nameLower.includes("mtn") ||
@@ -1216,15 +1213,22 @@
       setInterval(autoUpdateTargetFieldLabel, 400);
     })();
 
-    // 3. دالة جلب المنتجات من المورد عبر الوسيط
+    // دالة حفظ المورد الجديد وجلب منتجاته (تدعم المتاجر مثل Shams4Store وأنظمة SMM v2)
     window.fetchFromExternalSupplierAPI = async function() {
       const url = (document.getElementById("supplier-api-url")?.value || "https://api.shams4store.com/client/api/products").trim();
       const key = (document.getElementById("supplier-api-key")?.value || "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427").trim();
+
+      setDB("supplier_api_url", url);
+      setDB("supplier_api_key", key);
+
       const infoEl = document.getElementById("supplier-results-info");
-      if (infoEl) infoEl.innerHTML = `<span style="color:#10b981; font-weight:bold;">✅ جاري السحب المباشر عبر وسيطك الخاص...</span>`;
+      if (infoEl) infoEl.innerHTML = `<span style="color:#10b981; font-weight:bold;">✅ جاري حفظ المورد الجديد وسحب المنتجات...</span>`;
 
       try {
-        const workerUrl = `https://rapid-dew-4b71.fhdsd686.workers.dev/?url=${encodeURIComponent(url)}&token=${encodeURIComponent(key)}`;
+        const isSmmV2 = url.toLowerCase().includes("/api/v2");
+        const fetchTarget = isSmmV2 ? `${url}?key=${encodeURIComponent(key)}&action=services` : url;
+        const workerUrl = `https://rapid-dew-4b71.fhdsd686.workers.dev/?url=${encodeURIComponent(fetchTarget)}&token=${encodeURIComponent(key)}`;
+
         const res = await fetch(workerUrl, {
           method: "GET",
           headers: {
@@ -1237,21 +1241,27 @@
         const rawList = Array.isArray(data) ? data : (data.products || data.services || (data.data && Array.isArray(data.data) ? data.data : (data.data?.products || data.data?.data || [])));
 
         if (!rawList || rawList.length === 0) {
-          alert("رد السيرفر: " + JSON.stringify(data).slice(0, 300));
+          alert("تم حفظ بيانات المورد، ولكن رد السيرفر لم يُرجع منتجات: " + JSON.stringify(data).slice(0, 300));
           return;
         }
 
-        const mapped = rawList.map((item, idx) => ({
-          supplierId: String(item.id || item.service || item.product_id || `SHAMS-${idx + 1}`),
-          app: item.category_name || item.category?.name || item.category || item.group || "Shams4Store",
-          name: item.name || item.title || item.service_name || `منتج #${idx + 1}`,
-          supplierPriceUSD: parseFloat(item.price || item.rate || item.cost || 0),
-          image: item.image || item.icon || item.category?.image || "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80",
-          desc: item.desc || item.description || item.notes || ""
-        }));
+        const mapped = rawList.map((item, idx) => {
+          // في أنظمة SMM v2 السعر يكون لكل 1000 وحدة، بينما في المتاجر يكون للوحدة
+          let rawPrice = parseFloat(item.price || item.rate || item.cost || 0);
+          if (isSmmV2 && rawPrice > 0) rawPrice = Number((rawPrice / 1000).toFixed(6));
+
+          return {
+            supplierId: String(item.id || item.service || item.product_id || `SUP-${idx + 1}`),
+            app: item.category_name || item.category?.name || item.category || item.group || "المورد الجديد",
+            name: item.name || item.title || item.service_name || `منتج #${idx + 1}`,
+            supplierPriceUSD: rawPrice,
+            image: item.image || item.icon || item.category?.image || "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80",
+            desc: item.desc || item.description || item.notes || ""
+          };
+        });
 
         setDB("supplier_catalog", mapped);
-        alert(`🎉 مبروك! تم جلب ${mapped.length} منتج من Shams4Store بنجاح!`);
+        alert(`🎉 تم تفعيل المورد الجديد وجلب ${mapped.length} منتج بنجاح! جميع الطلبات الجديدة ستُرسل إليه تلقائياً.`);
         if (typeof searchSupplierCatalog === "function") searchSupplierCatalog();
       } catch (err) {
         alert("خطأ في الاتصال: " + err.message);
