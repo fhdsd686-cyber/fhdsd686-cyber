@@ -1,4 +1,4 @@
-// --- منطق المتجر، الإشعارات الفورية، التسعير التلقائي والعروض، والشحن التلقائي عبر المورد ---
+// --- منطق المتجر، الإشعارات الفورية، التسعير التلقائي، المزامنة مع المورد، ومواصفات الطلب ---
 
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
@@ -8,9 +8,10 @@ let displayCurrency = getDB("display_currency", "USD");
 const STORE_EXCHANGE_RATE = 15000;
 let currentParentCategory = null;
 
-// إعدادات وسيط Cloudflare ومورد Shams4Store للشحن التلقائي
+// إعدادات وسيط Cloudflare ومورد Shams4Store للشحن التلقائي وفحص الحالة
 const SUPPLIER_WORKER_URL = "https://rapid-dew-4b71.fhdsd686.workers.dev/";
 const SHAMS_ORDER_ENDPOINT = "https://api.shams4store.com/client/api/newOrder";
+const SHAMS_CHECK_ORDERS_ENDPOINT = "https://api.shams4store.com/client/api/check";
 const SHAMS_DEFAULT_TOKEN = "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -231,6 +232,197 @@ function toggleTheme() {
   }
 }
 
+// ============================================================================
+// مزامنة حالة الطلبات مع سيرفر Shams4Store واسترجاع الرصيد تلقائياً عند الرفض
+// ============================================================================
+async function syncOrdersWithSupplier() {
+  const orders = getDB("orders", []);
+  if (!Array.isArray(orders) || orders.length === 0) return false;
+
+  // جمع الطلبات غير المنتهية والتي تملك رقم عملية عند المورد
+  const pendingOrders = orders.filter(o =>
+    o.supplierOrderId &&
+    !o.isFinalized &&
+    o.status !== "مكتمل" &&
+    o.status !== "مكتمل ✓" &&
+    !String(o.status).includes("مرفوض")
+  );
+
+  if (pendingOrders.length === 0) return false;
+
+  const apiToken = (getDB("supplier_api_key", "") || SHAMS_DEFAULT_TOKEN).trim();
+  const idsList = pendingOrders.map(o => o.supplierOrderId).join(",");
+
+  try {
+    const targetUrl = `${SHAMS_CHECK_ORDERS_ENDPOINT}?orders=${encodeURIComponent(idsList)}`;
+    const workerUrl = `${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(targetUrl)}&token=${encodeURIComponent(apiToken)}`;
+
+    const res = await fetch(workerUrl, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "api-token": apiToken,
+        "Authorization": `Bearer ${apiToken}`
+      }
+    });
+
+    const data = await res.json();
+    const statusMap = {};
+
+    // تحليل استجابة المورد سواء كانت مصفوفة أو كائناً
+    const items = Array.isArray(data)
+      ? data
+      : (Array.isArray(data.data) ? data.data : (data.orders ? Object.values(data.orders) : (data.data && typeof data.data === "object" ? Object.values(data.data) : [])));
+
+    items.forEach(item => {
+      if (!item || typeof item !== "object") return;
+      const oid = String(item.order_id || item.id || item.order || "");
+      if (oid) statusMap[oid] = item;
+    });
+
+    if (data && typeof data === "object" && !Array.isArray(data)) {
+      Object.keys(data).forEach(k => {
+        if (k.startsWith("ID_") || /^\d+$/.test(k)) {
+          statusMap[k] = typeof data[k] === "object" ? data[k] : { status: data[k] };
+        }
+      });
+    }
+
+    let changed = false;
+    let totalRefundedUSD = 0;
+    const users = getDB("users", []);
+
+    orders.forEach(order => {
+      if (!order.supplierOrderId || order.isFinalized) return;
+      const supInfo = statusMap[String(order.supplierOrderId)];
+      if (!supInfo) return;
+
+      const rawStatus = String(supInfo.status || supInfo.state || "").toLowerCase();
+      const supReply = supInfo.reply || supInfo.replay || supInfo.note || supInfo.reason || supInfo.message || "";
+      if (supReply) order.supplierReply = supReply;
+
+      if (rawStatus === "accept" || rawStatus === "completed" || rawStatus === "complete" || rawStatus === "success" || rawStatus === "done" || rawStatus === "مكتمل") {
+        order.status = "مكتمل ✓";
+        order.isFinalized = true;
+        changed = true;
+      } else if (rawStatus === "reject" || rawStatus === "rejected" || rawStatus === "canceled" || rawStatus === "cancelled" || rawStatus === "fail" || rawStatus === "failed" || rawStatus === "مرفوض") {
+        order.status = "مرفوض ✕";
+        order.isFinalized = true;
+        changed = true;
+
+        // استرجاع المبلغ للزبون تلقائياً لمرة واحدة فقط
+        if (!order.refunded) {
+          order.refunded = true;
+          totalRefundedUSD += Number(order.price || 0);
+        }
+      }
+    });
+
+    if (totalRefundedUSD > 0 && Array.isArray(users) && users.length > 0 && users[0].name !== "زائر") {
+      users[0].balanceUSD = Number(((users[0].balanceUSD || 0) + totalRefundedUSD).toFixed(3));
+      setDB("users", users);
+      updateUserUI();
+      showInAppNotificationToast(
+        "🔄 استرجاع رصيد تلقائي",
+        `تم رفض أحد الطلبات من المورد وأُعيد مبلغ ${formatStoreAmount(totalRefundedUSD)} إلى رصيدك تلقائياً.`,
+        "danger"
+      );
+    }
+
+    if (changed) {
+      setDB("orders", orders);
+    }
+    return changed;
+  } catch (e) {
+    return false;
+  }
+}
+
+// ============================================================================
+// عرض نافذة مواصفات وتفاصيل الطلب عند الضغط على زر «مواصفات الطلب»
+// ============================================================================
+function showOrderDetailsModal(orderId) {
+  const orders = getDB("orders", []);
+  const order = orders.find(o => String(o.id) === String(orderId));
+  if (!order) return;
+
+  const modal = document.getElementById("feature-modal");
+  const titleEl = document.getElementById("feature-modal-title");
+  const iconEl = document.getElementById("feature-modal-icon");
+  const bodyEl = document.getElementById("feature-modal-body");
+  if (!modal || !titleEl || !iconEl || !bodyEl) return;
+
+  const isRejected = String(order.status).includes("مرفوض");
+  const isCompleted = String(order.status).includes("مكتمل");
+  const statusColor = isRejected ? "#ef4444" : (isCompleted ? "#10b981" : "#f59e0b");
+
+  iconEl.className = "fa-solid fa-receipt";
+  iconEl.style.color = "#38bdf8";
+  titleEl.innerText = "مواصفات وتفاصيل الطلب";
+
+  bodyEl.innerHTML = `
+    <div style="background:#050b18; border:1px solid rgba(56,189,248,0.25); border-radius:16px; padding:14px; margin-bottom:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08);">
+        <span style="color:#94a3b8; font-size:0.82rem;">حالة الطلب:</span>
+        <span style="background:${statusColor}22; color:${statusColor}; border:1px solid ${statusColor}; padding:3px 12px; border-radius:20px; font-size:0.8rem; font-weight:800;">
+          ${order.status}
+        </span>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.84rem;">
+        <span style="color:#94a3b8;">المنتج / الباقة:</span>
+        <strong style="color:#fff;">${order.packageName}</strong>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.84rem;">
+        <span style="color:#94a3b8;">القسم:</span>
+        <strong style="color:#e2e8f0;">${order.categoryName}</strong>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.84rem;">
+        <span style="color:#94a3b8;">المستلم (ID / رقم / رابط):</span>
+        <strong style="color:#38bdf8; word-break:break-all; max-width:60%; text-align:left;" dir="ltr">${order.target}</strong>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.84rem;">
+        <span style="color:#94a3b8;">المبلغ المدفوع:</span>
+        <strong style="color:#10b981;">${formatStoreAmount(order.price)}</strong>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.84rem;">
+        <span style="color:#94a3b8;">تاريخ الطلب:</span>
+        <span style="color:#cbd5e1; font-size:0.78rem;">${order.date}</span>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08); font-size:0.8rem;">
+        <span style="color:#94a3b8;">رقم العملية:</span>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <code style="color:#38bdf8; background:#0f172a; padding:3px 8px; border-radius:8px;" dir="ltr">${order.supplierOrderId || order.id}</code>
+          <button type="button" onclick="navigator.clipboard.writeText('${order.supplierOrderId || order.id}'); alert('تم نسخ رقم العملية');" style="background:#0284c7; border:none; color:#fff; padding:4px 8px; border-radius:6px; font-size:0.72rem; cursor:pointer;">نسخ</button>
+        </div>
+      </div>
+
+      ${order.refunded ? `
+        <div style="margin-top:10px; background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; padding:8px 10px; border-radius:10px; font-size:0.78rem; font-weight:700; text-align:center;">
+          ✓ تم إرجاع مبلغ (${formatStoreAmount(order.price)}) إلى محفظتك تلقائياً
+        </div>
+      ` : ""}
+
+      ${order.supplierReply ? `
+        <div style="margin-top:10px; background:#0f172a; border-right:3px solid #f59e0b; padding:8px 10px; border-radius:8px; font-size:0.78rem; color:#e2e8f0;">
+          <strong style="color:#f59e0b;">ملاحظة التنفيذ:</strong> ${order.supplierReply}
+        </div>
+      ` : ""}
+    </div>
+
+    <button type="button" onclick="openFeatureModal('orders')" class="btn-send-deposit" style="background:#1e293b; border:1px solid rgba(56,189,248,0.3);">
+      <i class="fa-solid fa-arrow-right"></i> رجوع إلى سجل الطلبات
+    </button>
+  `;
+
+  modal.classList.remove("hidden");
+}
+
 // --- فتح نوافذ الميزات التفاعلية ---
 function openFeatureModal(type) {
   toggleSidebar(false);
@@ -402,24 +594,46 @@ function openFeatureModal(type) {
     iconEl.style.color = "#38bdf8";
     titleEl.innerText = "سجل طلباتي";
 
-    const orders = getDB("orders", []);
-    if (!Array.isArray(orders) || orders.length === 0) {
-      bodyEl.innerHTML = `<p style="text-align:center; color:#94a3b8; padding:24px;">لم تقم بأي طلب شراء حتى الآن.</p>`;
-    } else {
-      bodyEl.innerHTML = orders.map(o => `
-        <div style="background:#0f172a; border-right:3px solid #10b981; padding:12px; border-radius:12px; margin-bottom:10px;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <strong style="font-size:0.88rem; color:#fff;">${o.packageName}</strong>
-            <span style="color:#38bdf8; font-weight:800;">${formatStoreAmount(o.price)}</span>
+    const renderOrdersListHTML = () => {
+      const orders = getDB("orders", []);
+      if (!Array.isArray(orders) || orders.length === 0) {
+        bodyEl.innerHTML = `<p style="text-align:center; color:#94a3b8; padding:24px;">لم تقم بأي طلب شراء حتى الآن.</p>`;
+        return;
+      }
+
+      bodyEl.innerHTML = orders.map(o => {
+        const isRejected = String(o.status).includes("مرفوض");
+        const isCompleted = String(o.status).includes("مكتمل");
+        const borderCol = isRejected ? "#ef4444" : (isCompleted ? "#10b981" : "#f59e0b");
+        const textCol = isRejected ? "#ef4444" : (isCompleted ? "#10b981" : "#f59e0b");
+
+        return `
+          <div style="background:#0f172a; border-right:3px solid ${borderCol}; padding:12px; border-radius:12px; margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong style="font-size:0.9rem; color:#fff;">${o.packageName}</strong>
+              <span style="color:#38bdf8; font-weight:800;">${formatStoreAmount(o.price)}</span>
+            </div>
+            <div style="font-size:0.78rem; color:#94a3b8; margin-top:4px;">
+              القسم: ${o.categoryName} | المستلم: <strong style="color:#fff;">${o.target}</strong>
+            </div>
+            ${o.supplierOrderId ? `<div style="font-size:0.74rem; color:#38bdf8; margin-top:3px;">رقم طلب المورد: #${o.supplierOrderId}</div>` : ""}
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06);">
+              <span style="font-size:0.74rem; color:${textCol}; font-weight:700;">الحالة: ${o.status}</span>
+              <button type="button" onclick="showOrderDetailsModal('${o.id}')" style="background:#0284c7; border:none; color:#fff; padding:5px 12px; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:5px;">
+                <i class="fa-solid fa-circle-info"></i> مواصفات الطلب
+              </button>
+            </div>
           </div>
-          <div style="font-size:0.78rem; color:#94a3b8; margin-top:4px;">
-            القسم: ${o.categoryName} | المستلم: <strong style="color:#fff;">${o.target}</strong>
-          </div>
-          ${o.supplierOrderId ? `<div style="font-size:0.74rem; color:#38bdf8; margin-top:3px;">رقم طلب المورد: #${o.supplierOrderId}</div>` : ""}
-          <div style="font-size:0.74rem; color:#10b981; margin-top:4px;">الحالة: ${o.status} • ${o.date}</div>
-        </div>
-      `).join("");
-    }
+        `;
+      }).join("");
+    };
+
+    renderOrdersListHTML();
+
+    // مزامنة تلقائية لحالة الطلبات مع المورد وإعادة تحديث القائمة فوراً إذا تغيرت حالة أي طلب
+    syncOrdersWithSupplier().then(updated => {
+      if (updated) renderOrdersListHTML();
+    });
   }
 
   modal.classList.remove("hidden");
@@ -1036,195 +1250,4 @@ async function handleServiceOrder(e, catId, catName) {
   const prodId = select.value;
 
   if (!prodId) {
-    alert("يرجى اختيار الباقة أولاً");
-    return;
-  }
-
-  const products = getDB("products", initialProducts);
-  const product = products.find(p => p.id === prodId);
-  if (!product) return;
-
-  const currentUser = users[0];
-  const price = calculateProductFinalPrice(product);
-
-  if ((currentUser.balanceUSD || 0) < price) {
-    alert(`عذراً، رصيدك الحالي (${formatStoreAmount(currentUser.balanceUSD || 0)}) لا يكفي لشراء هذه الباقة (${formatStoreAmount(price)})! يرجى شحن رصيدك.`);
-    return;
-  }
-
-  const submitBtn = document.getElementById("btn-submit-service-order");
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> جاري إرسال الطلب والشحن الفوري...`;
-  }
-
-  const supplierProductId = product.supplierId || "";
-  const apiToken = (getDB("supplier_api_key", "") || SHAMS_DEFAULT_TOKEN).trim();
-  const orderReference = "ORD-" + Date.now();
-
-  let supplierOrderId = "";
-  let orderStatus = "مكتمل";
-
-  // إذا كان المنتج مرتبطاً بمورد Shams4Store، نرسل الطلب تلقائياً عبر الوسيط بصيغة GET
-  if (supplierProductId) {
-    try {
-      const targetUrl = `${SHAMS_ORDER_ENDPOINT}/${encodeURIComponent(supplierProductId)}/params?qty=1&playerId=${encodeURIComponent(targetInput)}&order_uuid=${encodeURIComponent(orderReference)}`;
-      const workerRequestUrl = `${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(targetUrl)}&token=${encodeURIComponent(apiToken)}`;
-
-      const response = await fetch(workerRequestUrl, {
-        method: "GET",
-        headers: {
-          "Accept": "application/json",
-          "api-token": apiToken,
-          "Authorization": `Bearer ${apiToken}`
-        }
-      });
-
-      const result = await response.json();
-
-      // التحقق من رفض المورد للطلب (مثل عدم كفاية رصيد التاجر أو خطأ في البيانات)
-      if (!response.ok || result.status === false || result.error || (result.code && result.code !== 200 && result.code !== 0 && !result.data)) {
-        const errMsg = result.msg || result.message || result.error || "تعذر تنفيذ الطلب من سيرفر المورد.";
-        alert(`⚠️ لم يتم الشحن من المورد:\n${errMsg}\n\nلم يتم خصم أي مبلغ من رصيدك.`);
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> تأكيد الطلب والشحن الفوري`;
-        }
-        return;
-      }
-
-      supplierOrderId = (result.data && (result.data.order_id || result.data.id)) || result.order_id || result.id || orderReference;
-      orderStatus = "تم الإرسال للمورد ✓";
-    } catch (err) {
-      alert(`⚠️ خطأ في الاتصال بسيرفر الشحن:\n${err.message}\n\nلم يتم خصم أي مبلغ من رصيدك.`);
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> تأكيد الطلب والشحن الفوري`;
-      }
-      return;
-    }
-  }
-
-  // خصم الرصيد بعد نجاح الإرسال
-  currentUser.balanceUSD = Number((currentUser.balanceUSD - price).toFixed(3));
-  currentUser.ordersCount = (currentUser.ordersCount || 0) + 1;
-  setDB("users", users);
-
-  const orders = getDB("orders", []);
-  orders.unshift({
-    id: "ord_" + Date.now(),
-    supplierOrderId: supplierOrderId,
-    categoryName: catName,
-    packageName: product.name,
-    target: targetInput,
-    price: price,
-    date: new Date().toLocaleString("ar-SY"),
-    status: orderStatus
-  });
-  setDB("orders", orders);
-
-  if (submitBtn) {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> تأكيد الطلب والشحن الفوري`;
-  }
-
-  updateUserUI();
-  alert(
-    `✅ تم تنفيذ طلب الشحن بنجاح!\n` +
-    `المستلم: ${targetInput}\n` +
-    `الباقة: ${product.name}\n` +
-    (supplierOrderId ? `رقم العملية: #${supplierOrderId}\n` : "") +
-    `المبلغ المخصوم: ${formatStoreAmount(price)}`
-  );
-  backToCategories();
-}
-
-function backToCategories() {
-  if (currentParentCategory) {
-    const parent = currentParentCategory;
-    currentParentCategory = null;
-    openCategory(parent.id, parent.name, parent.image, null);
-    return;
-  }
-
-  const prodView = document.getElementById("products-view");
-  const catGrid = document.getElementById("categories-container");
-  const searchBox = document.querySelector(".search-pill-box");
-
-  if (prodView) prodView.classList.add("hidden");
-  if (catGrid) catGrid.classList.remove("hidden");
-  if (searchBox) searchBox.classList.remove("hidden");
-}
-
-function updateUserUI() {
-  const users = getDB("users", []);
-  const hasUser = Array.isArray(users) && users.length > 0 && users[0].name && users[0].name !== "زائر";
-  
-  const user = hasUser ? users[0] : {
-    name: "زائر",
-    balanceUSD: 0,
-    role: "عضو",
-    avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"
-  };
-
-  const headerBal = document.getElementById("header-balance-usd");
-  const drawerBal = document.getElementById("drawer-balance-text");
-  const sideName = document.getElementById("side-user-name");
-  const drawerAvatar = document.getElementById("drawer-avatar");
-  const sideRank = document.getElementById("side-user-rank");
-  const headerRank = document.getElementById("header-user-rank");
-  const adminLink = document.getElementById("admin-panel-link");
-
-  const balUSD = Number(user.balanceUSD || 0);
-  const balSYP = Math.round(balUSD * STORE_EXCHANGE_RATE).toLocaleString("en-US");
-
-  if (headerBal) {
-    const formattedHeader = displayCurrency === "SYP" ? `${balSYP} ل.س` : `${balUSD.toFixed(3)} $`;
-    headerBal.innerHTML = `${formattedHeader} <span onclick="toggleDisplayCurrency(event)" title="اضغط للتبديل بين الدولار والسوري" style="background:rgba(56,189,248,0.2); color:#38bdf8; padding:1px 6px; border-radius:8px; font-size:0.72rem; margin-right:4px; border:1px solid rgba(56,189,248,0.4);">⇄</span>`;
-  }
-
-  if (drawerBal) {
-    drawerBal.innerHTML = `
-      <div style="cursor:pointer;" onclick="toggleDisplayCurrency(event)" title="اضغط لتبديل عملة العرض">
-        <div>${displayCurrency === "SYP" ? `${balSYP} ل.س` : `$ ${balUSD.toFixed(3)}`} <i class="fa-solid fa-repeat" style="font-size:0.75rem; color:#38bdf8;"></i></div>
-        <div style="font-size:0.78rem; color:#94a3b8; font-weight:600; margin-top:2px;">
-          ${displayCurrency === "SYP" ? `($ ${balUSD.toFixed(3)})` : `(${balSYP} ل.س)`}
-        </div>
-      </div>
-    `;
-  }
-
-  if (sideName) sideName.innerText = user.fullname || user.name || "زائر";
-  if (sideRank) sideRank.innerText = user.role || "عضو";
-  if (headerRank) headerRank.innerText = user.role || "عضو";
-  if (drawerAvatar) drawerAvatar.src = user.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
-
-  if (adminLink) {
-    if (isCurrentUserAdmin(user)) {
-      adminLink.style.display = "flex";
-    } else {
-      adminLink.style.display = "none";
-    }
-  }
-}
-
-function showStore() {
-  currentParentCategory = null;
-  backToCategories();
-  toggleSidebar(false);
-}
-
-function toggleSidebar(force) {
-  const drawer = document.getElementById("sidebar-drawer");
-  const backdrop = document.getElementById("drawer-backdrop");
-  if (!drawer || !backdrop) return;
-
-  const isOpen = (typeof force === "boolean") ? !force : drawer.classList.contains("open");
-  if (isOpen) {
-    drawer.classList.remove("open");
-    backdrop.classList.add("hidden");
-  } else {
-    drawer.classList.add("open");
-    backdrop.classList.remove("hidden");
-  }
-}
+    alert("يرجى اختيار الب
