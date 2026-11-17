@@ -1,4 +1,4 @@
-// --- منطق المتجر، الإشعارات الفورية، التسعير التلقائي، المزامنة مع المورد، وحقل الكمية المفتوحة ---
+// --- منطق المتجر، الإشعارات الفورية، التسعير التلقائي، ودعم تغيير المورد ديناميكياً من لوحة الأدمن ---
 
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
@@ -9,9 +9,33 @@ const STORE_EXCHANGE_RATE = 155;
 let currentParentCategory = null;
 
 const SUPPLIER_WORKER_URL = "https://rapid-dew-4b71.fhdsd686.workers.dev/";
-const SHAMS_ORDER_ENDPOINT = "https://api.shams4store.com/client/api/newOrder";
-const SHAMS_CHECK_ORDERS_ENDPOINT = "https://api.shams4store.com/client/api/check";
+const DEFAULT_SUPPLIER_BASE = "https://api.shams4store.com";
 const SHAMS_DEFAULT_TOKEN = "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427";
+
+// دالة ذكية تستخرج إعدادات المورد النشط حالياً من لوحة الأدمن تلقائياً
+function getActiveSupplierConfig() {
+  const savedUrl = (getDB("supplier_api_url", "") || `${DEFAULT_SUPPLIER_BASE}/client/api/products`).trim();
+  const savedToken = (getDB("supplier_api_key", "") || SHAMS_DEFAULT_TOKEN).trim();
+
+  // اكتشاف نوع السيرفر تلقائياً (هل هو SMM Panel تقليدي /api/v2 أم نظام متاجر مثل Shams4Store)
+  const isSmmV2 = savedUrl.toLowerCase().includes("/api/v2");
+  let baseUrl = DEFAULT_SUPPLIER_BASE;
+  try {
+    const parsed = new URL(savedUrl);
+    baseUrl = parsed.origin;
+  } catch (e) {
+    baseUrl = DEFAULT_SUPPLIER_BASE;
+  }
+
+  return {
+    type: isSmmV2 ? "smm_v2" : "shams_style",
+    productsUrl: savedUrl,
+    baseUrl: baseUrl,
+    orderUrl: isSmmV2 ? savedUrl : `${baseUrl}/client/api/newOrder`,
+    checkUrl: isSmmV2 ? savedUrl : `${baseUrl}/client/api/check`,
+    token: savedToken
+  };
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   loadSiteSettings();
@@ -106,7 +130,6 @@ function isVariableQuantityProduct(product) {
   if (!product) return false;
   const unitPrice = Number(product.supplierPriceUSD !== undefined ? product.supplierPriceUSD : (product.priceUSD || 0));
   const nameLower = (product.name || "").toLowerCase();
-  // إذا كان سعر الوحدة صغيراً جداً (أقل من 0.05$) ولم يكن اسم الباقة رقماً ثابتاً مثل "MTN 50" أو "كازية"
   if (unitPrice > 0 && unitPrice < 0.05 && !nameLower.includes("كازية") && !/\d{2,}/.test(nameLower)) {
     return true;
   }
@@ -173,15 +196,21 @@ async function syncOrdersWithSupplier() {
   const pendingOrders = orders.filter(o => o.supplierOrderId && !o.isFinalized && o.status !== "مكتمل" && o.status !== "مكتمل ✓" && !String(o.status).includes("مرفوض"));
   if (pendingOrders.length === 0) return false;
 
-  const apiToken = (getDB("supplier_api_key", "") || SHAMS_DEFAULT_TOKEN).trim();
+  const supCfg = getActiveSupplierConfig();
   const idsList = pendingOrders.map(o => o.supplierOrderId).join(",");
 
   try {
-    const targetUrl = `${SHAMS_CHECK_ORDERS_ENDPOINT}?orders=${encodeURIComponent(idsList)}`;
-    const workerUrl = `${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(targetUrl)}&token=${encodeURIComponent(apiToken)}`;
+    let targetUrl = "";
+    if (supCfg.type === "smm_v2") {
+      targetUrl = `${supCfg.checkUrl}?key=${encodeURIComponent(supCfg.token)}&action=status&orders=${encodeURIComponent(idsList)}`;
+    } else {
+      targetUrl = `${supCfg.checkUrl}?orders=${encodeURIComponent(idsList)}`;
+    }
+
+    const workerUrl = `${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(targetUrl)}&token=${encodeURIComponent(supCfg.token)}`;
     const res = await fetch(workerUrl, {
       method: "GET",
-      headers: { "Accept": "application/json", "api-token": apiToken, "Authorization": `Bearer ${apiToken}` }
+      headers: { "Accept": "application/json", "api-token": supCfg.token, "Authorization": `Bearer ${supCfg.token}` }
     });
     const data = await res.json();
     const statusMap = {};
@@ -574,7 +603,7 @@ function filterCategories() {
 function getTargetFieldConfig(catName) {
   const nameLower = (catName || "").toLowerCase();
   if (nameLower.includes("متابع") || nameLower.includes("فيسبوك") || nameLower.includes("تيك") || nameLower.includes("انست") || nameLower.includes("يوتيوب") || nameLower.includes("تيلي") || nameLower.includes("صفح") || nameLower.includes("لايك") || nameLower.includes("مشاهد")) {
-    return { label: "رابط الصفحة أو الحساب", placeholder: "ضع رابط الصفحة أو الحساب هنا (https://...)" };
+    return { label: "رابط الصفحة أو الحساب", placeholder: "ضع رابط الصفحة أو الحساب المباشر هنا (https://...)" };
   }
   if (nameLower.includes("mtn") || nameLower.includes("سيرياتيل") || nameLower.includes("رصيد") || nameLower.includes("كاش") || nameLower.includes("وحدات")) {
     return { label: "رقم الهاتف", placeholder: "أدخل رقم الهاتف المطلوب (مثال: 09xxxxxxxx)" };
@@ -715,23 +744,29 @@ async function handleServiceOrder(e, catId, catName) {
   if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = "جاري الإرسال..."; }
 
   const supplierProductId = product.supplierId || "";
-  const apiToken = (getDB("supplier_api_key", "") || SHAMS_DEFAULT_TOKEN).trim();
+  const supCfg = getActiveSupplierConfig();
   const orderReference = "ORD-" + Date.now();
   let supplierOrderId = "";
   let orderStatus = "مكتمل";
 
   if (supplierProductId) {
     try {
-      const targetUrl = `${SHAMS_ORDER_ENDPOINT}/${encodeURIComponent(supplierProductId)}/params?qty=${orderQty}&playerId=${encodeURIComponent(targetInput)}&order_uuid=${encodeURIComponent(orderReference)}`;
-      const workerRequestUrl = `${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(targetUrl)}&token=${encodeURIComponent(apiToken)}`;
-      const response = await fetch(workerRequestUrl, { method: "GET", headers: { "Accept": "application/json", "api-token": apiToken, "Authorization": `Bearer ${apiToken}` } });
+      let targetUrl = "";
+      if (supCfg.type === "smm_v2") {
+        targetUrl = `${supCfg.orderUrl}?key=${encodeURIComponent(supCfg.token)}&action=add&service=${encodeURIComponent(supplierProductId)}&link=${encodeURIComponent(targetInput)}&quantity=${orderQty}`;
+      } else {
+        targetUrl = `${supCfg.orderUrl}/${encodeURIComponent(supplierProductId)}/params?qty=${orderQty}&playerId=${encodeURIComponent(targetInput)}&order_uuid=${encodeURIComponent(orderReference)}`;
+      }
+
+      const workerRequestUrl = `${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(targetUrl)}&token=${encodeURIComponent(supCfg.token)}`;
+      const response = await fetch(workerRequestUrl, { method: "GET", headers: { "Accept": "application/json", "api-token": supCfg.token, "Authorization": `Bearer ${supCfg.token}` } });
       const result = await response.json();
-      if (!response.ok || result.status === false || result.error || (result.code && result.code !== 200 && result.code !== 0 && !result.data)) {
+      if (!response.ok || result.status === false || result.error || (result.code && result.code !== 200 && result.code !== 0 && !result.data && !result.order)) {
         alert(`⚠️ لم يتم الشحن من المورد:\n${result.msg || result.message || result.error || "خطأ"}`);
         if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> تأكيد الطلب والشحن الفوري`; }
         return;
       }
-      supplierOrderId = (result.data && (result.data.order_id || result.data.id)) || result.order_id || result.id || orderReference;
+      supplierOrderId = (result.data && (result.data.order_id || result.data.id)) || result.order_id || result.order || result.id || orderReference;
       orderStatus = "تم الإرسال للمورد ✓";
     } catch (err) {
       alert(`⚠️ خطأ في الاتصال: ${err.message}`);
