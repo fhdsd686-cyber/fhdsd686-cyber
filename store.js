@@ -256,7 +256,6 @@ function showOrderDetailsModal(orderId) {
       </div>
       <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.84rem;"><span style="color:#94a3b8;">المنتج:</span><strong style="color:#fff;">${order.packageName}</strong></div>
       <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.84rem;"><span style="color:#94a3b8;">القسم:</span><strong style="color:#e2e8f0;">${order.categoryName}</strong></div>
-      <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.84rem;"><span style="color:#94a3b8;">الكمية المرسلة:</span><strong style="color:#38bdf8;">${order.qty || 1}</strong></div>
       <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.84rem;"><span style="color:#94a3b8;">المستلم:</span><strong style="color:#38bdf8; word-break:break-all; max-width:60%; text-align:left;" dir="ltr">${order.target}</strong></div>
       <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.84rem;"><span style="color:#94a3b8;">المبلغ:</span><strong style="color:#10b981;">${formatStoreAmount(order.price)}</strong></div>
       <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.84rem;"><span style="color:#94a3b8;">التاريخ:</span><span style="color:#cbd5e1; font-size:0.78rem;">${order.date}</span></div>
@@ -672,25 +671,6 @@ async function handleServiceOrder(e, catId, catName) {
   const submitBtn = document.getElementById("btn-submit-service-order");
   if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = "جاري الإرسال..."; }
 
-  // تحديد الكمية تلقائياً (مثلاً MTN 50 ترسل qty=50 لخدمات الرصيد والمتابعين، و qty=1 للبطاقات الثابتة)
-  let orderQty = 1;
-  const fullServiceTitle = `${catName} ${product.name}`.toLowerCase();
-  const isQuantityService =
-    fullServiceTitle.includes("رصيد") ||
-    fullServiceTitle.includes("وحدات") ||
-    fullServiceTitle.includes("mtn") ||
-    fullServiceTitle.includes("سيرياتيل") ||
-    fullServiceTitle.includes("متابع") ||
-    fullServiceTitle.includes("لايك") ||
-    fullServiceTitle.includes("مشاهد");
-
-  if (isQuantityService) {
-    const numMatch = product.name.match(/\d+/);
-    if (numMatch && Number(numMatch[0]) > 1) {
-      orderQty = Number(numMatch[0]);
-    }
-  }
-
   const supplierProductId = product.supplierId || "";
   const apiToken = (getDB("supplier_api_key", "") || SHAMS_DEFAULT_TOKEN).trim();
   const orderReference = "ORD-" + Date.now();
@@ -699,7 +679,7 @@ async function handleServiceOrder(e, catId, catName) {
 
   if (supplierProductId) {
     try {
-      const targetUrl = `${SHAMS_ORDER_ENDPOINT}/${encodeURIComponent(supplierProductId)}/params?qty=${orderQty}&playerId=${encodeURIComponent(targetInput)}&order_uuid=${encodeURIComponent(orderReference)}`;
+      const targetUrl = `${SHAMS_ORDER_ENDPOINT}/${encodeURIComponent(supplierProductId)}/params?qty=1&playerId=${encodeURIComponent(targetInput)}&order_uuid=${encodeURIComponent(orderReference)}`;
       const workerRequestUrl = `${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(targetUrl)}&token=${encodeURIComponent(apiToken)}`;
       const response = await fetch(workerRequestUrl, { method: "GET", headers: { "Accept": "application/json", "api-token": apiToken, "Authorization": `Bearer ${apiToken}` } });
       const result = await response.json();
@@ -722,12 +702,12 @@ async function handleServiceOrder(e, catId, catName) {
   setDB("users", users);
 
   const orders = getDB("orders", []);
-  orders.unshift({ id: "ord_" + Date.now(), supplierOrderId, categoryName: catName, packageName: product.name, qty: orderQty, target: targetInput, price, date: new Date().toLocaleString("ar-SY"), status: orderStatus });
+  orders.unshift({ id: "ord_" + Date.now(), supplierOrderId, categoryName: catName, packageName: product.name, target: targetInput, price, date: new Date().toLocaleString("ar-SY"), status: orderStatus });
   setDB("orders", orders);
 
   if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> تأكيد الطلب والشحن الفوري`; }
   updateUserUI();
-  alert(`✅ تم تنفيذ طلب الشحن بنجاح!\nالمستلم: ${targetInput}\nالباقة: ${product.name}\nالكمية: ${orderQty}`);
+  alert(`✅ تم تنفيذ طلب الشحن بنجاح!\nالمستلم: ${targetInput}\nالباقة: ${product.name}`);
   backToCategories();
 }
 
