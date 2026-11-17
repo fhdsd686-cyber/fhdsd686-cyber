@@ -1,4 +1,4 @@
-// --- منطق المتجر، الإشعارات الفورية، التسعير التلقائي، المزامنة مع المورد، ومواصفات الطلب ---
+// --- منطق المتجر، الإشعارات الفورية، التسعير التلقائي، المزامنة مع المورد، وحقل الكمية المفتوحة ---
 
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
@@ -99,7 +99,18 @@ function calculateProductFinalPrice(product) {
   if (product.customPercent !== undefined && product.customPercent !== null && product.customPercent !== "") {
     appliedPercent = Number(product.customPercent);
   }
-  return Number((supplierPrice + (supplierPrice * (appliedPercent / 100))).toFixed(3));
+  return Number((supplierPrice + (supplierPrice * (appliedPercent / 100))).toFixed(5));
+}
+
+function isVariableQuantityProduct(product) {
+  if (!product) return false;
+  const unitPrice = Number(product.supplierPriceUSD !== undefined ? product.supplierPriceUSD : (product.priceUSD || 0));
+  const nameLower = (product.name || "").toLowerCase();
+  // إذا كان سعر الوحدة صغيراً جداً (أقل من 0.05$) ولم يكن اسم الباقة رقماً ثابتاً مثل "MTN 50" أو "كازية"
+  if (unitPrice > 0 && unitPrice < 0.05 && !nameLower.includes("كازية") && !/\d{2,}/.test(nameLower)) {
+    return true;
+  }
+  return false;
 }
 
 function getProductAppliedOfferInfo(product) {
@@ -256,8 +267,9 @@ function showOrderDetailsModal(orderId) {
       </div>
       <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.84rem;"><span style="color:#94a3b8;">المنتج:</span><strong style="color:#fff;">${order.packageName}</strong></div>
       <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.84rem;"><span style="color:#94a3b8;">القسم:</span><strong style="color:#e2e8f0;">${order.categoryName}</strong></div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.84rem;"><span style="color:#94a3b8;">الكمية:</span><strong style="color:#38bdf8;">${order.qty || 1}</strong></div>
       <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.84rem;"><span style="color:#94a3b8;">المستلم:</span><strong style="color:#38bdf8; word-break:break-all; max-width:60%; text-align:left;" dir="ltr">${order.target}</strong></div>
-      <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.84rem;"><span style="color:#94a3b8;">المبلغ:</span><strong style="color:#10b981;">${formatStoreAmount(order.price)}</strong></div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.84rem;"><span style="color:#94a3b8;">المبلغ الإجمالي:</span><strong style="color:#10b981;">${formatStoreAmount(order.price)}</strong></div>
       <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.84rem;"><span style="color:#94a3b8;">التاريخ:</span><span style="color:#cbd5e1; font-size:0.78rem;">${order.date}</span></div>
       <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08); font-size:0.8rem;">
         <span style="color:#94a3b8;">رقم العملية:</span>
@@ -335,7 +347,7 @@ function openFeatureModal(type) {
         return `
           <div style="background:#0f172a; border-right:3px solid ${borderCol}; padding:12px; border-radius:12px; margin-bottom:10px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-              <strong style="font-size:0.9rem; color:#fff;">${o.packageName}</strong>
+              <strong style="font-size:0.9rem; color:#fff;">${o.packageName} ${o.qty && o.qty > 1 ? `(×${o.qty})` : ""}</strong>
               <span style="color:#38bdf8; font-weight:800;">${formatStoreAmount(o.price)}</span>
             </div>
             <div style="font-size:0.78rem; color:#94a3b8; margin-top:4px;">القسم: ${o.categoryName} | المستلم: <strong style="color:#fff;">${o.target}</strong></div>
@@ -612,8 +624,10 @@ function openCategory(catId, catName, catImage, parentInfo = null) {
 
   let packageOptions = `<option value="" disabled selected>اختر الباقة</option>`;
   catProducts.forEach(prod => {
-    const finalUSD = calculateProductFinalPrice(prod);
-    packageOptions += `<option value="${prod.id}" data-price="${finalUSD}">${prod.name} (${formatStoreAmount(finalUSD)})</option>`;
+    const unitUSD = calculateProductFinalPrice(prod);
+    const isVarQty = isVariableQuantityProduct(prod);
+    const priceLabel = isVarQty ? `${formatStoreAmount(unitUSD)} للوحدة` : formatStoreAmount(unitUSD);
+    packageOptions += `<option value="${prod.id}" data-price="${unitUSD}" data-varqty="${isVarQty ? '1' : '0'}">${prod.name} (${priceLabel})</option>`;
   });
 
   const fieldCfg = getTargetFieldConfig(catName);
@@ -634,6 +648,10 @@ function openCategory(catId, catName, catImage, parentInfo = null) {
           <select id="srv-package-select" class="field-select" required onchange="onPackageSelectChange()">${packageOptions}</select>
         </div>
       </div>
+      <div class="field-block hidden" id="srv-qty-block">
+        <label class="field-label" style="color:#38bdf8;">الكمية المطلوبة (مثال: 40 أو 50 أو أكثر):</label>
+        <input type="number" id="srv-qty-input" class="field-input" min="1" step="1" value="50" placeholder="أدخل الكمية المطلوبة (مثال: 40 أو 50)" oninput="onPackageSelectChange()" dir="ltr">
+      </div>
       <div class="order-summary-bar">
         <span>السعر المطلوب:</span>
         <strong id="srv-price-display" style="color:var(--accent-cyan); font-size:1.1rem;">${formatStoreAmount(0)}</strong>
@@ -646,9 +664,27 @@ function openCategory(catId, catName, catImage, parentInfo = null) {
 function onPackageSelectChange() {
   const select = document.getElementById("srv-package-select");
   const display = document.getElementById("srv-price-display");
+  const qtyBlock = document.getElementById("srv-qty-block");
+  const qtyInput = document.getElementById("srv-qty-input");
   if (!select || !display) return;
+
   const opt = select.options[select.selectedIndex];
-  display.innerText = (opt && opt.dataset.price) ? formatStoreAmount(opt.dataset.price) : formatStoreAmount(0);
+  if (!opt || !opt.dataset.price) {
+    display.innerText = formatStoreAmount(0);
+    if (qtyBlock) qtyBlock.classList.add("hidden");
+    return;
+  }
+
+  const unitPriceUSD = parseFloat(opt.dataset.price) || 0;
+  const isVarQty = opt.dataset.varqty === "1";
+
+  if (qtyBlock) {
+    qtyBlock.classList.toggle("hidden", !isVarQty);
+  }
+
+  const qty = isVarQty ? Math.max(1, parseInt(qtyInput?.value || "1", 10)) : 1;
+  const totalUSD = unitPriceUSD * qty;
+  display.innerText = formatStoreAmount(totalUSD);
 }
 
 async function handleServiceOrder(e, catId, catName) {
@@ -664,9 +700,16 @@ async function handleServiceOrder(e, catId, catName) {
 
   const product = getDB("products", initialProducts).find(p => p.id === prodId);
   if (!product) return;
+
+  const isVarQty = isVariableQuantityProduct(product);
+  const qtyInput = document.getElementById("srv-qty-input");
+  const orderQty = isVarQty ? Math.max(1, parseInt(qtyInput?.value || "1", 10)) : 1;
+
   const currentUser = users[0];
-  const price = calculateProductFinalPrice(product);
-  if ((currentUser.balanceUSD || 0) < price) { alert("عذراً، رصيدك الحالي لا يكفي!"); return; }
+  const unitPrice = calculateProductFinalPrice(product);
+  const totalPrice = Number((unitPrice * orderQty).toFixed(3));
+
+  if ((currentUser.balanceUSD || 0) < totalPrice) { alert("عذراً، رصيدك الحالي لا يكفي!"); return; }
 
   const submitBtn = document.getElementById("btn-submit-service-order");
   if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = "جاري الإرسال..."; }
@@ -679,7 +722,7 @@ async function handleServiceOrder(e, catId, catName) {
 
   if (supplierProductId) {
     try {
-      const targetUrl = `${SHAMS_ORDER_ENDPOINT}/${encodeURIComponent(supplierProductId)}/params?qty=1&playerId=${encodeURIComponent(targetInput)}&order_uuid=${encodeURIComponent(orderReference)}`;
+      const targetUrl = `${SHAMS_ORDER_ENDPOINT}/${encodeURIComponent(supplierProductId)}/params?qty=${orderQty}&playerId=${encodeURIComponent(targetInput)}&order_uuid=${encodeURIComponent(orderReference)}`;
       const workerRequestUrl = `${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(targetUrl)}&token=${encodeURIComponent(apiToken)}`;
       const response = await fetch(workerRequestUrl, { method: "GET", headers: { "Accept": "application/json", "api-token": apiToken, "Authorization": `Bearer ${apiToken}` } });
       const result = await response.json();
@@ -697,17 +740,17 @@ async function handleServiceOrder(e, catId, catName) {
     }
   }
 
-  currentUser.balanceUSD = Number((currentUser.balanceUSD - price).toFixed(3));
+  currentUser.balanceUSD = Number((currentUser.balanceUSD - totalPrice).toFixed(3));
   currentUser.ordersCount = (currentUser.ordersCount || 0) + 1;
   setDB("users", users);
 
   const orders = getDB("orders", []);
-  orders.unshift({ id: "ord_" + Date.now(), supplierOrderId, categoryName: catName, packageName: product.name, target: targetInput, price, date: new Date().toLocaleString("ar-SY"), status: orderStatus });
+  orders.unshift({ id: "ord_" + Date.now(), supplierOrderId, categoryName: catName, packageName: product.name, qty: orderQty, target: targetInput, price: totalPrice, date: new Date().toLocaleString("ar-SY"), status: orderStatus });
   setDB("orders", orders);
 
   if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> تأكيد الطلب والشحن الفوري`; }
   updateUserUI();
-  alert(`✅ تم تنفيذ طلب الشحن بنجاح!\nالمستلم: ${targetInput}\nالباقة: ${product.name}`);
+  alert(`✅ تم تنفيذ طلب الشحن بنجاح!\nالمستلم: ${targetInput}\nالمنتج: ${product.name}\nالكمية: ${orderQty}`);
   backToCategories();
 }
 
