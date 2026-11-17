@@ -1,4 +1,4 @@
-// --- منطق المتجر، الإشعارات الفورية، التسعير التلقائي، ودعم تغيير المورد ديناميكياً من لوحة الأدمن ---
+// --- منطق المتجر، الإشعارات الفورية، التسعير التلقائي، والربط الديناميكي الكامل مع Parabyte و Shams4Store ---
 
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
@@ -9,30 +9,42 @@ const STORE_EXCHANGE_RATE = 155;
 let currentParentCategory = null;
 
 const SUPPLIER_WORKER_URL = "https://rapid-dew-4b71.fhdsd686.workers.dev/";
-const DEFAULT_SUPPLIER_BASE = "https://api.shams4store.com";
-const SHAMS_DEFAULT_TOKEN = "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427";
+const DEFAULT_SUPPLIER_BASE = "https://parabyte1.com";
+const DEFAULT_SUPPLIER_TOKEN = "";
 
-// دالة ذكية تستخرج إعدادات المورد النشط حالياً من لوحة الأدمن تلقائياً
+// توليد معرف UUIDv4 حقيقي لكل طلب جديد (مطلوب في Parabyte)
+function generateUUIDv4() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+// اكتشاف نوع المورد وتكوين روابطه تلقائياً من لوحة الأدمن
 function getActiveSupplierConfig() {
-  const savedUrl = (getDB("supplier_api_url", "") || `${DEFAULT_SUPPLIER_BASE}/client/api/products`).trim();
-  const savedToken = (getDB("supplier_api_key", "") || SHAMS_DEFAULT_TOKEN).trim();
+  const savedUrl = (getDB("supplier_api_url", "") || `${DEFAULT_SUPPLIER_BASE}/api/v2/products`).trim();
+  const savedToken = (getDB("supplier_api_key", "") || DEFAULT_SUPPLIER_TOKEN).trim();
 
-  // اكتشاف نوع السيرفر تلقائياً (هل هو SMM Panel تقليدي /api/v2 أم نظام متاجر مثل Shams4Store)
-  const isSmmV2 = savedUrl.toLowerCase().includes("/api/v2");
   let baseUrl = DEFAULT_SUPPLIER_BASE;
   try {
-    const parsed = new URL(savedUrl);
-    baseUrl = parsed.origin;
+    baseUrl = new URL(savedUrl).origin;
   } catch (e) {
     baseUrl = DEFAULT_SUPPLIER_BASE;
   }
 
+  const lowerUrl = savedUrl.toLowerCase();
+  const isParabyteMaxStore = lowerUrl.includes("parabyte") || lowerUrl.includes("/api/v2/products");
+
   return {
-    type: isSmmV2 ? "smm_v2" : "shams_style",
+    type: isParabyteMaxStore ? "parabyte_v2" : "shams_style",
     productsUrl: savedUrl,
     baseUrl: baseUrl,
-    orderUrl: isSmmV2 ? savedUrl : `${baseUrl}/client/api/newOrder`,
-    checkUrl: isSmmV2 ? savedUrl : `${baseUrl}/client/api/check`,
+    orderUrl: isParabyteMaxStore ? `${baseUrl}/api/v2/order` : `${baseUrl}/client/api/newOrder`,
+    checkUrl: isParabyteMaxStore ? `${baseUrl}/api/v2/check` : `${baseUrl}/client/api/check`,
     token: savedToken
   };
 }
@@ -128,26 +140,14 @@ function calculateProductFinalPrice(product) {
 
 function isVariableQuantityProduct(product) {
   if (!product) return false;
+  if (product.productType === "package") return false;
+  if (product.qtyValues && Number(product.qtyValues.max) > 1) return true;
   const unitPrice = Number(product.supplierPriceUSD !== undefined ? product.supplierPriceUSD : (product.priceUSD || 0));
   const nameLower = (product.name || "").toLowerCase();
   if (unitPrice > 0 && unitPrice < 0.05 && !nameLower.includes("كازية") && !/\d{2,}/.test(nameLower)) {
     return true;
   }
   return false;
-}
-
-function getProductAppliedOfferInfo(product) {
-  const globalPercent = Number(getDB("global_profit_percent", 0));
-  const categoryOffers = getDB("category_profit_percents", {});
-  if (product.customPercent !== undefined && product.customPercent !== null && product.customPercent !== "") {
-    const p = Number(product.customPercent);
-    return { percent: p, isSpecialOffer: p < globalPercent };
-  }
-  if (product.categoryId && categoryOffers[product.categoryId] !== undefined && categoryOffers[product.categoryId] !== null && categoryOffers[product.categoryId] !== "") {
-    const p = Number(categoryOffers[product.categoryId]);
-    return { percent: p, isSpecialOffer: p < globalPercent };
-  }
-  return { percent: globalPercent, isSpecialOffer: false };
 }
 
 function toggleDisplayCurrency(e) {
@@ -200,34 +200,21 @@ async function syncOrdersWithSupplier() {
   const idsList = pendingOrders.map(o => o.supplierOrderId).join(",");
 
   try {
-    let targetUrl = "";
-    if (supCfg.type === "smm_v2") {
-      targetUrl = `${supCfg.checkUrl}?key=${encodeURIComponent(supCfg.token)}&action=status&orders=${encodeURIComponent(idsList)}`;
-    } else {
-      targetUrl = `${supCfg.checkUrl}?orders=${encodeURIComponent(idsList)}`;
-    }
-
+    const targetUrl = `${supCfg.checkUrl}?orders=${encodeURIComponent(idsList)}`;
     const workerUrl = `${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(targetUrl)}&token=${encodeURIComponent(supCfg.token)}`;
     const res = await fetch(workerUrl, {
       method: "GET",
-      headers: { "Accept": "application/json", "api-token": supCfg.token, "Authorization": `Bearer ${supCfg.token}` }
+      headers: { "Accept": "application/json", "api-token": supCfg.token }
     });
     const data = await res.json();
     const statusMap = {};
-    const items = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : (data.orders ? Object.values(data.orders) : (data.data && typeof data.data === "object" ? Object.values(data.data) : [])));
+    const items = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : (data.orders ? Object.values(data.orders) : []));
     items.forEach(item => {
       if (item && typeof item === "object") {
-        const oid = String(item.order_id || item.id || item.order || "");
+        const oid = String(item.order_id || item.id || "");
         if (oid) statusMap[oid] = item;
       }
     });
-    if (data && typeof data === "object" && !Array.isArray(data)) {
-      Object.keys(data).forEach(k => {
-        if (k.startsWith("ID_") || /^\d+$/.test(k)) {
-          statusMap[k] = typeof data[k] === "object" ? data[k] : { status: data[k] };
-        }
-      });
-    }
 
     let changed = false;
     let totalRefundedUSD = 0;
@@ -238,7 +225,8 @@ async function syncOrdersWithSupplier() {
       const supInfo = statusMap[String(order.supplierOrderId)];
       if (!supInfo) return;
       const rawStatus = String(supInfo.status || supInfo.state || "").toLowerCase();
-      const supReply = supInfo.reply || supInfo.replay || supInfo.note || supInfo.reason || supInfo.message || "";
+      const deliveryCodes = Array.isArray(supInfo.delivery) && supInfo.delivery.length > 0 ? `الكود: ${supInfo.delivery.join(" , ")}` : "";
+      const supReply = deliveryCodes || supInfo.reply || supInfo.replay || supInfo.note || supInfo.reason || supInfo.message || "";
       if (supReply) order.supplierReply = supReply;
 
       if (["accept", "completed", "complete", "success", "done", "مكتمل"].includes(rawStatus)) {
@@ -303,12 +291,12 @@ function showOrderDetailsModal(orderId) {
       <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08); font-size:0.8rem;">
         <span style="color:#94a3b8;">رقم العملية:</span>
         <div style="display:flex; align-items:center; gap:6px;">
-          <code style="color:#38bdf8; background:#0f172a; padding:3px 8px; border-radius:8px;" dir="ltr">${order.supplierOrderId || order.id}</code>
+          <code style="color:#38bdf8; background:#0f172a; padding:3px 8px; border-radius:8px; max-width:160px; overflow:hidden; text-overflow:ellipsis;" dir="ltr">${order.supplierOrderId || order.id}</code>
           <button type="button" onclick="navigator.clipboard.writeText('${order.supplierOrderId || order.id}'); alert('تم نسخ رقم العملية');" style="background:#0284c7; border:none; color:#fff; padding:4px 8px; border-radius:6px; font-size:0.72rem; cursor:pointer;">نسخ</button>
         </div>
       </div>
       ${order.refunded ? `<div style="margin-top:10px; background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; padding:8px 10px; border-radius:10px; font-size:0.78rem; font-weight:700; text-align:center;">✓ تم إرجاع مبلغ (${formatStoreAmount(order.price)}) إلى محفظتك تلقائياً</div>` : ""}
-      ${order.supplierReply ? `<div style="margin-top:10px; background:#0f172a; border-right:3px solid #f59e0b; padding:8px 10px; border-radius:8px; font-size:0.78rem; color:#e2e8f0;"><strong style="color:#f59e0b;">ملاحظة التنفيذ:</strong> ${order.supplierReply}</div>` : ""}
+      ${order.supplierReply ? `<div style="margin-top:10px; background:#0f172a; border-right:3px solid #f59e0b; padding:8px 10px; border-radius:8px; font-size:0.78rem; color:#e2e8f0;"><strong style="color:#f59e0b;">التسليم / الرد:</strong> ${order.supplierReply}</div>` : ""}
     </div>
     <button type="button" onclick="openFeatureModal('orders')" class="btn-send-deposit" style="background:#1e293b; border:1px solid rgba(56,189,248,0.3);"><i class="fa-solid fa-arrow-right"></i> رجوع إلى سجل الطلبات</button>
   `;
@@ -380,7 +368,7 @@ function openFeatureModal(type) {
               <span style="color:#38bdf8; font-weight:800;">${formatStoreAmount(o.price)}</span>
             </div>
             <div style="font-size:0.78rem; color:#94a3b8; margin-top:4px;">القسم: ${o.categoryName} | المستلم: <strong style="color:#fff;">${o.target}</strong></div>
-            ${o.supplierOrderId ? `<div style="font-size:0.74rem; color:#38bdf8; margin-top:3px;">رقم طلب المورد: #${o.supplierOrderId}</div>` : ""}
+            ${o.supplierOrderId ? `<div style="font-size:0.74rem; color:#38bdf8; margin-top:3px;">رقم طلب المورد: #${String(o.supplierOrderId).slice(0, 18)}...</div>` : ""}
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06);">
               <span style="font-size:0.74rem; color:${textCol}; font-weight:700;">الحالة: ${o.status}</span>
               <button type="button" onclick="showOrderDetailsModal('${o.id}')" style="background:#0284c7; border:none; color:#fff; padding:5px 12px; border-radius:8px; font-size:0.75rem; font-weight:800; cursor:pointer;">مواصفات الطلب</button>
@@ -655,8 +643,10 @@ function openCategory(catId, catName, catImage, parentInfo = null) {
   catProducts.forEach(prod => {
     const unitUSD = calculateProductFinalPrice(prod);
     const isVarQty = isVariableQuantityProduct(prod);
+    const minQ = prod.qtyValues?.min || 1;
+    const maxQ = prod.qtyValues?.max || 100000;
     const priceLabel = isVarQty ? `${formatStoreAmount(unitUSD)} للوحدة` : formatStoreAmount(unitUSD);
-    packageOptions += `<option value="${prod.id}" data-price="${unitUSD}" data-varqty="${isVarQty ? '1' : '0'}">${prod.name} (${priceLabel})</option>`;
+    packageOptions += `<option value="${prod.id}" data-price="${unitUSD}" data-varqty="${isVarQty ? '1' : '0'}" data-min="${minQ}" data-max="${maxQ}">${prod.name} (${priceLabel})</option>`;
   });
 
   const fieldCfg = getTargetFieldConfig(catName);
@@ -678,8 +668,8 @@ function openCategory(catId, catName, catImage, parentInfo = null) {
         </div>
       </div>
       <div class="field-block hidden" id="srv-qty-block">
-        <label class="field-label" style="color:#38bdf8;">الكمية المطلوبة (مثال: 40 أو 50 أو أكثر):</label>
-        <input type="number" id="srv-qty-input" class="field-input" min="1" step="1" value="50" placeholder="أدخل الكمية المطلوبة (مثال: 40 أو 50)" oninput="onPackageSelectChange()" dir="ltr">
+        <label class="field-label" id="srv-qty-label" style="color:#38bdf8;">الكمية المطلوبة:</label>
+        <input type="number" id="srv-qty-input" class="field-input" min="1" step="1" value="1" placeholder="أدخل الكمية المطلوبة" oninput="onPackageSelectChange()" dir="ltr">
       </div>
       <div class="order-summary-bar">
         <span>السعر المطلوب:</span>
@@ -695,6 +685,7 @@ function onPackageSelectChange() {
   const display = document.getElementById("srv-price-display");
   const qtyBlock = document.getElementById("srv-qty-block");
   const qtyInput = document.getElementById("srv-qty-input");
+  const qtyLabel = document.getElementById("srv-qty-label");
   if (!select || !display) return;
 
   const opt = select.options[select.selectedIndex];
@@ -706,12 +697,20 @@ function onPackageSelectChange() {
 
   const unitPriceUSD = parseFloat(opt.dataset.price) || 0;
   const isVarQty = opt.dataset.varqty === "1";
+  const minQ = parseInt(opt.dataset.min || "1", 10);
+  const maxQ = parseInt(opt.dataset.max || "100000", 10);
 
   if (qtyBlock) {
     qtyBlock.classList.toggle("hidden", !isVarQty);
+    if (isVarQty && qtyInput) {
+      qtyInput.min = minQ;
+      qtyInput.max = maxQ;
+      if (parseInt(qtyInput.value || "0", 10) < minQ) qtyInput.value = minQ;
+      if (qtyLabel) qtyLabel.innerText = `الكمية المطلوبة (من ${minQ} إلى ${maxQ}):`;
+    }
   }
 
-  const qty = isVarQty ? Math.max(1, parseInt(qtyInput?.value || "1", 10)) : 1;
+  const qty = isVarQty ? Math.max(minQ, parseInt(qtyInput?.value || String(minQ), 10)) : 1;
   const totalUSD = unitPriceUSD * qty;
   display.innerText = formatStoreAmount(totalUSD);
 }
@@ -745,29 +744,56 @@ async function handleServiceOrder(e, catId, catName) {
 
   const supplierProductId = product.supplierId || "";
   const supCfg = getActiveSupplierConfig();
-  const orderReference = "ORD-" + Date.now();
+  const orderUuidV4 = generateUUIDv4();
   let supplierOrderId = "";
   let orderStatus = "مكتمل";
 
   if (supplierProductId) {
     try {
-      let targetUrl = "";
-      if (supCfg.type === "smm_v2") {
-        targetUrl = `${supCfg.orderUrl}?key=${encodeURIComponent(supCfg.token)}&action=add&service=${encodeURIComponent(supplierProductId)}&link=${encodeURIComponent(targetInput)}&quantity=${orderQty}`;
+      let response;
+      if (supCfg.type === "parabyte_v2") {
+        // Parabyte MaxStore API: POST /api/v2/order مع JSON Body و UUIDv4
+        const workerRequestUrl = `${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(supCfg.orderUrl)}&token=${encodeURIComponent(supCfg.token)}`;
+        const paramKey = product.paramField || "player_id";
+        const payload = {
+          product_id: isNaN(Number(supplierProductId)) ? supplierProductId : Number(supplierProductId),
+          qty: orderQty,
+          order_uuid: orderUuidV4,
+          params: {
+            [paramKey]: targetInput
+          }
+        };
+
+        response = await fetch(workerRequestUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "api-token": supCfg.token
+          },
+          body: JSON.stringify(payload)
+        });
       } else {
-        targetUrl = `${supCfg.orderUrl}/${encodeURIComponent(supplierProductId)}/params?qty=${orderQty}&playerId=${encodeURIComponent(targetInput)}&order_uuid=${encodeURIComponent(orderReference)}`;
+        // نظام Shams4Store القديم
+        const targetUrl = `${supCfg.orderUrl}/${encodeURIComponent(supplierProductId)}/params?qty=${orderQty}&playerId=${encodeURIComponent(targetInput)}&order_uuid=${encodeURIComponent(orderUuidV4)}`;
+        const workerRequestUrl = `${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(targetUrl)}&token=${encodeURIComponent(supCfg.token)}`;
+        response = await fetch(workerRequestUrl, {
+          method: "GET",
+          headers: { "Accept": "application/json", "api-token": supCfg.token }
+        });
       }
 
-      const workerRequestUrl = `${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(targetUrl)}&token=${encodeURIComponent(supCfg.token)}`;
-      const response = await fetch(workerRequestUrl, { method: "GET", headers: { "Accept": "application/json", "api-token": supCfg.token, "Authorization": `Bearer ${supCfg.token}` } });
       const result = await response.json();
-      if (!response.ok || result.status === false || result.error || (result.code && result.code !== 200 && result.code !== 0 && !result.data && !result.order)) {
-        alert(`⚠️ لم يتم الشحن من المورد:\n${result.msg || result.message || result.error || "خطأ"}`);
+      const errDetail = result.detail?.message || result.msg || result.message || result.error || "";
+      if (!response.ok || result.detail || result.error || (result.status && String(result.status).toUpperCase() !== "OK" && result.status !== true)) {
+        alert(`⚠️ لم يتم الشحن من المورد:\n${errDetail || JSON.stringify(result)}`);
         if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> تأكيد الطلب والشحن الفوري`; }
         return;
       }
-      supplierOrderId = (result.data && (result.data.order_id || result.data.id)) || result.order_id || result.order || result.id || orderReference;
-      orderStatus = "تم الإرسال للمورد ✓";
+
+      supplierOrderId = (result.data && (result.data.order_id || result.data.id)) || result.order_id || orderUuidV4;
+      const initialSupStatus = String(result.data?.status || "").toLowerCase();
+      orderStatus = (initialSupStatus === "accept") ? "مكتمل ✓" : "تم الإرسال للمورد ✓";
     } catch (err) {
       alert(`⚠️ خطأ في الاتصال: ${err.message}`);
       if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> تأكيد الطلب والشحن الفوري`; }
@@ -785,7 +811,7 @@ async function handleServiceOrder(e, catId, catName) {
 
   if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> تأكيد الطلب والشحن الفوري`; }
   updateUserUI();
-  alert(`✅ تم تنفيذ طلب الشحن بنجاح!\nالمستلم: ${targetInput}\nالمنتج: ${product.name}\nالكمية: ${orderQty}`);
+  alert(`✅ تم إرسال طلب الشحن بنجاح!\nالمستلم: ${targetInput}\nالمنتج: ${product.name}\nالكمية: ${orderQty}`);
   backToCategories();
 }
 
