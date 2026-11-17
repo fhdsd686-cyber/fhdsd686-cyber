@@ -5,7 +5,7 @@ let currentDepositCurrency = "USD";
 let activeDepositMethod = null;
 let depositReceiptBase64 = "";
 let displayCurrency = getDB("display_currency", "USD");
-const STORE_EXCHANGE_RATE = 15000;
+const STORE_EXCHANGE_RATE = 155;
 let currentParentCategory = null;
 
 const SUPPLIER_WORKER_URL = "https://rapid-dew-4b71.fhdsd686.workers.dev/";
@@ -127,7 +127,8 @@ function toggleDisplayCurrency(e) {
 function formatStoreAmount(usdAmount) {
   const val = Number(usdAmount || 0);
   if (displayCurrency === "SYP") {
-    return `${Math.round(val * STORE_EXCHANGE_RATE).toLocaleString("en-US")} ل.س`;
+    const newSyp = (val * STORE_EXCHANGE_RATE).toFixed(2);
+    return `${newSyp} ل.س`;
   }
   return `${val.toFixed(3)} $`;
 }
@@ -494,10 +495,10 @@ function calculateDepositConversion() {
   const rate = getActiveExchangeRate();
   if (currentDepositCurrency === "USD") {
     convertedEl.innerText = `${inputVal.toFixed(2)} $`;
-    rateInfoEl.innerText = `(ما يعادل: ${Math.round(inputVal * rate).toLocaleString("en-US")} ل.س)`;
+    rateInfoEl.innerText = `(ما يعادل: ${(inputVal * rate).toFixed(2)} ل.س)`;
   } else {
     convertedEl.innerText = `${(inputVal / rate).toFixed(3)} $`;
-    rateInfoEl.innerText = `(1$ = ${rate.toLocaleString()} ل.س)`;
+    rateInfoEl.innerText = `(1$ = ${rate} ل.س)`;
   }
 }
 
@@ -522,14 +523,14 @@ function handleDepositSubmit(e) {
   const rate = getActiveExchangeRate();
   const methodName = activeDepositMethod ? activeDepositMethod.name : "شام كاش";
   const amountUSD = currentDepositCurrency === "USD" ? inputVal : Number((inputVal / rate).toFixed(3));
-  const amountSYP = currentDepositCurrency === "SYP" ? inputVal : Math.round(inputVal * rate);
+  const amountSYP = currentDepositCurrency === "SYP" ? inputVal : Number((inputVal * rate).toFixed(2));
   const currentUser = users[0] || { name: "زائر" };
 
   const allRequests = getDB("deposit_requests", []);
   allRequests.unshift({ id: "dep_" + Date.now(), userName: currentUser.name, userEmail: currentUser.email || "", methodName, amountUSD, amountSYP, sender: senderInfo, note, receipt: depositReceiptBase64, date: new Date().toLocaleString("ar-SY"), status: "معلق" });
   setDB("deposit_requests", allRequests);
 
-  const waMsg = encodeURIComponent(`طلب شحن (${methodName}):\nالمستخدم: ${currentUser.name}\nالمبلغ: ${amountUSD} $ (${amountSYP.toLocaleString()} ل.س)\nالمرسل: ${senderInfo}`);
+  const waMsg = encodeURIComponent(`طلب شحن (${methodName}):\nالمستخدم: ${currentUser.name}\nالمبلغ: ${amountUSD} $ (${amountSYP} ل.س)\nالمرسل: ${senderInfo}`);
   alert("✅ تم إرسال طلب الشحن!");
   closeDepositModal();
   window.open(`https://wa.me/963957455972?text=${waMsg}`, "_blank");
@@ -756,14 +757,14 @@ function updateUserUI() {
   const adminLink = document.getElementById("admin-panel-link");
 
   const balUSD = Number(user.balanceUSD || 0);
-  const balSYP = Math.round(balUSD * STORE_EXCHANGE_RATE).toLocaleString("en-US");
+  const balNewSYP = (balUSD * STORE_EXCHANGE_RATE).toFixed(2);
 
   if (headerBal) {
-    const formattedHeader = displayCurrency === "SYP" ? `${balSYP} ل.س` : `${balUSD.toFixed(3)} $`;
+    const formattedHeader = displayCurrency === "SYP" ? `${balNewSYP} ل.س` : `${balUSD.toFixed(3)} $`;
     headerBal.innerHTML = `${formattedHeader} <span onclick="toggleDisplayCurrency(event)" style="background:rgba(56,189,248,0.2); color:#38bdf8; padding:1px 6px; border-radius:8px; font-size:0.72rem; margin-right:4px;">⇄</span>`;
   }
   if (drawerBal) {
-    drawerBal.innerHTML = `<div style="cursor:pointer;" onclick="toggleDisplayCurrency(event)"><div>${displayCurrency === "SYP" ? `${balSYP} ل.س` : `$ ${balUSD.toFixed(3)}`}</div><div style="font-size:0.78rem; color:#94a3b8;">${displayCurrency === "SYP" ? `($ ${balUSD.toFixed(3)})` : `(${balSYP} ل.س)`}</div></div>`;
+    drawerBal.innerHTML = `<div style="cursor:pointer;" onclick="toggleDisplayCurrency(event)"><div>${displayCurrency === "SYP" ? `${balNewSYP} ل.س` : `$ ${balUSD.toFixed(3)}`}</div><div style="font-size:0.78rem; color:#94a3b8;">${displayCurrency === "SYP" ? `($ ${balUSD.toFixed(3)})` : `(${balNewSYP} ل.س)`}</div></div>`;
   }
   if (sideName) sideName.innerText = user.fullname || user.name || "زائر";
   if (sideRank) sideRank.innerText = user.role || "عضو";
