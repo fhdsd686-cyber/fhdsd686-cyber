@@ -4,7 +4,7 @@ let bannerInterval = null;
 let currentDepositCurrency = "USD";
 let activeDepositMethod = null;
 let depositReceiptBase64 = "";
-let displayCurrency = getDB("display_currency", "USD");
+let displayCurrency = (typeof getDB === "function") ? getDB("display_currency", "USD") : "USD";
 const STORE_EXCHANGE_RATE = 155;
 let currentParentCategory = null;
 
@@ -50,13 +50,13 @@ function getActiveSupplierConfig() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  loadSiteSettings();
-  renderCategories();
-  updateUserUI();
-  initSavedTheme();
-  requestBrowserNotificationPermission();
-  checkIncomingNotifications();
-  setInterval(checkIncomingNotifications, 4000);
+  try { loadSiteSettings(); } catch (e) { console.error(e); }
+  try { renderCategories(); } catch (e) { console.error(e); }
+  try { updateUserUI(); } catch (e) { console.error(e); }
+  try { initSavedTheme(); } catch (e) { console.error(e); }
+  try { requestBrowserNotificationPermission(); } catch (e) {}
+  try { checkIncomingNotifications(); } catch (e) {}
+  setInterval(() => { try { checkIncomingNotifications(); } catch (e) {} }, 4000);
   if (typeof checkMaintenanceGate === "function") checkMaintenanceGate();
   if (typeof checkAuthGate === "function") checkAuthGate();
 });
@@ -336,7 +336,7 @@ function openFeatureModal(type) {
     bodyEl.innerHTML = `<div style="background:#0f172a; border:1px solid #38bdf8; padding:14px; border-radius:14px; margin-bottom:14px;"><strong style="color:#fff;">الجلسة الحالية نشطة</strong><div style="font-size:0.78rem; color:#94a3b8; margin-top:4px;">${new Date().toLocaleString("ar-SY")}</div></div><button type="button" onclick="closeFeatureModal(); logoutUser();" class="btn-send-deposit" style="background:#ef4444;">تسجيل الخروج</button>`;
   } else if (type === "favorites") {
     iconEl.className = "fa-solid fa-heart"; iconEl.style.color = "#ef4444"; titleEl.innerText = "الأقسام المفضلة";
-    const categories = getDB("categories", initialCategories);
+    const categories = getDB("categories", typeof initialCategories !== "undefined" ? initialCategories : []);
     const favIds = getDB("user_favorites", ["cat_syriatel", "cat_mtn"]);
     const favCats = categories.filter(c => favIds.includes(c.id));
     bodyEl.innerHTML = favCats.length ? favCats.map(c => `<div style="background:#0f172a; padding:10px 12px; border-radius:14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><strong style="color:#fff;">${c.name}</strong><button onclick="closeFeatureModal(); openCategory('${c.id}', '${c.name.replace(/'/g, "\\'")}', '${c.image}')" style="background:#0284c7; border:none; color:#fff; padding:6px 12px; border-radius:8px;">فتح</button></div>`).join("") : `<p style="text-align:center; color:#94a3b8;">لا توجد عناصر في المفضلة.</p>`;
@@ -473,7 +473,8 @@ function closeDepositModal() {
 function renderDepositMethodsSelector() {
   const selector = document.getElementById("deposit-methods-selector");
   if (!selector) return;
-  const methods = getDB("depositMethods", initialDepositMethods);
+  const fallbackMethods = typeof initialDepositMethods !== "undefined" ? initialDepositMethods : [];
+  const methods = getDB("depositMethods", fallbackMethods);
   if (!Array.isArray(methods) || methods.length === 0) return;
   if (!activeDepositMethod || !methods.find(m => m.id === activeDepositMethod.id)) activeDepositMethod = methods[0];
   const defaultIcon = "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=100&q=80";
@@ -482,7 +483,8 @@ function renderDepositMethodsSelector() {
 }
 
 function selectDepositMethod(methodId) {
-  const found = getDB("depositMethods", initialDepositMethods).find(m => m.id === methodId);
+  const fallbackMethods = typeof initialDepositMethods !== "undefined" ? initialDepositMethods : [];
+  const found = getDB("depositMethods", fallbackMethods).find(m => m.id === methodId);
   if (found) { activeDepositMethod = found; renderDepositMethodsSelector(); }
 }
 
@@ -569,7 +571,8 @@ function handleDepositSubmit(e) {
 function renderCategories(filterText = "") {
   const container = document.getElementById("categories-container");
   if (!container) return;
-  const categories = getDB("categories", initialCategories);
+  const fallbackCats = typeof initialCategories !== "undefined" ? initialCategories : [];
+  const categories = getDB("categories", fallbackCats);
   const mainCategories = Array.isArray(categories) ? categories.filter(c => !c.parentId) : [];
   const filtered = mainCategories.filter(c => c.name && c.name.toLowerCase().includes((filterText || "").toLowerCase()));
   container.innerHTML = "";
@@ -619,7 +622,8 @@ function openCategory(catId, catName, catImage, parentInfo = null) {
   const fallbackImg = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80";
   const defaultImg = (catImage && catImage.trim().length > 10) ? catImage : fallbackImg;
 
-  const subCategories = getDB("categories", initialCategories).filter(c => c.parentId === catId);
+  const fallbackCats = typeof initialCategories !== "undefined" ? initialCategories : [];
+  const subCategories = getDB("categories", fallbackCats).filter(c => c.parentId === catId);
   if (subCategories.length > 0) {
     container.className = "categories-app-grid";
     container.innerHTML = "";
@@ -634,7 +638,8 @@ function openCategory(catId, catName, catImage, parentInfo = null) {
     return;
   }
 
-  const catProducts = getDB("products", initialProducts).filter(p => p.categoryId === catId);
+  const fallbackProds = typeof initialProducts !== "undefined" ? initialProducts : [];
+  const catProducts = getDB("products", fallbackProds).filter(p => p.categoryId === catId);
   if (catProducts.length === 0) {
     container.className = "products-compact-grid";
     container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:30px;"><p style="color:var(--text-muted); margin-bottom:12px;">لا توجد باقات مضافة في هذا القسم حالياً.</p><button class="btn-back-pill" onclick="backToCategories()">الرجوع</button></div>`;
@@ -707,7 +712,12 @@ function onPackageSelectChange(preserveQty = false) {
   const isVarQty = opt.dataset.varqty === "1";
   const minQ = parseFloat(opt.dataset.min || "1");
   const maxQ = parseFloat(opt.dataset.max || "100000");
-  const qtyListRaw = opt.dataset.qtylist ? JSON.parse(decodeURIComponent(opt.dataset.qtylist)) : null;
+  let qtyListRaw = null;
+  try {
+    qtyListRaw = opt.dataset.qtylist ? JSON.parse(decodeURIComponent(opt.dataset.qtylist)) : null;
+  } catch (e) {
+    qtyListRaw = null;
+  }
 
   let currentQty = 1;
 
@@ -747,7 +757,8 @@ async function handleServiceOrder(e, catId, catName) {
   const prodId = document.getElementById("srv-package-select").value;
   if (!prodId) { alert("يرجى اختيار الباقة أولاً"); return; }
 
-  const product = getDB("products", initialProducts).find(p => p.id === prodId);
+  const fallbackProds = typeof initialProducts !== "undefined" ? initialProducts : [];
+  const product = getDB("products", fallbackProds).find(p => p.id === prodId);
   if (!product) return;
 
   const isVarQty = isVariableQuantityProduct(product);
@@ -798,7 +809,6 @@ async function handleServiceOrder(e, catId, catName) {
         body: JSON.stringify(payload)
       });
     } else {
-      // نظام Shams4Store
       const paramKey = product.paramField || "playerId";
       const targetUrl = `${supCfg.orderUrl}/${encodeURIComponent(supplierProductId)}/params?qty=${encodeURIComponent(orderQty)}&${encodeURIComponent(paramKey)}=${encodeURIComponent(targetInput)}&playerId=${encodeURIComponent(targetInput)}&order_uuid=${encodeURIComponent(orderUuidV4)}`;
       const workerRequestUrl = `${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(targetUrl)}&token=${encodeURIComponent(supCfg.token)}`;
@@ -879,15 +889,4 @@ function updateUserUI() {
   const adminLink = document.getElementById("admin-panel-link");
 
   const balUSD = Number(user.balanceUSD || 0);
-  const balNewSYP = (balUSD * STORE_EXCHANGE_RATE).toFixed(2);
-
-  if (headerBal) {
-    const formattedHeader = displayCurrency === "SYP" ? `${balNewSYP} ل.س` : `${balUSD.toFixed(3)} $`;
-    headerBal.innerHTML = `${formattedHeader} <span onclick="toggleDisplayCurrency(event)" style="background:rgba(56,189,248,0.2); color:#38bdf8; padding:1px 6px; border-radius:8px; font-size:0.72rem; margin-right:4px;">⇄</span>`;
-  }
-  if (drawerBal) {
-    drawerBal.innerHTML = `<div style="cursor:pointer;" onclick="toggleDisplayCurrency(event)"><div>${displayCurrency === "SYP" ? `${balNewSYP} ل.س` : `$ ${balUSD.toFixed(3)}`}</div><div style="font-size:0.78rem; color:#94a3b8;">${displayCurrency === "SYP" ? `($ ${balUSD.toFixed(3)})` : `(${balNewSYP} ل.س)`}</div></div>`;
-  }
-  if (sideName) sideName.innerText = user.fullname || user.name || "زائر";
-  if (sideRank) sideRank.innerText = user.role || "عضو";
-  if (headerRank) headerR
+  const balNewSYP = (balU
