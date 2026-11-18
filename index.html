@@ -4,8 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
+  <script>
+    window.onerror = function(msg, url, line) {
+      alert("خطأ برمجي في الملف:\n" + url + "\nالسطر: " + line + "\nالسبب: " + msg);
+    };
+  </script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=129">
+  <link rel="stylesheet" href="style.css?v=151">
 
   <style>
     /* تنسيقات أساسية وإجبارية للنوافذ */
@@ -1130,10 +1135,10 @@
   </script>
 
   <!-- ملفات السكربت -->
-  <script src="data.js?v=129"></script>
-  <script src="auth.js?v=129"></script>
-  <script src="store.js?v=147"></script>
-  <script src="admin.js?v=137"></script>
+  <script src="data.js?v=151"></script>
+  <script src="auth.js?v=151"></script>
+  <script src="store.js?v=151"></script>
+  <script src="admin.js?v=151"></script>
 
   <script>
     window.openAdminPanel = function() {
