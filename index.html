@@ -1037,12 +1037,12 @@
               </summary>
               <div style="margin-top:10px;">
                 <div class="form-group">
-                  <label>رابط API المورد (Parabyte Group):</label>
-                  <input type="text" id="supplier-api-url" placeholder="https://parabyte1.com/api/v2/products" dir="ltr">
+                  <label>رابط API المورد (Shams4Store أو Parabyte):</label>
+                  <input type="text" id="supplier-api-url" placeholder="https://api.shams4store.com/client/api/products" dir="ltr">
                 </div>
                 <div class="form-group">
                   <label>مفتاح المورد (API Key / Token):</label>
-                  <input type="text" id="supplier-api-key" placeholder="أدخل مفتاح API الخاص بحسابك في Parabyte" dir="ltr">
+                  <input type="text" id="supplier-api-key" placeholder="أدخل مفتاح API الخاص بحسابك لدى المورد" dir="ltr">
                 </div>
                 <button type="button" class="btn-submit" style="background:#0284c7;" onclick="fetchFromExternalSupplierAPI()">
                   <i class="fa-solid fa-rotate"></i> حفظ المورد وجلب المنتجات الآن
@@ -1051,7 +1051,7 @@
             </details>
 
             <div class="form-group" style="margin-bottom:0;">
-              <label>2. اكتب اسم التطبيق أو المنتج للبحث في المورد (مثال: PUBG، TikTok، Netflix):</label>
+              <label>2. اكتب اسم التطبيق أو المنتج للبحث في المورد (مثال: PUBG، MTN، Syriatel):</label>
               <div style="display:flex; gap:8px;">
                 <input type="text" id="supplier-search-input" placeholder="اكتب اسم التطبيق هنا..." oninput="searchSupplierCatalog()">
                 <button type="button" class="btn-submit" style="width:auto; padding:0 18px;" onclick="searchSupplierCatalog()">بحث</button>
@@ -1132,7 +1132,7 @@
   <!-- ملفات السكربت -->
   <script src="data.js?v=129"></script>
   <script src="auth.js?v=129"></script>
-  <script src="store.js?v=146"></script>
+  <script src="store.js?v=147"></script>
   <script src="admin.js?v=137"></script>
 
   <script>
@@ -1145,8 +1145,8 @@
       }
       const urlInput = document.getElementById("supplier-api-url");
       const keyInput = document.getElementById("supplier-api-key");
-      if (urlInput) urlInput.value = getDB("supplier_api_url", "https://parabyte1.com/api/v2/products");
-      if (keyInput) keyInput.value = getDB("supplier_api_key", "");
+      if (urlInput) urlInput.value = getDB("supplier_api_url", "https://api.shams4store.com/client/api/products");
+      if (keyInput) keyInput.value = getDB("supplier_api_key", "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427");
 
       if (typeof updateMaintenanceAdminBtn === "function") {
         try { updateMaintenanceAdminBtn(); } catch (e) {}
@@ -1192,12 +1192,13 @@
         } else if (
           nameLower.includes("mtn") ||
           nameLower.includes("سيرياتيل") ||
+          nameLower.includes("syriatel") ||
           nameLower.includes("رصيد") ||
           nameLower.includes("كاش") ||
           nameLower.includes("وحدات")
         ) {
-          if (labelEl.innerText !== "رقم الهاتف") {
-            labelEl.innerText = "رقم الهاتف";
+          if (labelEl.innerText !== "رقم الهاتف (بدون +963)") {
+            labelEl.innerText = "رقم الهاتف (بدون +963)";
             inputEl.placeholder = "أدخل رقم الهاتف المطلوب (مثال: 09xxxxxxxx)";
           }
         } else {
@@ -1213,13 +1214,13 @@
       setInterval(autoUpdateTargetFieldLabel, 400);
     })();
 
-    // دالة حفظ المورد الجديد وجلب منتجاته من Parabyte Group
+    // دالة حفظ المورد وجلب منتجاته مع قوائم الكميات وحقول الإدخال المطلوبة
     window.fetchFromExternalSupplierAPI = async function() {
-      const url = (document.getElementById("supplier-api-url")?.value || "https://parabyte1.com/api/v2/products").trim();
-      const key = (document.getElementById("supplier-api-key")?.value || "").trim();
+      const url = (document.getElementById("supplier-api-url")?.value || "https://api.shams4store.com/client/api/products").trim();
+      const key = (document.getElementById("supplier-api-key")?.value || "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427").trim();
 
       if (!key) {
-        alert("يرجى إدخال مفتاح API Key الخاص بحسابك في Parabyte أولاً!");
+        alert("يرجى إدخال مفتاح API Key أولاً!");
         return;
       }
 
@@ -1227,7 +1228,7 @@
       setDB("supplier_api_key", key);
 
       const infoEl = document.getElementById("supplier-results-info");
-      if (infoEl) infoEl.innerHTML = `<span style="color:#10b981; font-weight:bold;">✅ جاري حفظ المورد الجديد وسحب المنتجات...</span>`;
+      if (infoEl) infoEl.innerHTML = `<span style="color:#10b981; font-weight:bold;">✅ جاري حفظ المورد وسحب المنتجات...</span>`;
 
       try {
         const workerUrl = `https://rapid-dew-4b71.fhdsd686.workers.dev/?url=${encodeURIComponent(url)}&token=${encodeURIComponent(key)}`;
@@ -1236,7 +1237,8 @@
           method: "GET",
           headers: {
             "Accept": "application/json",
-            "api-token": key
+            "api-token": key,
+            "Authorization": `Bearer ${key}`
           }
         });
         const data = await res.json();
@@ -1248,21 +1250,21 @@
         }
 
         const mapped = rawList.map((item, idx) => {
-          let detectedParam = "player_id";
+          let detectedParam = "playerId";
           if (Array.isArray(item.params) && item.params.length > 0) {
-            detectedParam = typeof item.params[0] === "string" ? item.params[0] : (item.params[0].name || item.params[0].key || "player_id");
+            detectedParam = typeof item.params[0] === "string" ? item.params[0] : (item.params[0].name || item.params[0].key || "playerId");
           } else if (item.params && typeof item.params === "object") {
             const keys = Object.keys(item.params);
             if (keys.length > 0) detectedParam = keys[0];
           }
 
           return {
-            supplierId: String(item.id || item.product_id || `SUP-${idx + 1}`),
-            app: item.category_name || item.category?.name || item.category || item.group || "Parabyte",
-            name: item.name || item.title || `منتج #${idx + 1}`,
+            supplierId: String(item.id || item.service || item.product_id || `SUP-${idx + 1}`),
+            app: item.category_name || item.category?.name || item.category || item.group || "المورد",
+            name: item.name || item.title || item.service_name || `منتج #${idx + 1}`,
             supplierPriceUSD: parseFloat(item.price || item.rate || item.cost || 0),
             productType: item.product_type || "package",
-            qtyValues: item.qty_values || null,
+            qtyValues: item.qty_values || item.quantities || null,
             paramField: detectedParam,
             image: item.image || item.icon || item.category?.image || "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80",
             desc: item.desc || item.description || item.notes || ""
@@ -1270,7 +1272,7 @@
         });
 
         setDB("supplier_catalog", mapped);
-        alert(`🎉 تم تفعيل المورد الجديد وجلب ${mapped.length} منتج بنجاح! جميع الطلبات الجديدة ستُرسل إلى Parabyte تلقائياً.`);
+        alert(`🎉 تم تفعيل المورد وجلب ${mapped.length} منتج بنجاح مع قوائم الكميات وحقولها!`);
         if (typeof searchSupplierCatalog === "function") searchSupplierCatalog();
       } catch (err) {
         alert("خطأ في الاتصال: " + err.message);
