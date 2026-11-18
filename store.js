@@ -336,8 +336,10 @@ function openFeatureModal(type) {
     bodyEl.innerHTML = `<div style="background:#0f172a; border:1px solid #38bdf8; padding:14px; border-radius:14px; margin-bottom:14px;"><strong style="color:#fff;">الجلسة الحالية نشطة</strong><div style="font-size:0.78rem; color:#94a3b8; margin-top:4px;">${new Date().toLocaleString("ar-SY")}</div></div><button type="button" onclick="closeFeatureModal(); logoutUser();" class="btn-send-deposit" style="background:#ef4444;">تسجيل الخروج</button>`;
   } else if (type === "favorites") {
     iconEl.className = "fa-solid fa-heart"; iconEl.style.color = "#ef4444"; titleEl.innerText = "الأقسام المفضلة";
-    const categories = getDB("categories", typeof initialCategories !== "undefined" ? initialCategories : []);
-    const favIds = getDB("user_favorites", ["cat_syriatel", "cat_mtn"]);
+    const fallbackCats = typeof initialCategories !== "undefined" ? initialCategories : [];
+    let categories = getDB("categories", fallbackCats);
+    if (!Array.isArray(categories) || categories.length === 0) categories = fallbackCats;
+    const favIds = getDB("user_favorites", ["cat_syria_telecom", "cat_games"]);
     const favCats = categories.filter(c => favIds.includes(c.id));
     bodyEl.innerHTML = favCats.length ? favCats.map(c => `<div style="background:#0f172a; padding:10px 12px; border-radius:14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><strong style="color:#fff;">${c.name}</strong><button onclick="closeFeatureModal(); openCategory('${c.id}', '${c.name.replace(/'/g, "\\'")}', '${c.image}')" style="background:#0284c7; border:none; color:#fff; padding:6px 12px; border-radius:8px;">فتح</button></div>`).join("") : `<p style="text-align:center; color:#94a3b8;">لا توجد عناصر في المفضلة.</p>`;
   } else if (type === "notifications") {
@@ -474,8 +476,9 @@ function renderDepositMethodsSelector() {
   const selector = document.getElementById("deposit-methods-selector");
   if (!selector) return;
   const fallbackMethods = typeof initialDepositMethods !== "undefined" ? initialDepositMethods : [];
-  const methods = getDB("depositMethods", fallbackMethods);
-  if (!Array.isArray(methods) || methods.length === 0) return;
+  let methods = getDB("depositMethods", fallbackMethods);
+  if (!Array.isArray(methods) || methods.length === 0) methods = fallbackMethods;
+  if (methods.length === 0) return;
   if (!activeDepositMethod || !methods.find(m => m.id === activeDepositMethod.id)) activeDepositMethod = methods[0];
   const defaultIcon = "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=100&q=80";
   selector.innerHTML = methods.map(m => `<button type="button" class="method-pill-btn ${activeDepositMethod.id === m.id ? 'active' : ''}" onclick="selectDepositMethod('${m.id}')"><img src="${m.icon || defaultIcon}" style="width:20px;height:20px;border-radius:6px;"><span>${m.name}</span></button>`).join("");
@@ -484,7 +487,9 @@ function renderDepositMethodsSelector() {
 
 function selectDepositMethod(methodId) {
   const fallbackMethods = typeof initialDepositMethods !== "undefined" ? initialDepositMethods : [];
-  const found = getDB("depositMethods", fallbackMethods).find(m => m.id === methodId);
+  let methods = getDB("depositMethods", fallbackMethods);
+  if (!Array.isArray(methods) || methods.length === 0) methods = fallbackMethods;
+  const found = methods.find(m => m.id === methodId);
   if (found) { activeDepositMethod = found; renderDepositMethodsSelector(); }
 }
 
@@ -572,8 +577,11 @@ function renderCategories(filterText = "") {
   const container = document.getElementById("categories-container");
   if (!container) return;
   const fallbackCats = typeof initialCategories !== "undefined" ? initialCategories : [];
-  const categories = getDB("categories", fallbackCats);
-  const mainCategories = Array.isArray(categories) ? categories.filter(c => !c.parentId) : [];
+  let categories = getDB("categories", fallbackCats);
+  if (!Array.isArray(categories) || categories.length === 0) {
+    categories = fallbackCats;
+  }
+  const mainCategories = categories.filter(c => !c.parentId);
   const filtered = mainCategories.filter(c => c.name && c.name.toLowerCase().includes((filterText || "").toLowerCase()));
   container.innerHTML = "";
   const defaultImg = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80";
@@ -623,7 +631,9 @@ function openCategory(catId, catName, catImage, parentInfo = null) {
   const defaultImg = (catImage && catImage.trim().length > 10) ? catImage : fallbackImg;
 
   const fallbackCats = typeof initialCategories !== "undefined" ? initialCategories : [];
-  const subCategories = getDB("categories", fallbackCats).filter(c => c.parentId === catId);
+  let allCats = getDB("categories", fallbackCats);
+  if (!Array.isArray(allCats) || allCats.length === 0) allCats = fallbackCats;
+  const subCategories = allCats.filter(c => c.parentId === catId);
   if (subCategories.length > 0) {
     container.className = "categories-app-grid";
     container.innerHTML = "";
@@ -881,12 +891,3 @@ function updateUserUI() {
   const user = hasUser ? users[0] : { name: "زائر", balanceUSD: 0, role: "عضو", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80" };
 
   const headerBal = document.getElementById("header-balance-usd");
-  const drawerBal = document.getElementById("drawer-balance-text");
-  const sideName = document.getElementById("side-user-name");
-  const drawerAvatar = document.getElementById("drawer-avatar");
-  const sideRank = document.getElementById("side-user-rank");
-  const headerRank = document.getElementById("header-user-rank");
-  const adminLink = document.getElementById("admin-panel-link");
-
-  const balUSD = Number(user.balanceUSD || 0);
-  const balNewSYP = (balU
