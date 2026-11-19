@@ -4,16 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
-  <script>
-    window.onerror = function(msg, url, line) {
-      alert("خطأ برمجي في الملف:\n" + url + "\nالسطر: " + line + "\nالسبب: " + msg);
-    };
-  </script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=151">
+  <link rel="stylesheet" href="style.css?v=155">
 
   <style>
-    /* تنسيقات أساسية وإجبارية للنوافذ */
     .hidden,
     #admin-wrapper.hidden,
     #deposit-modal.hidden,
@@ -622,7 +616,7 @@
   <!-- الحاوية الرئيسية للمتجر -->
   <main class="store-container">
     
-    <!-- البانر الترويجي المتعدد -->
+    <!-- البانر الترويجي -->
     <div class="banner-card">
       <img src="https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80" alt="Banner">
       <div class="banner-dots">
@@ -637,7 +631,7 @@
       <input type="text" id="category-search" placeholder="ابحث عن قسم..." oninput="filterCategories()">
     </div>
 
-    <!-- شبكة الأقسام بنمط 3 أعمدة -->
+    <!-- شبكة الأقسام -->
     <div class="categories-app-grid" id="categories-container"></div>
 
     <!-- عرض المنتجات عند اختيار قسم -->
@@ -758,7 +752,7 @@
     </div>
   </div>
 
-  <!-- نافذة وضع الصيانة للزوار -->
+  <!-- نافذة وضع الصيانة -->
   <div id="maintenance-modal" class="modal-overlay hidden">
     <div class="maintenance-card">
       <i class="fa-solid fa-screwdriver-wrench maintenance-icon"></i>
@@ -773,7 +767,7 @@
     </div>
   </div>
 
-  <!-- نافذة الإيداع التفاعلية الديناميكية + عرض الباركود -->
+  <!-- نافذة الإيداع -->
   <div id="deposit-modal" class="modal-overlay hidden">
     <div class="shawy-deposit-card">
       <button class="auth-top-close" onclick="closeDepositModal()">✕</button>
@@ -918,7 +912,7 @@
     </div>
   </div>
 
-  <!-- نافذة تأكيد تسجيل الخروج المنبثقة -->
+  <!-- نافذة تأكيد تسجيل الخروج -->
   <div id="logout-confirm-modal" class="modal-overlay hidden">
     <div class="shawy-logout-card">
       <div class="logout-icon-circle">
@@ -977,13 +971,12 @@
           </div>
         </section>
 
-        <!-- قسم التسعير والعروض -->
         <section id="sec-pricing-offers" class="hidden">
           <h4>نظام التسعير التلقائي والعروض (سعر المورد + النسبة %)</h4>
           <div style="background:#0c1527; padding:16px; border-radius:14px; margin-bottom:16px; border:1px solid rgba(56,189,248,0.25);">
             <div class="form-group">
               <label>النسبة العامة لجميع التطبيقات (%):</label>
-              <input type="number" step="any" id="global-profit-percent" placeholder="مثال: 10 (يعني زيادة 10% على سعر المورد)">
+              <input type="number" step="any" id="global-profit-percent" placeholder="مثال: 10">
             </div>
             <button type="button" class="btn-submit" onclick="saveGlobalProfitPercent()">
               <i class="fa-solid fa-percent"></i> حفظ وتطبيق النسبة العامة على كل المتجر
@@ -1002,12 +995,12 @@
               <input type="text" id="setting-site-name" placeholder="Mohannad kard" required>
             </div>
             <div class="form-group">
-              <label>رابط لوجو الموقع (الصورة الدائرية بالهيدر):</label>
+              <label>رابط لوجو الموقع:</label>
               <input type="text" id="setting-site-logo" placeholder="https://i.postimg.cc/..." required>
             </div>
             <div class="form-group">
-              <label>روابط صور الإعلانات (ضع كل رابط إعلان في سطر):</label>
-              <textarea id="setting-site-banner" rows="3" placeholder="https://i.postimg.cc/رابط1&#10;https://i.postimg.cc/رابط2"></textarea>
+              <label>روابط صور الإعلانات (كل رابط في سطر):</label>
+              <textarea id="setting-site-banner" rows="3"></textarea>
             </div>
             <button type="submit" class="btn-submit">حفظ التغييرات</button>
           </form>
@@ -1026,9 +1019,9 @@
           <table class="data-table"><thead><tr><th>الاسم</th><th>القسم</th><th>المورد / النهائي</th><th>إجراء</th></tr></thead><tbody id="admin-products-table"></tbody></table>
         </section>
 
-        <!-- قسم جلب المنتجات وتغيير المورد بالكامل -->
+        <!-- قسم جلب المنتجات وتغيير المورد الشامل -->
         <section id="sec-import-supplier" class="hidden">
-          <h4><i class="fa-solid fa-cloud-arrow-down" style="color:#38bdf8;"></i> جلب المنتجات وإعدادات المورد</h4>
+          <h4><i class="fa-solid fa-cloud-arrow-down" style="color:#38bdf8;"></i> جلب المنتجات وربط أي مورد خارجي</h4>
 
           <div style="background:#0c1527; padding:16px; border-radius:14px; margin-bottom:16px; border:1px solid rgba(56,189,248,0.25);">
             <div class="form-group">
@@ -1038,12 +1031,12 @@
 
             <details open style="margin-bottom:12px; background:#070e1a; padding:12px; border-radius:10px; border:1px solid rgba(56,189,248,0.2);">
               <summary style="cursor:pointer; font-size:0.84rem; color:#38bdf8; font-weight:800;">
-                <i class="fa-solid fa-link"></i> تغيير أو ربط المورد الخارجي (API URL + Key)
+                <i class="fa-solid fa-link"></i> تغيير أو ربط أي مورد خارجي (Shams / Parabyte / SMM Panel / REST)
               </summary>
               <div style="margin-top:10px;">
                 <div class="form-group">
-                  <label>رابط API المورد (Shams4Store أو Parabyte):</label>
-                  <input type="text" id="supplier-api-url" placeholder="https://api.shams4store.com/client/api/products" dir="ltr">
+                  <label>رابط API المورد:</label>
+                  <input type="text" id="supplier-api-url" placeholder="ضع رابط API المورد هنا..." dir="ltr">
                 </div>
                 <div class="form-group">
                   <label>مفتاح المورد (API Key / Token):</label>
@@ -1056,7 +1049,7 @@
             </details>
 
             <div class="form-group" style="margin-bottom:0;">
-              <label>2. اكتب اسم التطبيق أو المنتج للبحث في المورد (مثال: PUBG، MTN، Syriatel):</label>
+              <label>2. اكتب اسم التطبيق أو المنتج للبحث في المورد:</label>
               <div style="display:flex; gap:8px;">
                 <input type="text" id="supplier-search-input" placeholder="اكتب اسم التطبيق هنا..." oninput="searchSupplierCatalog()">
                 <button type="button" class="btn-submit" style="width:auto; padding:0 18px;" onclick="searchSupplierCatalog()">بحث</button>
@@ -1068,20 +1061,19 @@
           <div id="supplier-results-container" style="display:flex; flex-direction:column; gap:10px;"></div>
         </section>
 
-        <!-- قسم إضافة منتج -->
         <section id="sec-add-product" class="hidden" style="padding-bottom: 100px;">
-          <h4>إضافة منتج (حساب السعر تلقائياً من سعر المورد + النسبة)</h4>
+          <h4>إضافة منتج</h4>
           <form onsubmit="handleAddProduct(event)">
             <div class="form-group"><label>القسم:</label><select id="prod-category-select"></select></div>
             <div class="form-group"><label>الاسم:</label><input type="text" id="prod-name" required></div>
-            <div class="form-group"><label>سعر المورد الأساسي ($):</label><input type="number" step="any" id="prod-price-usd" required placeholder="مثال: 10"></div>
+            <div class="form-group"><label>سعر المورد الأساسي ($):</label><input type="number" step="any" id="prod-price-usd" required></div>
             <button type="submit" class="btn-submit" style="margin: 12px 0; background: #10b981;">
               <i class="fa-solid fa-check"></i> حفظ المنتج
             </button>
-            <div class="form-group"><label>نسبة عرض خاصة لهذا المنتج فقط % (اختياري):</label><input type="number" step="any" id="prod-custom-percent" placeholder="مثال: 2"></div>
-            <div class="form-group"><label>السعر (ل.س - اختياري):</label><input type="number" id="prod-price-syp" placeholder="يحسب تلقائياً"></div>
+            <div class="form-group"><label>نسبة عرض خاصة لهذا المنتج فقط % (اختياري):</label><input type="number" step="any" id="prod-custom-percent"></div>
+            <div class="form-group"><label>السعر (ل.س - اختياري):</label><input type="number" id="prod-price-syp"></div>
             <div class="form-group"><label>الوصف (اختياري):</label><textarea id="prod-desc"></textarea></div>
-            <div class="form-group"><label>الصورة (اختياري):</label><input type="text" id="prod-image" placeholder="رابط الصورة (اختياري)"></div>
+            <div class="form-group"><label>الصورة (اختياري):</label><input type="text" id="prod-image"></div>
           </form>
         </section>
 
@@ -1093,7 +1085,7 @@
           <form onsubmit="handleAddCategory(event)">
             <div class="form-group"><label>الاسم:</label><input type="text" id="cat-name" required></div>
             <div class="form-group"><label>النوع:</label><select id="cat-parent-select"></select></div>
-            <div class="form-group"><label>الصورة:</label><input type="text" id="cat-image" placeholder="رابط الصورة (اختياري)"></div>
+            <div class="form-group"><label>الصورة:</label><input type="text" id="cat-image"></div>
             <button type="submit" class="btn-submit">إضافة قسم</button>
           </form>
         </section>
@@ -1102,12 +1094,12 @@
         <section id="sec-add-deposit-method" class="hidden">
           <h4>إضافة طريقة إيداع جديدة</h4>
           <form onsubmit="handleAddDepositMethod(event)">
-            <div class="form-group"><label>اسم الطريقة (مثال: شام كاش، USDT):</label><input type="text" id="method-name" required></div>
-            <div class="form-group"><label>رقم الحساب / عنوان المحفظة:</label><input type="text" id="method-account" required></div>
+            <div class="form-group"><label>اسم الطريقة:</label><input type="text" id="method-name" required></div>
+            <div class="form-group"><label>رقم الحساب / المحفظة:</label><input type="text" id="method-account" required></div>
             <div class="form-group"><label>العملة الأساسية:</label><input type="text" id="method-currency" required placeholder="USD"></div>
             <div class="form-group"><label>سعر الصرف (كم يساوي 1$):</label><input type="number" id="method-rate" required placeholder="155"></div>
-            <div class="form-group"><label>رابط صورة الباركود QR (اختياري):</label><input type="text" id="method-qr" placeholder="https://i.postimg.cc/... أو اتركه فارغاً"></div>
-            <div class="form-group"><label>رابط أيقونة الوسيلة (اختياري):</label><input type="text" id="method-icon" placeholder="رابط الأيقونة (اختياري)"></div>
+            <div class="form-group"><label>رابط صورة الباركود QR (اختياري):</label><input type="text" id="method-qr"></div>
+            <div class="form-group"><label>رابط أيقونة الوسيلة (اختياري):</label><input type="text" id="method-icon"></div>
             <button type="submit" class="btn-submit">حفظ الطريقة</button>
           </form>
         </section>
@@ -1135,10 +1127,10 @@
   </script>
 
   <!-- ملفات السكربت -->
-  <script src="data.js?v=151"></script>
-  <script src="auth.js?v=151"></script>
-  <script src="store.js?v=151"></script>
-  <script src="admin.js?v=151"></script>
+  <script src="data.js?v=155"></script>
+  <script src="auth.js?v=155"></script>
+  <script src="store.js?v=155"></script>
+  <script src="admin.js?v=155"></script>
 
   <script>
     window.openAdminPanel = function() {
@@ -1219,13 +1211,13 @@
       setInterval(autoUpdateTargetFieldLabel, 400);
     })();
 
-    // دالة حفظ المورد وجلب منتجاته مع قوائم الكميات وحقول الإدخال المطلوبة
+    // دالة حفظ وجلب المنتجات من أي مورد تلقائياً (Shams / Parabyte / SMM Panel / REST)
     window.fetchFromExternalSupplierAPI = async function() {
       const url = (document.getElementById("supplier-api-url")?.value || "https://api.shams4store.com/client/api/products").trim();
       const key = (document.getElementById("supplier-api-key")?.value || "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427").trim();
 
-      if (!key) {
-        alert("يرجى إدخال مفتاح API Key أولاً!");
+      if (!url || !key) {
+        alert("يرجى إدخال رابط API ومفتاح API Key أولاً!");
         return;
       }
 
@@ -1233,11 +1225,19 @@
       setDB("supplier_api_key", key);
 
       const infoEl = document.getElementById("supplier-results-info");
-      if (infoEl) infoEl.innerHTML = `<span style="color:#10b981; font-weight:bold;">✅ جاري حفظ المورد وسحب المنتجات...</span>`;
+      if (infoEl) infoEl.innerHTML = `<span style="color:#10b981; font-weight:bold;">✅ جاري التعرف على المورد وسحب المنتجات...</span>`;
 
       try {
-        const workerUrl = `https://rapid-dew-4b71.fhdsd686.workers.dev/?url=${encodeURIComponent(url)}&token=${encodeURIComponent(key)}`;
+        const adapter = (typeof detectSupplierAdapter === "function")
+          ? detectSupplierAdapter(url, key)
+          : { type: "shams_style", productsUrl: url, token: key };
 
+        let fetchTargetUrl = url;
+        if (adapter.type === "smm_panel") {
+          fetchTargetUrl = `${adapter.productsUrl}?key=${encodeURIComponent(key)}&action=services`;
+        }
+
+        const workerUrl = `https://rapid-dew-4b71.fhdsd686.workers.dev/?url=${encodeURIComponent(fetchTargetUrl)}&token=${encodeURIComponent(key)}`;
         const res = await fetch(workerUrl, {
           method: "GET",
           headers: {
@@ -1247,37 +1247,59 @@
           }
         });
         const data = await res.json();
-        const rawList = Array.isArray(data) ? data : (data.products || data.services || (data.data && Array.isArray(data.data) ? data.data : (data.data?.products || data.data?.data || [])));
+        const rawList = Array.isArray(data)
+          ? data
+          : (data.products || data.services || (data.data && Array.isArray(data.data) ? data.data : (data.data?.products || data.data?.data || [])));
 
-        if (!rawList || rawList.length === 0) {
+        if (!Array.isArray(rawList) || rawList.length === 0) {
           alert("تم حفظ بيانات المورد، ولكن رد السيرفر لم يُرجع منتجات: " + JSON.stringify(data).slice(0, 300));
           return;
         }
 
         const mapped = rawList.map((item, idx) => {
           let detectedParam = "playerId";
-          if (Array.isArray(item.params) && item.params.length > 0) {
-            detectedParam = typeof item.params[0] === "string" ? item.params[0] : (item.params[0].name || item.params[0].key || "playerId");
+          let hasNoParams = false;
+
+          if (Array.isArray(item.params)) {
+            if (item.params.length === 0) {
+              hasNoParams = true;
+            } else {
+              detectedParam = typeof item.params[0] === "string" ? item.params[0] : (item.params[0].name || item.params[0].key || "playerId");
+            }
           } else if (item.params && typeof item.params === "object") {
             const keys = Object.keys(item.params);
-            if (keys.length > 0) detectedParam = keys[0];
+            if (keys.length === 0) hasNoParams = true;
+            else detectedParam = keys[0];
+          } else if (adapter.type === "smm_panel") {
+            detectedParam = "link";
           }
+
+          let rawPrice = parseFloat(item.price || item.rate || item.cost || 0);
+          if (adapter.type === "smm_panel" && Number(item.max || 0) > 10) {
+            rawPrice = Number((rawPrice / 1000).toFixed(6));
+          }
+
+          const qtyInfo = item.qty_values || item.quantities || (adapter.type === "smm_panel" && item.min ? { min: Number(item.min), max: Number(item.max || 100000) } : null);
 
           return {
             supplierId: String(item.id || item.service || item.product_id || `SUP-${idx + 1}`),
+            supplierApiUrl: url,
+            supplierApiKey: key,
+            supplierApiType: adapter.type,
             app: item.category_name || item.category?.name || item.category || item.group || "المورد",
             name: item.name || item.title || item.service_name || `منتج #${idx + 1}`,
-            supplierPriceUSD: parseFloat(item.price || item.rate || item.cost || 0),
-            productType: item.product_type || "package",
-            qtyValues: item.qty_values || item.quantities || null,
+            supplierPriceUSD: rawPrice,
+            productType: (adapter.type === "smm_panel" || qtyInfo) ? "variable" : (item.product_type || "package"),
+            qtyValues: qtyInfo,
             paramField: detectedParam,
+            noParams: hasNoParams,
             image: item.image || item.icon || item.category?.image || "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80",
             desc: item.desc || item.description || item.notes || ""
           };
         });
 
         setDB("supplier_catalog", mapped);
-        alert(`🎉 تم تفعيل المورد وجلب ${mapped.length} منتج بنجاح مع قوائم الكميات وحقولها!`);
+        alert(`🎉 تم تفعيل المورد (${adapter.type}) وجلب ${mapped.length} منتج بنجاح!`);
         if (typeof searchSupplierCatalog === "function") searchSupplierCatalog();
       } catch (err) {
         alert("خطأ في الاتصال: " + err.message);
