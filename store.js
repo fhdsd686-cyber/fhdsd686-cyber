@@ -1,4 +1,4 @@
-// --- store.js (النسخة الكاملة: حرية تعديل الكمية + عداد الطلبات اليومية + حذف تلقائي كل 24 ساعة) ---
+// --- store.js (النسخة الكاملة: حساب الأرباح + حرية تعديل الكمية + حذف تلقائي كل 24 ساعة) ---
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
 let activeDepositMethod = null;
@@ -36,7 +36,6 @@ function getActiveSupplierConfig() {
   };
 }
 
-// تنظيف الطلبات التي مرّ عليها أكثر من 24 ساعة تلقائياً
 function cleanupExpiredOrders24h() {
   const orders = getDB("orders", []);
   if (!Array.isArray(orders) || orders.length === 0) return [];
@@ -52,7 +51,6 @@ function cleanupExpiredOrders24h() {
   return freshOrders;
 }
 
-// حساب إحصائيات الطلبات اليومية للمستخدم الحالي (آخر 24 ساعة)
 function getUserDailyOrdersStats(user) {
   const freshOrders = cleanupExpiredOrders24h();
   if (!user || !user.name || user.name === "زائر") {
@@ -62,7 +60,6 @@ function getUserDailyOrdersStats(user) {
   const uEmail = (user.email || "").toLowerCase().trim();
 
   const userOrders = freshOrders.filter(o => {
-    // إذا كان الطلب قديماً بدون حقل userName نعرضه للمستخدم الحالي، وإلا نطابق الاسم أو الإيميل
     if (!o.userName && !o.userEmail) return true;
     const oName = (o.userName || "").toLowerCase().trim();
     const oEmail = (o.userEmail || "").toLowerCase().trim();
@@ -452,7 +449,6 @@ function onPackageSelectChange(preserveQty = false) {
         if (qtyLabel) qtyLabel.innerText = "اختر الكمية المعتمدة:";
         qty = parseFloat(document.getElementById("srv-qty-select")?.value || String(qtyList[0]));
       } else {
-        // حرية كاملة للمستخدم بمسح الرقم وكتابة أي كمية يريدها دون مقاطعة أثناء الكتابة
         if (!preserveQty || !document.getElementById("srv-qty-input")) {
           qtyWrap.innerHTML = `<input type="number" id="srv-qty-input" class="field-input" min="${minQ}" max="${maxQ}" step="any" value="${minQ}" placeholder="أدخل الكمية (أقل كمية ${minQ})" oninput="onPackageSelectChange(true)" dir="ltr">`;
         }
@@ -532,6 +528,10 @@ async function handleServiceOrder(e, catId, catName) {
   users[0].balanceUSD = Number((users[0].balanceUSD - totalPrice).toFixed(3));
   setDB("users", users);
 
+  const unitSupplierCost = Number(product.supplierPriceUSD !== undefined ? product.supplierPriceUSD : (product.priceUSD || 0));
+  const totalSupplierCost = Number((unitSupplierCost * orderQty).toFixed(4));
+  const orderProfitUSD = Number(Math.max(0, totalPrice - totalSupplierCost).toFixed(4));
+
   const nowTs = Date.now();
   const orders = cleanupExpiredOrders24h();
   orders.unshift({
@@ -545,6 +545,8 @@ async function handleServiceOrder(e, catId, catName) {
     qty: orderQty,
     target: targetInput,
     price: totalPrice,
+    supplierCost: totalSupplierCost,
+    profitUSD: orderProfitUSD,
     date: new Date(nowTs).toLocaleString("ar-SY"),
     status: orderStatus
   });
