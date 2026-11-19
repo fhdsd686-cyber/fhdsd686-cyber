@@ -1,5 +1,5 @@
 // ============================================================================
-// لوحة تحكم الإدارة الكاملة + إشعار واتساب التلقائي للزبون + حساب الأرباح (admin.js - v142)
+// لوحة تحكم الإدارة الكاملة + تغيير رقم الواتساب + إشعار واتساب التلقائي (admin.js - v143)
 // ============================================================================
 
 const ADMIN_SECTIONS = [
@@ -219,15 +219,18 @@ function recalculateAllProductsPrices() {
 function loadSiteSettingsIntoForm() {
   const settings = getDB("site_settings", {
     siteName: "Mohannad kard",
+    whatsapp: "0957455972",
     logo: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80",
     banners: ["https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80"]
   });
 
   const nameEl = document.getElementById("setting-site-name");
+  const waEl = document.getElementById("setting-whatsapp-number");
   const logoEl = document.getElementById("setting-site-logo");
   const bannerEl = document.getElementById("setting-site-banner");
 
   if (nameEl) nameEl.value = settings.siteName || settings.name || "Mohannad kard";
+  if (waEl) waEl.value = settings.whatsapp || getDB("admin_whatsapp", "0957455972");
   if (logoEl) logoEl.value = settings.logo || "";
   if (bannerEl) {
     const arr = Array.isArray(settings.banners) ? settings.banners : (settings.banner ? [settings.banner] : []);
@@ -238,13 +241,15 @@ function loadSiteSettingsIntoForm() {
 function handleSiteSettingsUpdate(e) {
   e.preventDefault();
   const siteName = document.getElementById("setting-site-name")?.value.trim() || "Mohannad kard";
+  const whatsapp = document.getElementById("setting-whatsapp-number")?.value.trim() || "0957455972";
   const logo = document.getElementById("setting-site-logo")?.value.trim();
   const bannerRaw = document.getElementById("setting-site-banner")?.value || "";
   const banners = bannerRaw.split("\n").map(s => s.trim()).filter(Boolean);
 
-  setDB("site_settings", { name: siteName, siteName, logo, banner: banners[0] || "", banners });
+  setDB("admin_whatsapp", whatsapp);
+  setDB("site_settings", { name: siteName, siteName, whatsapp, logo, banner: banners[0] || "", banners });
   if (typeof loadSiteSettings === "function") loadSiteSettings();
-  alert("تم حفظ إعدادات وهوية المتجر ومزامنتها!");
+  alert("✅ تم حفظ إعدادات المتجر ورقم الواتساب الجديد بنجاح!");
 }
 
 function creditUserEverywhere(targetName, targetEmail, deltaUSD, exactBalance = null) {
@@ -352,7 +357,7 @@ function renderAdminUsers() {
           <strong>${u.fullname || u.name} (${u.role || "عضو"})</strong>
           <span style="color:#38bdf8; font-weight:800;">$${bal}</span>
         </div>
-        <div style="font-size:0.78rem; color:#94a3b8; margin-bottom:8px;">${u.name} | ${u.email || ""}</div>
+        <div style="font-size:0.78rem; color:#94a3b8; margin-bottom:8px;">${u.name} | ${u.email || ""} ${u.phone ? `| 📱 ${u.phone}` : ""}</div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           <button type="button" class="btn-submit" style="width:auto; padding:5px 10px; font-size:0.75rem; margin:0;" onclick="adminAdjustUserBalance('${key}', 1)">+1$</button>
           <button type="button" class="btn-submit" style="width:auto; padding:5px 10px; font-size:0.75rem; margin:0; background:#0284c7;" onclick="adminPromptCustomBalance('${key}')">تعديل الرصيد</button>
@@ -658,10 +663,6 @@ function deleteDepositMethod(id) {
   setDB("depositMethods", getDB("depositMethods", []).filter(m => m.id !== id));
   renderAdminDepositMethods();
 }
-
-// ============================================================================
-// 9. نظام جلب المنتجات الشامل من أي مورد (Shams / Parabyte / SMM / REST)
-// ============================================================================
 
 const ADMIN_SHAMS_URL = "https://api.shams4store.com/client/api/products";
 const ADMIN_SHAMS_TOKEN = "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427";
