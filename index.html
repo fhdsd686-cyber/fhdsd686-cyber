@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=157">
+  <link rel="stylesheet" href="style.css?v=158">
 
   <style>
     .hidden,
@@ -1133,42 +1133,12 @@
   </script>
 
   <!-- ملفات السكربت -->
-  <script src="data.js?v=157"></script>
-  <script src="auth.js?v=157"></script>
-  <script src="store.js?v=157"></script>
-  <script src="admin.js?v=157"></script>
+  <script src="data.js?v=158"></script>
+  <script src="auth.js?v=158"></script>
+  <script src="store.js?v=158"></script>
+  <script src="admin.js?v=158"></script>
 
   <script>
-    window.openAdminPanel = function() {
-      if (typeof toggleSidebar === "function") toggleSidebar(false);
-      const adminWrap = document.getElementById("admin-wrapper");
-      if (adminWrap) {
-        adminWrap.classList.remove("hidden");
-        adminWrap.style.display = "block";
-      }
-      const urlInput = document.getElementById("supplier-api-url");
-      const keyInput = document.getElementById("supplier-api-key");
-      if (urlInput) urlInput.value = getDB("supplier_api_url", "https://api.shams4store.com/client/api/products");
-      if (keyInput) keyInput.value = getDB("supplier_api_key", "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427");
-
-      if (typeof updateMaintenanceAdminBtn === "function") {
-        try { updateMaintenanceAdminBtn(); } catch (e) {}
-      }
-      if (typeof switchAdminSection === "function") {
-        try { switchAdminSection("stats"); } catch (e) {}
-      }
-    };
-
-    window.closeAdminPanel = function() {
-      const adminWrap = document.getElementById("admin-wrapper");
-      if (adminWrap) {
-        adminWrap.classList.add("hidden");
-        adminWrap.style.display = "none";
-      }
-      if (typeof renderCategories === "function") renderCategories();
-      if (typeof loadSiteSettings === "function") loadSiteSettings();
-    };
-
     (function() {
       function autoUpdateTargetFieldLabel() {
         const titleEl = document.getElementById("current-category-title");
