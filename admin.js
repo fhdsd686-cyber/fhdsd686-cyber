@@ -1,5 +1,5 @@
 // ============================================================================
-// لوحة تحكم الإدارة الكاملة + نظام جلب المنتجات من المورد (admin.js - v137)
+// لوحة تحكم الإدارة الكاملة + حساب الأرباح اليومية + نظام المورد (admin.js - v139)
 // ============================================================================
 
 const ADMIN_SECTIONS = [
@@ -87,9 +87,37 @@ function updateMaintenanceAdminBtn() {
 }
 
 function renderAdminStats() {
-  const orders = getDB("orders", []);
+  const allOrders = getDB("orders", []);
   const deposits = getDB("deposit_requests", []);
-  const totalSales = orders.reduce((sum, o) => sum + (parseFloat(o.price || o.priceUSD || o.totalUSD || 0)), 0);
+  const products = getDB("products", []);
+  const now = Date.now();
+  const oneDayMs = 24 * 60 * 60 * 1000;
+
+  const dailyOrders = allOrders.filter(o => {
+    const ts = Number(o.timestamp || (String(o.id || "").startsWith("ord_") ? String(o.id).split("_")[1] : now));
+    const isNotRejected = !String(o.status || "").includes("مرفوض");
+    return isNotRejected && (now - ts) < oneDayMs;
+  });
+
+  let dailySalesUSD = 0;
+  let dailyProfitUSD = 0;
+
+  dailyOrders.forEach(o => {
+    const sale = parseFloat(o.price || o.priceUSD || 0);
+    dailySalesUSD += sale;
+
+    if (o.profitUSD !== undefined && !isNaN(parseFloat(o.profitUSD))) {
+      dailyProfitUSD += parseFloat(o.profitUSD);
+    } else {
+      const matchedProd = products.find(p => p.name === o.packageName);
+      if (matchedProd && matchedProd.supplierPriceUSD !== undefined) {
+        const qty = parseFloat(o.qty || 1);
+        const cost = parseFloat(matchedProd.supplierPriceUSD) * qty;
+        dailyProfitUSD += Math.max(0, sale - cost);
+      }
+    }
+  });
+
   const approvedDeposits = deposits
     .filter(d => d.status === "approved" || d.status === "مقبول")
     .reduce((sum, d) => sum + (parseFloat(d.amountUSD || 0)), 0);
@@ -98,9 +126,27 @@ function renderAdminStats() {
   const ordersEl = document.getElementById("stat-orders-count");
   const depEl = document.getElementById("stat-total-deposits");
 
-  if (salesEl) salesEl.textContent = `$${totalSales.toFixed(2)}`;
-  if (ordersEl) ordersEl.textContent = orders.length;
+  if (salesEl) salesEl.textContent = `$${dailySalesUSD.toFixed(2)}`;
+  if (ordersEl) ordersEl.textContent = dailyOrders.length;
   if (depEl) depEl.textContent = `$${approvedDeposits.toFixed(2)}`;
+
+  const statsGrid = document.querySelector("#sec-stats .stats-grid");
+  if (statsGrid) {
+    let profitCard = document.getElementById("stat-daily-profit-card");
+    if (!profitCard) {
+      profitCard = document.createElement("div");
+      profitCard.id = "stat-daily-profit-card";
+      profitCard.className = "stat-card";
+      profitCard.style.cssText = "border: 1.5px solid #10b981; background: linear-gradient(135deg, #06281e, #0b192c);";
+      statsGrid.prepend(profitCard);
+    }
+    const profitSYP = (dailyProfitUSD * 155).toFixed(2);
+    profitCard.innerHTML = `
+      <span style="color:#10b981; font-weight:800;"><i class="fa-solid fa-coins"></i> صافي الأرباح اليومية (24س)</span>
+      <p style="color:#10b981; font-size:1.35rem; font-weight:900; margin:4px 0;">$${dailyProfitUSD.toFixed(3)}</p>
+      <small style="color:#cbd5e1; font-size:0.75rem;">ما يعادل: ${profitSYP} ل.س</small>
+    `;
+  }
 }
 
 function renderPricingOffersSection() {
@@ -497,7 +543,7 @@ function deleteDepositMethod(id) {
 }
 
 // ============================================================================
-// 9. نظام جلب المنتجات من المورد (Shams4Store عبر وسيط Cloudflare)
+// 9. نظام جلب المنتجات من المورد (Shams4Store / Parabyte عبر وسيط Cloudflare)
 // ============================================================================
 
 const ADMIN_SHAMS_URL = "https://api.shams4store.com/client/api/products";
@@ -533,62 +579,15 @@ function populateSupplierCategoriesDropdown() {
     return `<option value="${cat.id}">${label}</option>`;
   }).join("");
 
-  const savedCfg = getDB("supplier_api_config", {
-    url: ADMIN_SHAMS_URL,
-    key: ADMIN_SHAMS_TOKEN
-  });
+  const savedUrl = getDB("supplier_api_url", ADMIN_SHAMS_URL);
+  const savedKey = getDB("supplier_api_key", ADMIN_SHAMS_TOKEN);
 
   const urlInput = document.getElementById("supplier-api-url");
   const keyInput = document.getElementById("supplier-api-key");
-  if (urlInput) urlInput.value = savedCfg.url || ADMIN_SHAMS_URL;
-  if (keyInput) keyInput.value = savedCfg.key || ADMIN_SHAMS_TOKEN;
+  if (urlInput) urlInput.value = savedUrl;
+  if (keyInput) keyInput.value = savedKey;
 
   searchSupplierCatalog();
-}
-
-async function fetchFromExternalSupplierAPI() {
-  const url = (document.getElementById("supplier-api-url")?.value || ADMIN_SHAMS_URL).trim();
-  const key = (document.getElementById("supplier-api-key")?.value || ADMIN_SHAMS_TOKEN).trim();
-
-  setDB("supplier_api_config", { url, key });
-  const infoEl = document.getElementById("supplier-results-info");
-  if (infoEl) infoEl.innerHTML = `<span style="color:#10b981; font-weight:bold;">✅ جاري السحب المباشر عبر وسيطك الخاص...</span>`;
-
-  try {
-    const workerUrl = `${ADMIN_WORKER_URL}?url=${encodeURIComponent(url)}&token=${encodeURIComponent(key)}`;
-    const res = await fetch(workerUrl, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-        "api-token": key,
-        "Authorization": `Bearer ${key}`
-      }
-    });
-    const data = await res.json();
-    const rawList = Array.isArray(data)
-      ? data
-      : (data.products || data.services || (data.data && Array.isArray(data.data) ? data.data : (data.data?.products || data.data?.data || [])));
-
-    if (!Array.isArray(rawList) || rawList.length === 0) {
-      alert("رد السيرفر: " + JSON.stringify(data).slice(0, 300));
-      return;
-    }
-
-    const mapped = rawList.map((item, idx) => ({
-      supplierId: String(item.id || item.service || item.product_id || `SHAMS-${idx + 1}`),
-      app: item.category_name || item.category?.name || item.category || item.group || "Shams4Store",
-      name: item.name || item.title || item.service_name || `منتج #${idx + 1}`,
-      supplierPriceUSD: parseFloat(item.price || item.rate || item.cost || 0),
-      image: item.image || item.icon || item.category?.image || "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80",
-      desc: item.desc || item.description || item.notes || ""
-    }));
-
-    setDB("supplier_catalog", mapped);
-    alert(`🎉 مبروك! تم جلب ${mapped.length} منتج من Shams4Store بنجاح!`);
-    searchSupplierCatalog();
-  } catch (err) {
-    alert("خطأ في الاتصال: " + err.message);
-  }
 }
 
 function searchSupplierCatalog() {
@@ -680,6 +679,9 @@ function addSupplierProductToStore(supplierId) {
     supplierPriceUSD: item.supplierPriceUSD,
     priceUSD: finalPriceUSD,
     priceSYP: finalPriceSYP,
+    productType: item.productType || "package",
+    qtyValues: item.qtyValues || null,
+    paramField: item.paramField || "playerId",
     desc: item.desc || "",
     image: item.image
   });
