@@ -1,5 +1,5 @@
 // ============================================================================
-// لوحة تحكم الإدارة الكاملة + حساب الأرباح اليومية + المحرك الشامل للموردين (admin.js - v140)
+// لوحة تحكم الإدارة الكاملة + إشعار واتساب التلقائي للزبون + حساب الأرباح (admin.js - v142)
 // ============================================================================
 
 const ADMIN_SECTIONS = [
@@ -120,7 +120,7 @@ function renderAdminStats() {
 
   const approvedDeposits = deposits
     .filter(d => d.status === "approved" || d.status === "مقبول")
-    .reduce((sum, d) => sum + (parseFloat(d.amountUSD || 0)), 0);
+    .reduce((sum, d) => sum + (parseFloat(d.amountUSD || d.amount || 0)), 0);
 
   const salesEl = document.getElementById("stat-sales");
   const ordersEl = document.getElementById("stat-orders-count");
@@ -247,6 +247,81 @@ function handleSiteSettingsUpdate(e) {
   alert("تم حفظ إعدادات وهوية المتجر ومزامنتها!");
 }
 
+function creditUserEverywhere(targetName, targetEmail, deltaUSD, exactBalance = null) {
+  const registry = getDB("cloud_users_registry", {});
+  const localUsers = getDB("users", []);
+  const nLow = (targetName || "").toLowerCase().trim();
+  const eLow = (targetEmail || "").toLowerCase().trim();
+  let updated = false;
+
+  Object.keys(registry).forEach(k => {
+    const u = registry[k];
+    if (!u) return;
+    const kLow = k.toLowerCase().trim();
+    const uEmail = (u.email || "").toLowerCase().trim();
+    const uName = (u.name || "").toLowerCase().trim();
+    const uFull = (u.fullname || "").toLowerCase().trim();
+
+    const isMatch =
+      (eLow && (kLow === eLow || uEmail === eLow)) ||
+      (nLow && (kLow === nLow || uName === nLow || uFull === nLow));
+
+    if (isMatch) {
+      const oldBal = parseFloat(u.balanceUSD || 0);
+      const newBal = exactBalance !== null ? +Number(exactBalance).toFixed(3) : Math.max(0, +(oldBal + Number(deltaUSD)).toFixed(3));
+      registry[k].balanceUSD = newBal;
+      updated = true;
+    }
+  });
+
+  if (!updated && (eLow || nLow)) {
+    const fallbackKey = eLow || nLow;
+    const newBal = exactBalance !== null ? +Number(exactBalance).toFixed(3) : Math.max(0, +Number(deltaUSD).toFixed(3));
+    registry[fallbackKey] = {
+      name: targetName || fallbackKey,
+      email: targetEmail || "",
+      balanceUSD: newBal,
+      role: "عضو"
+    };
+    updated = true;
+  }
+
+  setDB("cloud_users_registry", registry);
+
+  let localChanged = false;
+  localUsers.forEach(u => {
+    if (!u || u.name === "زائر") return;
+    const uEmail = (u.email || "").toLowerCase().trim();
+    const uName = (u.name || "").toLowerCase().trim();
+    const uFull = (u.fullname || "").toLowerCase().trim();
+    if ((eLow && uEmail === eLow) || (nLow && (uName === nLow || uFull === nLow))) {
+      const oldBal = parseFloat(u.balanceUSD || 0);
+      u.balanceUSD = exactBalance !== null ? +Number(exactBalance).toFixed(3) : Math.max(0, +(oldBal + Number(deltaUSD)).toFixed(3));
+      localChanged = true;
+    }
+  });
+  if (localChanged) {
+    setDB("users", localUsers);
+    if (typeof updateUserUI === "function") updateUserUI();
+  }
+
+  if (deltaUSD > 0) {
+    const notifs = getDB("user_notifications", []);
+    notifs.unshift({
+      id: "notif_" + Date.now(),
+      userName: targetName || "",
+      userEmail: targetEmail || "",
+      title: "تم شحن رصيدك بنجاح ✅",
+      message: `تمت إضافة مبلغ $${Number(deltaUSD).toFixed(2)} إلى محفظتك.`,
+      date: new Date().toLocaleString("ar-SY"),
+      read: false
+    });
+    setDB("user_notifications", notifs);
+  }
+
+  return updated;
+}
+
 function renderAdminUsers() {
   const container = document.getElementById("admin-users-list");
   if (!container) return;
@@ -274,10 +349,10 @@ function renderAdminUsers() {
     return `
       <div style="background:#0c1527; padding:12px; border-radius:12px; margin-bottom:10px; border:1px solid rgba(56,189,248,0.2);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <strong>${u.name} (${u.role || "عضو"})</strong>
+          <strong>${u.fullname || u.name} (${u.role || "عضو"})</strong>
           <span style="color:#38bdf8; font-weight:800;">$${bal}</span>
         </div>
-        <div style="font-size:0.78rem; color:#94a3b8; margin-bottom:8px;">${u.email || ""}</div>
+        <div style="font-size:0.78rem; color:#94a3b8; margin-bottom:8px;">${u.name} | ${u.email || ""}</div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           <button type="button" class="btn-submit" style="width:auto; padding:5px 10px; font-size:0.75rem; margin:0;" onclick="adminAdjustUserBalance('${key}', 1)">+1$</button>
           <button type="button" class="btn-submit" style="width:auto; padding:5px 10px; font-size:0.75rem; margin:0; background:#0284c7;" onclick="adminPromptCustomBalance('${key}')">تعديل الرصيد</button>
@@ -290,21 +365,19 @@ function renderAdminUsers() {
 
 function adminAdjustUserBalance(userKey, delta) {
   const registry = getDB("cloud_users_registry", {});
-  if (!registry[userKey]) return;
-  registry[userKey].balanceUSD = Math.max(0, +((parseFloat(registry[userKey].balanceUSD || 0) + delta).toFixed(3)));
-  setDB("cloud_users_registry", registry);
+  const u = registry[userKey];
+  creditUserEverywhere(u?.name || userKey, u?.email || userKey, delta, null);
   renderAdminUsers();
 }
 
 function adminPromptCustomBalance(userKey) {
   const registry = getDB("cloud_users_registry", {});
-  if (!registry[userKey]) return;
-  const val = prompt("أدخل الرصيد الجديد بالدولار ($):", registry[userKey].balanceUSD || 0);
+  const u = registry[userKey];
+  const val = prompt("أدخل الرصيد الجديد بالدولار ($):", u?.balanceUSD || 0);
   if (val === null) return;
   const num = parseFloat(val);
   if (isNaN(num)) return;
-  registry[userKey].balanceUSD = +num.toFixed(3);
-  setDB("cloud_users_registry", registry);
+  creditUserEverywhere(u?.name || userKey, u?.email || userKey, 0, num);
   renderAdminUsers();
 }
 
@@ -323,7 +396,9 @@ function submitUserUpgrade() {
 
   const registry = getDB("cloud_users_registry", {});
   const foundKey = Object.keys(registry).find(k =>
-    k.includes(query) || (registry[k].name && registry[k].name.toLowerCase().includes(query))
+    k.includes(query) ||
+    (registry[k].name && registry[k].name.toLowerCase().includes(query)) ||
+    (registry[k].fullname && registry[k].fullname.toLowerCase().includes(query))
   );
 
   if (!foundKey) { alert("لم يتم العثور على المستخدم."); return; }
@@ -462,13 +537,15 @@ function renderAdminDepositRequests() {
 
   container.innerHTML = requests.slice().reverse().map(req => {
     const isPending = req.status === "pending" || req.status === "معلق" || req.status === "قيد الانتظار" || !req.status;
+    const amt = parseFloat(req.amountUSD || req.amount || 0);
     return `
       <div style="background:#0c1527; padding:12px; border-radius:12px; margin-bottom:10px; border:1px solid rgba(56,189,248,0.2);">
         <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
           <strong>${req.userName || "مستخدم"}</strong>
-          <span style="color:#38bdf8; font-weight:800;">$${parseFloat(req.amountUSD || 0).toFixed(2)}</span>
+          <span style="color:#38bdf8; font-weight:800;">$${amt.toFixed(2)}</span>
         </div>
         <div style="font-size:0.78rem; color:#cbd5e1; margin-bottom:6px;">الوسيلة: ${req.methodName || "-"} | المرسل: ${req.sender || "-"}</div>
+        ${req.note ? `<div style="font-size:0.75rem; color:#94a3b8; margin-bottom:6px;">ملاحظة: ${req.note}</div>` : ""}
         ${(req.receipt || req.receiptImage) ? `<img src="${req.receipt || req.receiptImage}" style="max-width:140px; border-radius:8px; margin-bottom:8px; display:block;">` : ""}
         ${isPending ? `
           <div style="display:flex; gap:8px;">
@@ -486,20 +563,60 @@ function processDepositRequest(reqId, approve) {
   const idx = requests.findIndex(r => String(r.id) === String(reqId));
   if (idx === -1) return;
 
+  let amountToAdd = parseFloat(requests[idx].amountUSD || requests[idx].amount || 0);
+
+  if (approve) {
+    if (amountToAdd <= 0) {
+      const entered = prompt(`أدخل المبلغ بالدولار ($) الذي تريد إضافته لحساب (${requests[idx].userName}):`, "1");
+      if (entered === null) return;
+      amountToAdd = parseFloat(entered) || 0;
+      if (amountToAdd <= 0) {
+        alert("يرجى إدخال مبلغ صحيح أكبر من 0!");
+        return;
+      }
+      requests[idx].amountUSD = amountToAdd;
+      requests[idx].amount = amountToAdd;
+    }
+
+    creditUserEverywhere(requests[idx].userName, requests[idx].userEmail, amountToAdd, null);
+  }
+
   requests[idx].status = approve ? "approved" : "rejected";
   setDB("deposit_requests", requests);
+  renderAdminDepositRequests();
 
   if (approve) {
     const registry = getDB("cloud_users_registry", {});
-    const userKey = (requests[idx].userEmail || requests[idx].userName || "").toLowerCase().trim();
-    if (registry[userKey]) {
-      registry[userKey].balanceUSD = +((parseFloat(registry[userKey].balanceUSD || 0) + parseFloat(requests[idx].amountUSD || 0)).toFixed(3));
-      setDB("cloud_users_registry", registry);
-    }
-  }
+    const uEmail = (requests[idx].userEmail || "").toLowerCase().trim();
+    const uName = (requests[idx].userName || "").toLowerCase().trim();
+    const matchedUser = Object.values(registry).find(u =>
+      u && ((uEmail && (u.email || "").toLowerCase().trim() === uEmail) ||
+            (uName && ((u.name || "").toLowerCase().trim() === uName || (u.fullname || "").toLowerCase().trim() === uName)))
+    ) || {};
 
-  renderAdminDepositRequests();
-  alert(approve ? "تم قبول الطلب وإضافة الرصيد لحساب المستخدم!" : "تم رفض الطلب.");
+    const foundPhone = (
+      requests[idx].phone ||
+      matchedUser.phone ||
+      matchedUser.whatsapp ||
+      matchedUser.mobile ||
+      (/\d{9,}/.test(requests[idx].sender || "") ? requests[idx].sender : "")
+    ).toString().replace(/\D/g, "");
+
+    const syPhone = foundPhone.startsWith("09")
+      ? "963" + foundPhone.slice(1)
+      : (foundPhone.startsWith("963") ? foundPhone : foundPhone);
+
+    const msg = encodeURIComponent(
+      `مرحباً ${requests[idx].userName} 🌹\nتم قبول طلب الإيداع الخاص بك في متجر *Mohannad kard* ✅\n💰 المبلغ المضاف: *$${amountToAdd.toFixed(2)}*\nشكراً لتعاملك معنا!`
+    );
+
+    if (confirm(`✅ تم قبول الطلب وإضافة $${amountToAdd.toFixed(2)} لحساب ${requests[idx].userName}!\n\nهل تريد إرسال إشعار للزبون عبر واتساب الآن؟`)) {
+      const waUrl = syPhone ? `https://wa.me/${syPhone}?text=${msg}` : `https://wa.me/?text=${msg}`;
+      window.open(waUrl, "_blank");
+    }
+  } else {
+    alert("تم رفض الطلب.");
+  }
 }
 
 function renderAdminDepositMethods() {
