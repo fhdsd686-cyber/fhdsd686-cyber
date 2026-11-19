@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=155">
+  <link rel="stylesheet" href="style.css?v=157">
 
   <style>
     .hidden,
@@ -683,6 +683,9 @@
       <div class="drawer-nav-row" id="admin-panel-link" onclick="openAdminPanel()" style="cursor:pointer;">
         <div class="drawer-nav-left"><i class="fa-solid fa-gear c-orange"></i> <span>لوحة التحكم</span></div>
       </div>
+      <div class="drawer-nav-row" onclick="promptChangeUserWhatsApp()" style="cursor:pointer;">
+        <div class="drawer-nav-left"><i class="fa-brands fa-whatsapp c-green"></i> <span id="user-whatsapp-label">إضافة / تغيير رقم واتساب</span></div>
+      </div>
       <div class="drawer-nav-row" onclick="openFeatureModal('levels')" style="cursor:pointer;">
         <div class="drawer-nav-left"><i class="fa-solid fa-crown c-gold"></i> <span>المستويات</span></div>
       </div>
@@ -710,7 +713,7 @@
       <div class="drawer-socials">
         <a href="#" class="social-circle-btn btn-facebook"><i class="fa-brands fa-facebook-f"></i></a>
         <a href="#" class="social-circle-btn btn-telegram"><i class="fa-brands fa-telegram"></i></a>
-        <a href="https://wa.me/963957455972" target="_blank" class="social-circle-btn btn-whatsapp"><i class="fa-brands fa-whatsapp"></i></a>
+        <a href="https://wa.me/963957455972" id="drawer-whatsapp-link" target="_blank" class="social-circle-btn btn-whatsapp"><i class="fa-brands fa-whatsapp"></i></a>
       </div>
     </div>
   </aside>
@@ -761,7 +764,7 @@
         نقوم حالياً ببعض أعمال التحديث والصيانة وتطوير الخدمات لتقديم تجربة أفضل.<br>
         سنعود للعمل قريباً جداً!
       </p>
-      <a href="https://wa.me/963957455972?text=مرحباً،%20أستفسر%20عن%20موعد%20انتهاء%20صيانة%20المتجر" target="_blank" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #25d366; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; font-size: 0.85rem;">
+      <a href="https://wa.me/963957455972?text=مرحباً،%20أستفسر%20عن%20موعد%20انتهاء%20صيانة%20المتجر" id="maintenance-whatsapp-link" target="_blank" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #25d366; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; font-size: 0.85rem;">
         <i class="fa-brands fa-whatsapp"></i> تواصل مع الدعم الفني
       </a>
     </div>
@@ -988,11 +991,15 @@
         </section>
 
         <section id="sec-site-settings" class="hidden">
-          <h4>تغيير لوجو وهوية وإعلانات المتجر</h4>
+          <h4>تغيير لوجو وهوية ورقم واتساب المتجر</h4>
           <form onsubmit="handleSiteSettingsUpdate(event)">
             <div class="form-group">
               <label>اسم المتجر:</label>
               <input type="text" id="setting-site-name" placeholder="Mohannad kard" required>
+            </div>
+            <div class="form-group">
+              <label>رقم واتساب الإدارة والدعم (مثال: 0957455972):</label>
+              <input type="tel" id="setting-whatsapp-number" placeholder="0957455972" dir="ltr" required>
             </div>
             <div class="form-group">
               <label>رابط لوجو الموقع:</label>
@@ -1019,7 +1026,6 @@
           <table class="data-table"><thead><tr><th>الاسم</th><th>القسم</th><th>المورد / النهائي</th><th>إجراء</th></tr></thead><tbody id="admin-products-table"></tbody></table>
         </section>
 
-        <!-- قسم جلب المنتجات وتغيير المورد الشامل -->
         <section id="sec-import-supplier" class="hidden">
           <h4><i class="fa-solid fa-cloud-arrow-down" style="color:#38bdf8;"></i> جلب المنتجات وربط أي مورد خارجي</h4>
 
@@ -1127,10 +1133,10 @@
   </script>
 
   <!-- ملفات السكربت -->
-  <script src="data.js?v=155"></script>
-  <script src="auth.js?v=155"></script>
-  <script src="store.js?v=155"></script>
-  <script src="admin.js?v=155"></script>
+  <script src="data.js?v=157"></script>
+  <script src="auth.js?v=157"></script>
+  <script src="store.js?v=157"></script>
+  <script src="admin.js?v=157"></script>
 
   <script>
     window.openAdminPanel = function() {
@@ -1211,7 +1217,6 @@
       setInterval(autoUpdateTargetFieldLabel, 400);
     })();
 
-    // دالة حفظ وجلب المنتجات من أي مورد تلقائياً (Shams / Parabyte / SMM Panel / REST)
     window.fetchFromExternalSupplierAPI = async function() {
       const url = (document.getElementById("supplier-api-url")?.value || "https://api.shams4store.com/client/api/products").trim();
       const key = (document.getElementById("supplier-api-key")?.value || "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427").trim();
