@@ -1,5 +1,5 @@
 // ============================================================================
-// لوحة تحكم الإدارة الكاملة + حساب الأرباح اليومية + نظام المورد (admin.js - v139)
+// لوحة تحكم الإدارة الكاملة + حساب الأرباح اليومية + المحرك الشامل للموردين (admin.js - v140)
 // ============================================================================
 
 const ADMIN_SECTIONS = [
@@ -204,12 +204,12 @@ function recalculateAllProductsPrices() {
     const pct = p.customPercent !== undefined && p.customPercent !== ""
       ? parseFloat(p.customPercent)
       : (catPercents[p.categoryId] !== undefined ? parseFloat(catPercents[p.categoryId]) : globalPercent);
-    const finalUSD = +(base * (1 + pct / 100)).toFixed(3);
+    const finalUSD = +(base * (1 + pct / 100)).toFixed(4);
     return {
       ...p,
       supplierPriceUSD: base,
       priceUSD: finalUSD,
-      priceSYP: Math.round(finalUSD * 15000)
+      priceSYP: Math.round(finalUSD * 155)
     };
   });
 
@@ -347,7 +347,7 @@ function renderAdminProducts() {
 
   tbody.innerHTML = products.map(p => {
     const cat = categories.find(c => c.id === p.categoryId);
-    const sup = parseFloat(p.supplierPriceUSD || p.priceUSD || 0).toFixed(2);
+    const sup = parseFloat(p.supplierPriceUSD || p.priceUSD || 0).toFixed(3);
     const fin = parseFloat(p.priceUSD || 0).toFixed(3);
     return `
       <tr>
@@ -375,9 +375,9 @@ function handleAddProduct(e) {
     ? parseFloat(customPctRaw)
     : (catPercents[categoryId] !== undefined ? parseFloat(catPercents[categoryId]) : globalPercent);
 
-  const finalPriceUSD = +(supplierPriceUSD * (1 + appliedPct / 100)).toFixed(3);
+  const finalPriceUSD = +(supplierPriceUSD * (1 + appliedPct / 100)).toFixed(4);
   const manualSYP = parseFloat(document.getElementById("prod-price-syp")?.value || 0);
-  const finalPriceSYP = manualSYP > 0 ? manualSYP : Math.round(finalPriceUSD * 15000);
+  const finalPriceSYP = manualSYP > 0 ? manualSYP : Math.round(finalPriceUSD * 155);
 
   const products = getDB("products", []);
   products.push({
@@ -523,7 +523,7 @@ function handleAddDepositMethod(e) {
   const name = document.getElementById("method-name")?.value.trim();
   const account = document.getElementById("method-account")?.value.trim();
   const currency = document.getElementById("method-currency")?.value.trim() || "USD";
-  const rate = parseFloat(document.getElementById("method-rate")?.value || 15000);
+  const rate = parseFloat(document.getElementById("method-rate")?.value || 155);
   const qrImage = document.getElementById("method-qr")?.value.trim() || `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(account)}`;
   const icon = document.getElementById("method-icon")?.value.trim() || "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=100&q=80";
 
@@ -543,7 +543,7 @@ function deleteDepositMethod(id) {
 }
 
 // ============================================================================
-// 9. نظام جلب المنتجات من المورد (Shams4Store / Parabyte عبر وسيط Cloudflare)
+// 9. نظام جلب المنتجات الشامل من أي مورد (Shams / Parabyte / SMM / REST)
 // ============================================================================
 
 const ADMIN_SHAMS_URL = "https://api.shams4store.com/client/api/products";
@@ -623,7 +623,7 @@ function searchSupplierCatalog() {
     : globalPercent;
 
   container.innerHTML = filtered.slice(0, 120).map(item => {
-    const finalUSD = +(item.supplierPriceUSD * (1 + appliedPercent / 100)).toFixed(3);
+    const finalUSD = +(item.supplierPriceUSD * (1 + appliedPercent / 100)).toFixed(4);
     const alreadyAdded = existingProducts.some(
       p => p.categoryId === targetCatId && (p.supplierId === item.supplierId || p.name === item.name)
     );
@@ -636,8 +636,8 @@ function searchSupplierCatalog() {
             <div style="font-size:0.72rem; color:#38bdf8; font-weight:700;">${item.app}</div>
             <div style="font-size:0.86rem; font-weight:800; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</div>
             <div style="font-size:0.75rem; color:#94a3b8;">
-              سعر المورد: <strong style="color:#f59e0b;">$${item.supplierPriceUSD.toFixed(3)}</strong>
-              | سعر البيع: <strong style="color:#10b981;">$${finalUSD.toFixed(3)}</strong>
+              سعر المورد: <strong style="color:#f59e0b;">$${item.supplierPriceUSD.toFixed(4)}</strong>
+              | سعر البيع: <strong style="color:#10b981;">$${finalUSD.toFixed(4)}</strong>
             </div>
           </div>
         </div>
@@ -668,12 +668,15 @@ function addSupplierProductToStore(supplierId) {
     ? parseFloat(catPercents[targetCatId])
     : globalPercent;
 
-  const finalPriceUSD = +(item.supplierPriceUSD * (1 + appliedPercent / 100)).toFixed(3);
-  const finalPriceSYP = Math.round(finalPriceUSD * 15000);
+  const finalPriceUSD = +(item.supplierPriceUSD * (1 + appliedPercent / 100)).toFixed(4);
+  const finalPriceSYP = Math.round(finalPriceUSD * 155);
 
   products.push({
     id: "prod_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
     supplierId: item.supplierId,
+    supplierApiUrl: item.supplierApiUrl || getDB("supplier_api_url", ADMIN_SHAMS_URL),
+    supplierApiKey: item.supplierApiKey || getDB("supplier_api_key", ADMIN_SHAMS_TOKEN),
+    supplierApiType: item.supplierApiType || "",
     categoryId: targetCatId,
     name: item.name,
     supplierPriceUSD: item.supplierPriceUSD,
@@ -682,6 +685,7 @@ function addSupplierProductToStore(supplierId) {
     productType: item.productType || "package",
     qtyValues: item.qtyValues || null,
     paramField: item.paramField || "playerId",
+    noParams: !!item.noParams,
     desc: item.desc || "",
     image: item.image
   });
