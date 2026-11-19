@@ -1,4 +1,4 @@
-// --- store.js (النسخة الكاملة: دعم الحسابات الجاهزة بدون حقل ID + عرض رد المورد + حساب الأرباح + تنظيف 24 ساعة) ---
+// --- store.js (المحرك الشامل لجميع الموردين + حساب الأرباح + تنظيف 24 ساعة) ---
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
 let activeDepositMethod = null;
@@ -20,23 +20,75 @@ function generateUUIDv4() {
   });
 }
 
-function getActiveSupplierConfig() {
-  const savedUrl = (getDB("supplier_api_url", "") || `${DEFAULT_SUPPLIER_BASE}/client/api/products`).trim();
-  const savedToken = (getDB("supplier_api_key", "") || DEFAULT_SUPPLIER_TOKEN).trim();
+// محرك الكشف التلقائي الشامل لجميع أنواع الموردين (Shams / Parabyte / SMM Panel / REST)
+function detectSupplierAdapter(customUrl = "", customToken = "", forcedType = "") {
+  const savedUrl = (customUrl || getDB("supplier_api_url", "") || `${DEFAULT_SUPPLIER_BASE}/client/api/products`).trim();
+  const savedToken = (customToken || getDB("supplier_api_key", "") || DEFAULT_SUPPLIER_TOKEN).trim();
   let baseUrl = DEFAULT_SUPPLIER_BASE;
   try { baseUrl = new URL(savedUrl).origin; } catch (e) {}
-  const isParabyte = savedUrl.toLowerCase().includes("parabyte") || savedUrl.toLowerCase().includes("/api/v2/products");
+  const lower = savedUrl.toLowerCase();
+
+  let type = forcedType;
+  if (!type) {
+    if (lower.includes("/client/api")) {
+      type = "shams_style";
+    } else if (lower.includes("parabyte") || lower.includes("/api/v2/products") || lower.includes("/api/v2/order")) {
+      type = "parabyte_v2";
+    } else if (lower.endsWith("/api/v2") || lower.endsWith("/api/v2/") || lower.endsWith("/api") || lower.includes("action=services") || lower.includes("smm")) {
+      type = "smm_panel";
+    } else {
+      type = "rest_generic";
+    }
+  }
+
+  if (type === "shams_style") {
+    return {
+      type,
+      productsUrl: savedUrl,
+      baseUrl,
+      orderUrl: `${baseUrl}/client/api/newOrder`,
+      checkUrl: `${baseUrl}/client/api/check`,
+      token: savedToken
+    };
+  }
+  if (type === "parabyte_v2") {
+    return {
+      type,
+      productsUrl: savedUrl,
+      baseUrl,
+      orderUrl: `${baseUrl}/api/v2/order`,
+      checkUrl: `${baseUrl}/api/v2/check`,
+      token: savedToken
+    };
+  }
+  if (type === "smm_panel") {
+    const cleanEndpoint = savedUrl.split("?")[0];
+    return {
+      type,
+      productsUrl: cleanEndpoint,
+      baseUrl,
+      orderUrl: cleanEndpoint,
+      checkUrl: cleanEndpoint,
+      token: savedToken
+    };
+  }
   return {
-    type: isParabyte ? "parabyte_v2" : "shams_style",
+    type: "rest_generic",
     productsUrl: savedUrl,
     baseUrl,
-    orderUrl: isParabyte ? `${baseUrl}/api/v2/order` : `${baseUrl}/client/api/newOrder`,
-    checkUrl: isParabyte ? `${baseUrl}/api/v2/check` : `${baseUrl}/client/api/check`,
+    orderUrl: savedUrl.replace(/\/(products|services)\/?$/i, "/orders"),
+    checkUrl: savedUrl.replace(/\/(products|services)\/?$/i, "/orders"),
     token: savedToken
   };
 }
 
-// اكتشاف المنتجات التي لا تحتاج حقل إدخال (تُسلَّم بالحساب أو الكود في الرد مباشرة)
+function getActiveSupplierConfig(product = null) {
+  if (product && product.supplierApiUrl && product.supplierApiKey) {
+    return detectSupplierAdapter(product.supplierApiUrl, product.supplierApiKey, product.supplierApiType || "");
+  }
+  return detectSupplierAdapter();
+}
+
 function isNoTargetProduct(catName, product = null) {
   if (product && product.noParams === true) return true;
   const text = `${catName || ""} ${product?.name || ""}`.toLowerCase();
@@ -183,43 +235,76 @@ async function syncOrdersWithSupplier() {
   if (!Array.isArray(orders) || orders.length === 0) return false;
   const pending = orders.filter(o => o.supplierOrderId && !o.isFinalized && o.status !== "مكتمل ✓" && !String(o.status).includes("مرفوض"));
   if (pending.length === 0) return false;
-  const supCfg = getActiveSupplierConfig();
-  try {
-    const targetUrl = `${supCfg.checkUrl}?orders=${encodeURIComponent(pending.map(o => o.supplierOrderId).join(","))}`;
-    const res = await fetch(`${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(targetUrl)}&token=${encodeURIComponent(supCfg.token)}`, {
-      headers: { "Accept": "application/json", "api-token": supCfg.token }
-    });
-    const data = await res.json();
-    const statusMap = {};
-    const items = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : (data.orders ? Object.values(data.orders) : []));
-    items.forEach(item => { if (item && (item.order_id || item.id)) statusMap[String(item.order_id || item.id)] = item; });
-    let changed = false, refundUSD = 0;
-    const users = getDB("users", []);
-    orders.forEach(o => {
-      const info = statusMap[String(o.supplierOrderId)];
-      if (!info) return;
-      const deliveryCodes = Array.isArray(info.delivery) && info.delivery.length > 0 ? info.delivery.join(" | ") : "";
-      const supReply = deliveryCodes || info.reply || info.replay || info.note || info.reason || info.message || "";
-      if (supReply && o.supplierReply !== supReply) {
-        o.supplierReply = supReply;
-        changed = true;
+
+  // تجميع الطلبات المعلقة حسب المورد الخاص بكل طلب
+  const groups = {};
+  pending.forEach(o => {
+    const cfg = detectSupplierAdapter(o.supplierApiUrl || "", o.supplierApiKey || "", o.supplierApiType || "");
+    const gKey = `${cfg.type}|${cfg.checkUrl}|${cfg.token}`;
+    if (!groups[gKey]) groups[gKey] = { cfg, list: [] };
+    groups[gKey].list.push(o);
+  });
+
+  let changed = false, refundUSD = 0;
+  const users = getDB("users", []);
+
+  for (const gKey of Object.keys(groups)) {
+    const { cfg, list } = groups[gKey];
+    const idsStr = list.map(o => o.supplierOrderId).join(",");
+    try {
+      let res;
+      if (cfg.type === "smm_panel") {
+        const u = `${cfg.checkUrl}?key=${encodeURIComponent(cfg.token)}&action=status&orders=${encodeURIComponent(idsStr)}`;
+        res = await fetch(`${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(u)}&token=${encodeURIComponent(cfg.token)}`, { headers: { "Accept": "application/json" } });
+      } else {
+        const u = `${cfg.checkUrl}?orders=${encodeURIComponent(idsStr)}`;
+        res = await fetch(`${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(u)}&token=${encodeURIComponent(cfg.token)}`, {
+          headers: { "Accept": "application/json", "api-token": cfg.token, "Authorization": `Bearer ${cfg.token}` }
+        });
       }
-      if (o.isFinalized) return;
-      const st = String(info.status || info.state || "").toLowerCase();
-      if (["accept", "completed", "complete", "success", "done", "مكتمل"].includes(st)) {
-        o.status = "مكتمل ✓"; o.isFinalized = true; changed = true;
-      } else if (["reject", "rejected", "canceled", "cancelled", "fail", "failed", "مرفوض"].includes(st)) {
-        o.status = "مرفوض ✕"; o.isFinalized = true; changed = true;
-        if (!o.refunded) { o.refunded = true; refundUSD += Number(o.price || 0); }
+      const data = await res.json();
+      const statusMap = {};
+      if (Array.isArray(data)) {
+        data.forEach(item => { if (item && (item.order_id || item.id)) statusMap[String(item.order_id || item.id)] = item; });
+      } else if (data && typeof data === "object") {
+        const arr = Array.isArray(data.data) ? data.data : null;
+        if (arr) {
+          arr.forEach(item => { if (item && (item.order_id || item.id)) statusMap[String(item.order_id || item.id)] = item; });
+        } else {
+          const sourceObj = data.orders && typeof data.orders === "object" ? data.orders : data;
+          Object.keys(sourceObj).forEach(k => {
+            if (sourceObj[k] && typeof sourceObj[k] === "object") statusMap[String(k)] = sourceObj[k];
+          });
+        }
       }
-    });
-    if (refundUSD > 0 && users[0] && users[0].name !== "زائر") {
-      users[0].balanceUSD = Number(((users[0].balanceUSD || 0) + refundUSD).toFixed(3));
-      setDB("users", users); updateUserUI();
-    }
-    if (changed) setDB("orders", orders);
-    return changed;
-  } catch (e) { return false; }
+
+      list.forEach(o => {
+        const info = statusMap[String(o.supplierOrderId)];
+        if (!info) return;
+        const deliveryCodes = Array.isArray(info.delivery) && info.delivery.length > 0 ? info.delivery.join(" | ") : "";
+        const supReply = deliveryCodes || info.reply || info.replay || info.note || info.reason || info.message || "";
+        if (supReply && o.supplierReply !== supReply) {
+          o.supplierReply = supReply;
+          changed = true;
+        }
+        if (o.isFinalized) return;
+        const st = String(info.status || info.state || "").toLowerCase();
+        if (["accept", "completed", "complete", "success", "done", "مكتمل"].includes(st)) {
+          o.status = "مكتمل ✓"; o.isFinalized = true; changed = true;
+        } else if (["reject", "rejected", "canceled", "cancelled", "fail", "failed", "مرفوض"].includes(st)) {
+          o.status = "مرفوض ✕"; o.isFinalized = true; changed = true;
+          if (!o.refunded) { o.refunded = true; refundUSD += Number(o.price || 0); }
+        }
+      });
+    } catch (e) {}
+  }
+
+  if (refundUSD > 0 && users[0] && users[0].name !== "زائر") {
+    users[0].balanceUSD = Number(((users[0].balanceUSD || 0) + refundUSD).toFixed(3));
+    setDB("users", users); updateUserUI();
+  }
+  if (changed) setDB("orders", orders);
+  return changed;
 }
 
 function showOrderDetailsModal(orderId) {
@@ -548,9 +633,9 @@ async function handleServiceOrder(e, catId, catName) {
   const btn = document.getElementById("btn-submit-service-order");
   if (btn) { btn.disabled = true; btn.innerText = "جاري الإرسال..."; }
 
-  const supCfg = getActiveSupplierConfig();
+  const supCfg = getActiveSupplierConfig(product);
   const uuid = generateUUIDv4();
-  let supOrderId = "", orderStatus = "تم الإرسال للمورد ✓";
+  let supOrderId = "", orderStatus = "تم الإرسال للمورد ✓", immediateReply = "";
 
   try {
     let res;
@@ -559,25 +644,54 @@ async function handleServiceOrder(e, catId, catName) {
       if (!isNoTarget) bodyObj.params = { [product.paramField || "player_id"]: rawTarget };
       res = await fetch(`${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(supCfg.orderUrl)}&token=${encodeURIComponent(supCfg.token)}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json", "api-token": supCfg.token },
+        headers: { "Content-Type": "application/json", "Accept": "application/json", "api-token": supCfg.token, "Authorization": `Bearer ${supCfg.token}` },
+        body: JSON.stringify(bodyObj)
+      });
+    } else if (supCfg.type === "smm_panel") {
+      let smmUrl = `${supCfg.orderUrl}?key=${encodeURIComponent(supCfg.token)}&action=add&service=${encodeURIComponent(supId)}&quantity=${encodeURIComponent(orderQty)}`;
+      if (!isNoTarget) smmUrl += `&link=${encodeURIComponent(rawTarget)}`;
+      res = await fetch(`${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(smmUrl)}&token=${encodeURIComponent(supCfg.token)}`, {
+        headers: { "Accept": "application/json" }
+      });
+    } else if (supCfg.type === "rest_generic") {
+      const bodyObj = { service: supId, product_id: supId, quantity: orderQty, qty: orderQty, order_uuid: uuid };
+      if (!isNoTarget) {
+        bodyObj.link = rawTarget;
+        bodyObj.target = rawTarget;
+        bodyObj[product.paramField || "playerId"] = rawTarget;
+      }
+      res = await fetch(`${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(supCfg.orderUrl)}&token=${encodeURIComponent(supCfg.token)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json", "api-token": supCfg.token, "Authorization": `Bearer ${supCfg.token}` },
         body: JSON.stringify(bodyObj)
       });
     } else {
       const pKey = product.paramField || "playerId";
-      const paramsPart = isNoTarget ? `qty=${encodeURIComponent(orderQty)}&order_uuid=${encodeURIComponent(uuid)}` : `qty=${encodeURIComponent(orderQty)}&${encodeURIComponent(pKey)}=${encodeURIComponent(rawTarget)}&playerId=${encodeURIComponent(rawTarget)}&order_uuid=${encodeURIComponent(uuid)}`;
+      const paramsPart = isNoTarget
+        ? `qty=${encodeURIComponent(orderQty)}&order_uuid=${encodeURIComponent(uuid)}`
+        : `qty=${encodeURIComponent(orderQty)}&${encodeURIComponent(pKey)}=${encodeURIComponent(rawTarget)}&playerId=${encodeURIComponent(rawTarget)}&order_uuid=${encodeURIComponent(uuid)}`;
       const tUrl = `${supCfg.orderUrl}/${encodeURIComponent(supId)}/params?${paramsPart}`;
       res = await fetch(`${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(tUrl)}&token=${encodeURIComponent(supCfg.token)}`, {
         headers: { "Accept": "application/json", "api-token": supCfg.token }
       });
     }
+
     const raw = await res.text();
     let result = {};
     try { result = JSON.parse(raw); } catch (err) { alert("⚠️ رد غير متوقع:\n" + raw.slice(0, 200)); if (btn) { btn.disabled = false; btn.innerText = "تأكيد الطلب والشحن الفوري"; } return; }
 
     const errMsg = result.detail?.message || result.msg || result.message || result.error || "";
-    const ok = res.ok && !result.detail && !result.error && (String(result.status || "").toUpperCase() === "OK" || result.status === true || Boolean(result.order_id) || Boolean(result.data?.order_id || result.data?.id));
+    const ok = res.ok && !result.detail && !result.error && (
+      String(result.status || "").toUpperCase() === "OK" ||
+      result.status === true ||
+      Boolean(result.order) ||
+      Boolean(result.order_id) ||
+      Boolean(result.id) ||
+      Boolean(result.data?.order_id || result.data?.id)
+    );
     if (!ok) { alert("⚠️ رفض المورد الطلب:\n" + (errMsg || raw.slice(0, 200))); if (btn) { btn.disabled = false; btn.innerText = "تأكيد الطلب والشحن الفوري"; } return; }
-    supOrderId = result.data?.order_id || result.data?.id || result.order_id || uuid;
+    supOrderId = result.data?.order_id || result.data?.id || result.order_id || result.order || result.id || uuid;
+    immediateReply = Array.isArray(result.delivery) ? result.delivery.join(" | ") : (result.reply || result.code || "");
   } catch (err) {
     alert("⚠️ خطأ اتصال: " + err.message);
     if (btn) { btn.disabled = false; btn.innerText = "تأكيد الطلب والشحن الفوري"; }
@@ -599,6 +713,10 @@ async function handleServiceOrder(e, catId, catName) {
     userName: users[0].name,
     userEmail: users[0].email || "",
     supplierOrderId: supOrderId,
+    supplierApiUrl: supCfg.productsUrl,
+    supplierApiKey: supCfg.token,
+    supplierApiType: supCfg.type,
+    supplierReply: immediateReply,
     categoryName: catName,
     packageName: product.name,
     qty: orderQty,
