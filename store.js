@@ -1,4 +1,4 @@
-// --- store.js (النسخة الكاملة: استخراج الهاتف تلقائياً + إشعار واتساب + المحرك الشامل للموردين + تنظيف 24 ساعة) ---
+// --- store.js (النسخة الكاملة: تغيير رقم واتساب الإدارة والزبون + المحرك الشامل للموردين + تنظيف 24 ساعة) ---
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
 let activeDepositMethod = null;
@@ -12,6 +12,38 @@ let lastNotifCount = -1;
 const SUPPLIER_WORKER_URL = "https://rapid-dew-4b71.fhdsd686.workers.dev/";
 const DEFAULT_SUPPLIER_BASE = "https://api.shams4store.com";
 const DEFAULT_SUPPLIER_TOKEN = "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427";
+
+function getAdminWhatsAppNumber() {
+  const s = getDB("site_settings", {});
+  const raw = (s.whatsapp || getDB("admin_whatsapp", "0957455972")).toString().replace(/\D/g, "");
+  if (!raw) return "963957455972";
+  return raw.startsWith("09") ? "963" + raw.slice(1) : (raw.startsWith("963") ? raw : raw);
+}
+
+function promptChangeUserWhatsApp() {
+  const users = getDB("users", []);
+  if (!users[0] || !users[0].name || users[0].name === "زائر") {
+    if (typeof openAuthModal === "function") openAuthModal();
+    return;
+  }
+  const currentPhone = users[0].phone || users[0].whatsapp || "";
+  const entered = prompt("أدخل رقم الواتساب الخاص بك (ليصلك إشعار فور شحن رصيدك):", currentPhone);
+  if (entered === null) return;
+  const cleanPhone = entered.trim();
+  users[0].phone = cleanPhone;
+  users[0].whatsapp = cleanPhone;
+  setDB("users", users);
+
+  const registry = getDB("cloud_users_registry", {});
+  const regKey = (users[0].email || users[0].name || "").toLowerCase().trim();
+  if (registry[regKey]) {
+    registry[regKey].phone = cleanPhone;
+    registry[regKey].whatsapp = cleanPhone;
+    setDB("cloud_users_registry", registry);
+  }
+  updateUserUI();
+  alert(cleanPhone ? `✅ تم حفظ رقم الواتساب الخاص بك: ${cleanPhone}` : "تم مسح رقم الواتساب.");
+}
 
 function generateUUIDv4() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
@@ -432,6 +464,7 @@ function openFeatureModal(type) {
     titleEl.innerText = "معلومات الحساب";
     bodyEl.innerHTML = `<div style="background:#0f172a;padding:14px;border-radius:12px;text-align:center;">
       <p style="margin-bottom:8px;">المستوى الحالي: <strong style="color:#38bdf8;">${currentUser ? (currentUser.role || "عضو") : "زائر"}</strong></p>
+      <p style="margin-bottom:8px;">رقم الواتساب: <strong style="color:#10b981;" dir="ltr">${currentUser?.phone || "غير مسجل"}</strong></p>
       <p style="margin:0;">عدد طلباتك اليوم: <strong style="color:#10b981;">${stats.count} طلب</strong> (${formatStoreAmount(stats.totalUSD)})</p>
     </div>`;
   }
@@ -448,12 +481,18 @@ function checkMaintenanceGate() {
 
 function loadSiteSettings() {
   const def = ["https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80"];
-  const s = getDB("site_settings", { name: "Mohannad kard", logo: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80", banners: def });
+  const s = getDB("site_settings", { name: "Mohannad kard", logo: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80", banners: def, whatsapp: "0957455972" });
   if (document.getElementById("site-logo") && s.logo) document.getElementById("site-logo").src = s.logo;
   if (document.getElementById("site-title")) document.getElementById("site-title").innerText = s.name || s.siteName || "Mohannad kard";
   const banners = (s.banners && s.banners.length) ? s.banners : def;
   const imgEl = document.querySelector(".banner-card img");
   if (imgEl) imgEl.src = banners[0];
+
+  const waNum = getAdminWhatsAppNumber();
+  const drawerWa = document.getElementById("drawer-whatsapp-link");
+  if (drawerWa) drawerWa.href = `https://wa.me/${waNum}`;
+  const maintWa = document.getElementById("maintenance-whatsapp-link");
+  if (maintWa) maintWa.href = `https://wa.me/${waNum}?text=${encodeURIComponent("مرحباً، أستفسر عن موعد انتهاء صيانة المتجر")}`;
 }
 
 function promptChangeUserAvatar() {
@@ -541,11 +580,12 @@ function handleDepositSubmit(e) {
   setDB("deposit_requests", reqs);
 
   closeDepositModal();
+  const adminWa = getAdminWhatsAppNumber();
   const adminMsg = encodeURIComponent(
     `🔔 *طلب إيداع جديد في Mohannad kard*\n👤 المستخدم: ${currentUser.name || "زائر"}\n💳 الوسيلة: ${activeDepositMethod?.name || "شام كاش"}\n💰 المبلغ: $${amountUSD.toFixed(2)}\n📝 المرسل: ${sender}${autoPhone ? `\n📱 هاتف الحساب: ${autoPhone}` : ""}`
   );
   if (confirm("✅ تم تسجيل طلب الشحن بنجاح!\nاضغط (موافق) لإرسال إشعار للإدارة عبر واتساب لتأكيد الطلب فوراً:")) {
-    window.open(`https://wa.me/963957455972?text=${adminMsg}`, "_blank");
+    window.open(`https://wa.me/${adminWa}?text=${adminMsg}`, "_blank");
   }
 }
 
@@ -842,6 +882,8 @@ function updateUserUI() {
   if (document.getElementById("side-user-rank")) document.getElementById("side-user-rank").innerText = user.role || "عضو";
   if (document.getElementById("header-user-rank")) document.getElementById("header-user-rank").innerText = user.role || "عضو";
   if (document.getElementById("drawer-avatar")) document.getElementById("drawer-avatar").src = user.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
+  const waLabel = document.getElementById("user-whatsapp-label");
+  if (waLabel) waLabel.innerText = user.phone ? `واتساب: ${user.phone}` : "إضافة / تغيير رقم واتساب";
   const adminLink = document.getElementById("admin-panel-link");
   if (adminLink) adminLink.style.display = isCurrentUserAdmin(user) ? "flex" : "none";
 }
