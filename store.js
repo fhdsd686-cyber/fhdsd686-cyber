@@ -1,4 +1,4 @@
-// --- store.js (المحرك الشامل لجميع الموردين + حساب الأرباح + تنظيف 24 ساعة) ---
+// --- store.js (النسخة الكاملة: استخراج الهاتف تلقائياً + إشعار واتساب + المحرك الشامل للموردين + تنظيف 24 ساعة) ---
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
 let activeDepositMethod = null;
@@ -7,6 +7,7 @@ let displayCurrency = (typeof getDB === "function") ? getDB("display_currency", 
 const STORE_EXCHANGE_RATE = 155;
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 let currentParentCategory = null;
+let lastNotifCount = -1;
 
 const SUPPLIER_WORKER_URL = "https://rapid-dew-4b71.fhdsd686.workers.dev/";
 const DEFAULT_SUPPLIER_BASE = "https://api.shams4store.com";
@@ -20,7 +21,6 @@ function generateUUIDv4() {
   });
 }
 
-// محرك الكشف التلقائي الشامل لجميع أنواع الموردين (Shams / Parabyte / SMM Panel / REST)
 function detectSupplierAdapter(customUrl = "", customToken = "", forcedType = "") {
   const savedUrl = (customUrl || getDB("supplier_api_url", "") || `${DEFAULT_SUPPLIER_BASE}/client/api/products`).trim();
   const savedToken = (customToken || getDB("supplier_api_key", "") || DEFAULT_SUPPLIER_TOKEN).trim();
@@ -152,12 +152,38 @@ document.addEventListener("DOMContentLoaded", () => {
   if (typeof checkAuthGate === "function") checkAuthGate();
 });
 
+function isNotificationForUser(notif, user) {
+  if (!notif || !user) return false;
+  if (notif.targetAll === true) return true;
+  const uName = (user.name || "").toLowerCase().trim();
+  const uFull = (user.fullname || "").toLowerCase().trim();
+  const uEmail = (user.email || "").toLowerCase().trim();
+
+  const nName = (notif.userName || "").toLowerCase().trim();
+  const nEmail = (notif.userEmail || "").toLowerCase().trim();
+
+  return (
+    (nEmail && uEmail && nEmail === uEmail) ||
+    (nName && (nName === uName || nName === uFull || nName === uEmail))
+  );
+}
+
 function checkIncomingNotifications() {
   const users = getDB("users", []);
   const currentUser = (Array.isArray(users) && users.length > 0 && users[0].name !== "زائر") ? users[0] : null;
   if (!currentUser) return;
+
   const notifications = getDB("user_notifications", []);
-  const myUnread = notifications.filter(n => n.userName === currentUser.name && !n.read);
+  const myUnread = notifications.filter(n => isNotificationForUser(n, currentUser) && !n.read);
+
+  if (lastNotifCount !== -1 && myUnread.length > lastNotifCount) {
+    const newest = myUnread[0];
+    if (newest) {
+      alert(`🔔 إشعار جديد:\n${newest.title}\n${newest.message}`);
+    }
+  }
+  lastNotifCount = myUnread.length;
+
   document.querySelectorAll(".fa-bell").forEach(icon => {
     const parent = icon.parentElement;
     if (!parent) return;
@@ -167,11 +193,13 @@ function checkIncomingNotifications() {
       if (!badge) {
         badge = document.createElement("span");
         badge.className = "notif-red-dot";
-        badge.style.cssText = "position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;font-size:0.65rem;font-weight:900;min-width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;padding:0 3px;";
+        badge.style.cssText = "position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;font-size:0.65rem;font-weight:900;min-width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;padding:0 3px;box-shadow:0 0 8px #ef4444;";
         parent.appendChild(badge);
       }
       badge.innerText = myUnread.length;
-    } else if (badge) badge.remove();
+    } else if (badge) {
+      badge.remove();
+    }
   });
 }
 
@@ -236,7 +264,6 @@ async function syncOrdersWithSupplier() {
   const pending = orders.filter(o => o.supplierOrderId && !o.isFinalized && o.status !== "مكتمل ✓" && !String(o.status).includes("مرفوض"));
   if (pending.length === 0) return false;
 
-  // تجميع الطلبات المعلقة حسب المورد الخاص بكل طلب
   const groups = {};
   pending.forEach(o => {
     const cfg = detectSupplierAdapter(o.supplierApiUrl || "", o.supplierApiKey || "", o.supplierApiType || "");
@@ -375,8 +402,31 @@ function openFeatureModal(type) {
     syncOrdersWithSupplier().then(u => { if (u) render(); });
   } else if (type === "notifications") {
     titleEl.innerText = "الإشعارات";
-    const notifs = currentUser ? getDB("user_notifications", []).filter(n => n.userName === currentUser.name) : [];
-    bodyEl.innerHTML = notifs.map(n => `<div style="background:#0f172a;padding:10px;border-radius:10px;margin-bottom:8px;"><strong>${n.title}</strong><p style="font-size:0.8rem;">${n.message}</p></div>`).join("") + `<div style="background:#0f172a;padding:10px;border-radius:10px;">أهلاً بك في Mohannad kard 🇸🇾</div>`;
+    const allNotifs = getDB("user_notifications", []);
+    let changedRead = false;
+    const myNotifs = currentUser ? allNotifs.filter(n => {
+      if (isNotificationForUser(n, currentUser)) {
+        if (!n.read) { n.read = true; changedRead = true; }
+        return true;
+      }
+      return false;
+    }) : [];
+
+    if (changedRead) {
+      setDB("user_notifications", allNotifs);
+      lastNotifCount = 0;
+      checkIncomingNotifications();
+    }
+
+    bodyEl.innerHTML = myNotifs.map(n => `
+      <div style="background:#0f172a;padding:12px;border-radius:12px;margin-bottom:8px;border-right:3px solid #10b981;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <strong style="color:#38bdf8;font-size:0.9rem;">${n.title}</strong>
+          <span style="font-size:0.68rem;color:#64748b;">${n.date || ""}</span>
+        </div>
+        <p style="font-size:0.82rem;color:#e2e8f0;margin:0;">${n.message}</p>
+      </div>
+    `).join("") + `<div style="background:#0f172a;padding:10px;border-radius:10px;font-size:0.82rem;color:#94a3b8;">أهلاً بك في Mohannad kard 🇸🇾</div>`;
   } else {
     const stats = getUserDailyOrdersStats(currentUser);
     titleEl.innerText = "معلومات الحساب";
@@ -449,17 +499,54 @@ function onDepositFileChosen(e) {
   const f = e.target.files[0]; if (!f) return;
   const r = new FileReader(); r.onload = ev => { depositReceiptBase64 = ev.target.result; }; r.readAsDataURL(f);
 }
+
 function handleDepositSubmit(e) {
   e.preventDefault();
   const users = getDB("users", []);
+  const currentUser = users[0] || {};
   const v = parseFloat(document.getElementById("deposit-input-val").value) || 0;
   const sender = document.getElementById("deposit-sender-info").value.trim();
+  const note = (document.getElementById("deposit-note")?.value || "").trim();
   const rate = (activeDepositMethod && Number(activeDepositMethod.rate) > 1) ? Number(activeDepositMethod.rate) : STORE_EXCHANGE_RATE;
   const amountUSD = currentDepositCurrency === "USD" ? v : Number((v / rate).toFixed(3));
+
+  const registry = getDB("cloud_users_registry", {});
+  const regKey = (currentUser.email || currentUser.name || "").toLowerCase().trim();
+  const regUser = registry[regKey] || {};
+  const autoPhone = (
+    currentUser.phone ||
+    currentUser.whatsapp ||
+    currentUser.mobile ||
+    regUser.phone ||
+    regUser.whatsapp ||
+    regUser.mobile ||
+    ""
+  ).toString().trim();
+
   const reqs = getDB("deposit_requests", []);
-  reqs.unshift({ id: "dep_" + Date.now(), userName: users[0]?.name || "زائر", userEmail: users[0]?.email || "", methodName: activeDepositMethod?.name || "شام كاش", amountUSD, sender, receipt: depositReceiptBase64, date: new Date().toLocaleString("ar-SY"), status: "معلق" });
+  reqs.unshift({
+    id: "dep_" + Date.now(),
+    userName: currentUser.name || "زائر",
+    userEmail: currentUser.email || "",
+    phone: autoPhone,
+    methodName: activeDepositMethod?.name || "شام كاش",
+    amountUSD,
+    amount: amountUSD,
+    sender,
+    note,
+    receipt: depositReceiptBase64,
+    date: new Date().toLocaleString("ar-SY"),
+    status: "معلق"
+  });
   setDB("deposit_requests", reqs);
-  alert("✅ تم إرسال طلب الشحن!"); closeDepositModal();
+
+  closeDepositModal();
+  const adminMsg = encodeURIComponent(
+    `🔔 *طلب إيداع جديد في Mohannad kard*\n👤 المستخدم: ${currentUser.name || "زائر"}\n💳 الوسيلة: ${activeDepositMethod?.name || "شام كاش"}\n💰 المبلغ: $${amountUSD.toFixed(2)}\n📝 المرسل: ${sender}${autoPhone ? `\n📱 هاتف الحساب: ${autoPhone}` : ""}`
+  );
+  if (confirm("✅ تم تسجيل طلب الشحن بنجاح!\nاضغط (موافق) لإرسال إشعار للإدارة عبر واتساب لتأكيد الطلب فوراً:")) {
+    window.open(`https://wa.me/963957455972?text=${adminMsg}`, "_blank");
+  }
 }
 
 function renderCategories(filterText = "") {
