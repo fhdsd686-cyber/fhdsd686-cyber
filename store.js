@@ -1,10 +1,11 @@
-// --- store.js (النسخة الكاملة والمحسّنة) ---
+// --- store.js (النسخة الكاملة: حرية تعديل الكمية + عداد الطلبات اليومية + حذف تلقائي كل 24 ساعة) ---
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
 let activeDepositMethod = null;
 let depositReceiptBase64 = "";
 let displayCurrency = (typeof getDB === "function") ? getDB("display_currency", "USD") : "USD";
 const STORE_EXCHANGE_RATE = 155;
+const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 let currentParentCategory = null;
 
 const SUPPLIER_WORKER_URL = "https://rapid-dew-4b71.fhdsd686.workers.dev/";
@@ -35,13 +36,54 @@ function getActiveSupplierConfig() {
   };
 }
 
+// تنظيف الطلبات التي مرّ عليها أكثر من 24 ساعة تلقائياً
+function cleanupExpiredOrders24h() {
+  const orders = getDB("orders", []);
+  if (!Array.isArray(orders) || orders.length === 0) return [];
+  const now = Date.now();
+  const freshOrders = orders.filter(o => {
+    const createdTime = Number(o.timestamp || (String(o.id || "").startsWith("ord_") ? String(o.id).split("_")[1] : 0));
+    if (!createdTime || isNaN(createdTime)) return true;
+    return (now - createdTime) < TWENTY_FOUR_HOURS_MS;
+  });
+  if (freshOrders.length !== orders.length) {
+    setDB("orders", freshOrders);
+  }
+  return freshOrders;
+}
+
+// حساب إحصائيات الطلبات اليومية للمستخدم الحالي (آخر 24 ساعة)
+function getUserDailyOrdersStats(user) {
+  const freshOrders = cleanupExpiredOrders24h();
+  if (!user || !user.name || user.name === "زائر") {
+    return { count: 0, totalUSD: 0, userOrders: [] };
+  }
+  const uName = (user.name || "").toLowerCase().trim();
+  const uEmail = (user.email || "").toLowerCase().trim();
+
+  const userOrders = freshOrders.filter(o => {
+    // إذا كان الطلب قديماً بدون حقل userName نعرضه للمستخدم الحالي، وإلا نطابق الاسم أو الإيميل
+    if (!o.userName && !o.userEmail) return true;
+    const oName = (o.userName || "").toLowerCase().trim();
+    const oEmail = (o.userEmail || "").toLowerCase().trim();
+    return (uName && oName === uName) || (uEmail && oEmail === uEmail);
+  });
+
+  const totalUSD = userOrders.reduce((sum, o) => sum + Number(o.price || 0), 0);
+  return { count: userOrders.length, totalUSD, userOrders };
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  try { cleanupExpiredOrders24h(); } catch (e) {}
   try { loadSiteSettings(); } catch (e) {}
   try { renderCategories(); } catch (e) {}
   try { updateUserUI(); } catch (e) {}
   try { initSavedTheme(); } catch (e) {}
   try { checkIncomingNotifications(); } catch (e) {}
-  setInterval(() => { try { checkIncomingNotifications(); } catch (e) {} }, 4000);
+  setInterval(() => {
+    try { cleanupExpiredOrders24h(); } catch (e) {}
+    try { checkIncomingNotifications(); } catch (e) {}
+  }, 60000);
   if (typeof checkMaintenanceGate === "function") checkMaintenanceGate();
   if (typeof checkAuthGate === "function") checkAuthGate();
 });
@@ -125,7 +167,7 @@ function toggleTheme() {
 }
 
 async function syncOrdersWithSupplier() {
-  const orders = getDB("orders", []);
+  const orders = cleanupExpiredOrders24h();
   if (!Array.isArray(orders) || orders.length === 0) return false;
   const pending = orders.filter(o => o.supplierOrderId && !o.isFinalized && o.status !== "مكتمل ✓" && !String(o.status).includes("مرفوض"));
   if (pending.length === 0) return false;
@@ -162,10 +204,13 @@ async function syncOrdersWithSupplier() {
 }
 
 function showOrderDetailsModal(orderId) {
-  const order = getDB("orders", []).find(o => String(o.id) === String(orderId));
+  const order = cleanupExpiredOrders24h().find(o => String(o.id) === String(orderId));
   if (!order) return;
   const modal = document.getElementById("feature-modal"), titleEl = document.getElementById("feature-modal-title"), bodyEl = document.getElementById("feature-modal-body");
   if (!modal || !titleEl || !bodyEl) return;
+  const createdMs = Number(order.timestamp || Date.now());
+  const remainingHrs = Math.max(0, Math.ceil((TWENTY_FOUR_HOURS_MS - (Date.now() - createdMs)) / (1000 * 60 * 60)));
+
   titleEl.innerText = "تفاصيل الطلب";
   bodyEl.innerHTML = `<div style="background:#050b18;padding:14px;border-radius:14px;margin-bottom:12px;">
     <p><strong>المنتج:</strong> ${order.packageName}</p>
@@ -174,6 +219,7 @@ function showOrderDetailsModal(orderId) {
     <p><strong>المبلغ:</strong> ${formatStoreAmount(order.price)}</p>
     <p><strong>الحالة:</strong> ${order.status}</p>
     <p><strong>رقم المورد:</strong> ${order.supplierOrderId || order.id}</p>
+    <p style="font-size:0.78rem;color:#f59e0b;margin-top:8px;">⏳ يُحذف تلقائياً من السجل بعد: ${remainingHrs} ساعة</p>
   </div><button onclick="openFeatureModal('orders')" class="btn-send-deposit">رجوع</button>`;
   modal.classList.remove("hidden");
 }
@@ -185,14 +231,31 @@ function openFeatureModal(type) {
   const users = getDB("users", []);
   const currentUser = (Array.isArray(users) && users.length > 0 && users[0].name !== "زائر") ? users[0] : null;
   if (type === "orders") {
-    titleEl.innerText = "سجل طلباتي";
+    titleEl.innerText = "سجل الطلبات اليومية (24 ساعة)";
     const render = () => {
-      const orders = getDB("orders", []);
-      bodyEl.innerHTML = orders.length ? orders.map(o => `<div style="background:#0f172a;padding:12px;border-radius:12px;margin-bottom:8px;">
+      const stats = getUserDailyOrdersStats(currentUser);
+      const orders = stats.userOrders;
+      const summaryHeader = `
+        <div style="background:linear-gradient(135deg,#0c1e3a,#091428);border:1px solid rgba(56,189,248,0.35);padding:12px;border-radius:14px;margin-bottom:12px;display:flex;justify-content:space-around;text-align:center;">
+          <div>
+            <div style="font-size:0.75rem;color:#94a3b8;">طلباتك اليوم (24س)</div>
+            <strong style="font-size:1.2rem;color:#38bdf8;">${stats.count} طلب</strong>
+          </div>
+          <div style="width:1px;background:rgba(255,255,255,0.1);"></div>
+          <div>
+            <div style="font-size:0.75rem;color:#94a3b8;">إجمالي مشتريات اليوم</div>
+            <strong style="font-size:1.1rem;color:#10b981;">${formatStoreAmount(stats.totalUSD)}</strong>
+          </div>
+        </div>
+        <div style="font-size:0.72rem;color:#94a3b8;text-align:center;margin-bottom:10px;">
+          <i class="fa-solid fa-clock-rotate-left" style="color:#f59e0b;"></i> يتم تصفير وحذف كل طلب تلقائياً بعد مرور 24 ساعة من إرساله
+        </div>
+      `;
+      bodyEl.innerHTML = summaryHeader + (orders.length ? orders.map(o => `<div style="background:#0f172a;padding:12px;border-radius:12px;margin-bottom:8px;border-right:3px solid ${String(o.status).includes('مكتمل') ? '#10b981' : (String(o.status).includes('مرفوض') ? '#ef4444' : '#f59e0b')};">
         <div style="display:flex;justify-content:space-between;"><strong>${o.packageName} (×${o.qty || 1})</strong><span style="color:#38bdf8;">${formatStoreAmount(o.price)}</span></div>
-        <div style="font-size:0.78rem;color:#94a3b8;">المستلم: ${o.target} | ${o.status}</div>
-        <button onclick="showOrderDetailsModal('${o.id}')" style="margin-top:6px;background:#0284c7;border:none;color:#fff;padding:4px 10px;border-radius:6px;">التفاصيل</button>
-      </div>`).join("") : `<p style="text-align:center;color:#94a3b8;">لا توجد طلبات.</p>`;
+        <div style="font-size:0.78rem;color:#94a3b8;margin-top:4px;">المستلم: ${o.target} | ${o.status}</div>
+        <button onclick="showOrderDetailsModal('${o.id}')" style="margin-top:6px;background:#0284c7;border:none;color:#fff;padding:4px 10px;border-radius:6px;font-size:0.76rem;">التفاصيل</button>
+      </div>`).join("") : `<p style="text-align:center;color:#94a3b8;padding:16px;">لا توجد طلبات خلال آخر 24 ساعة.</p>`);
     };
     render();
     syncOrdersWithSupplier().then(u => { if (u) render(); });
@@ -201,8 +264,12 @@ function openFeatureModal(type) {
     const notifs = currentUser ? getDB("user_notifications", []).filter(n => n.userName === currentUser.name) : [];
     bodyEl.innerHTML = notifs.map(n => `<div style="background:#0f172a;padding:10px;border-radius:10px;margin-bottom:8px;"><strong>${n.title}</strong><p style="font-size:0.8rem;">${n.message}</p></div>`).join("") + `<div style="background:#0f172a;padding:10px;border-radius:10px;">أهلاً بك في Mohannad kard 🇸🇾</div>`;
   } else {
+    const stats = getUserDailyOrdersStats(currentUser);
     titleEl.innerText = "معلومات الحساب";
-    bodyEl.innerHTML = `<p style="text-align:center;">المستوى الحالي: <strong>${currentUser ? (currentUser.role || "عضو") : "زائر"}</strong></p>`;
+    bodyEl.innerHTML = `<div style="background:#0f172a;padding:14px;border-radius:12px;text-align:center;">
+      <p style="margin-bottom:8px;">المستوى الحالي: <strong style="color:#38bdf8;">${currentUser ? (currentUser.role || "عضو") : "زائر"}</strong></p>
+      <p style="margin:0;">عدد طلباتك اليوم: <strong style="color:#10b981;">${stats.count} طلب</strong> (${formatStoreAmount(stats.totalUSD)})</p>
+    </div>`;
   }
   modal.classList.remove("hidden");
 }
@@ -385,13 +452,14 @@ function onPackageSelectChange(preserveQty = false) {
         if (qtyLabel) qtyLabel.innerText = "اختر الكمية المعتمدة:";
         qty = parseFloat(document.getElementById("srv-qty-select")?.value || String(qtyList[0]));
       } else {
+        // حرية كاملة للمستخدم بمسح الرقم وكتابة أي كمية يريدها دون مقاطعة أثناء الكتابة
         if (!preserveQty || !document.getElementById("srv-qty-input")) {
-          qtyWrap.innerHTML = `<input type="number" id="srv-qty-input" class="field-input" min="${minQ}" max="${maxQ}" step="any" value="${minQ}" oninput="onPackageSelectChange(true)" dir="ltr">`;
+          qtyWrap.innerHTML = `<input type="number" id="srv-qty-input" class="field-input" min="${minQ}" max="${maxQ}" step="any" value="${minQ}" placeholder="أدخل الكمية (أقل كمية ${minQ})" oninput="onPackageSelectChange(true)" dir="ltr">`;
         }
         const inp = document.getElementById("srv-qty-input");
-        if (inp && parseFloat(inp.value || "0") < minQ) inp.value = minQ;
         if (qtyLabel) qtyLabel.innerText = `الكمية المطلوبة (من ${minQ} إلى ${maxQ}):`;
-        qty = Math.max(minQ, parseFloat(inp?.value || String(minQ)));
+        const typedVal = parseFloat(inp?.value || "0");
+        qty = (!isNaN(typedVal) && typedVal > 0) ? typedVal : 0;
       }
     }
   }
@@ -403,13 +471,22 @@ async function handleServiceOrder(e, catId, catName) {
   const users = getDB("users", []);
   if (!users[0] || !users[0].name || users[0].name === "زائر") { if (typeof openAuthModal === "function") openAuthModal(); return; }
   const targetInput = document.getElementById("srv-target-input").value.trim();
-  const prodId = document.getElementById("srv-package-select").value;
+  const selectEl = document.getElementById("srv-package-select");
+  const prodId = selectEl.value;
   const product = getDB("products", []).find(p => p.id === prodId);
   if (!product) return;
 
   const isVar = isVariableQuantityProduct(product);
+  const opt = selectEl.options[selectEl.selectedIndex];
+  const minAllowed = parseFloat(opt?.dataset.min || "1");
   const rawQty = document.getElementById("srv-qty-select")?.value || document.getElementById("srv-qty-input")?.value || "1";
-  const orderQty = isVar ? Math.max(0.01, parseFloat(rawQty)) : 1;
+  const orderQty = isVar ? parseFloat(rawQty) : 1;
+
+  if (isVar && (isNaN(orderQty) || orderQty < minAllowed)) {
+    alert(`⚠️ أقل كمية مسموحة لهذه الخدمة هي: ${minAllowed}`);
+    return;
+  }
+
   const totalPrice = Number((calculateProductFinalPrice(product) * orderQty).toFixed(3));
   if ((users[0].balanceUSD || 0) < totalPrice) { alert("رصيدك لا يكفي!"); return; }
 
@@ -454,12 +531,29 @@ async function handleServiceOrder(e, catId, catName) {
 
   users[0].balanceUSD = Number((users[0].balanceUSD - totalPrice).toFixed(3));
   setDB("users", users);
-  const orders = getDB("orders", []);
-  orders.unshift({ id: "ord_" + Date.now(), supplierOrderId: supOrderId, categoryName: catName, packageName: product.name, qty: orderQty, target: targetInput, price: totalPrice, date: new Date().toLocaleString("ar-SY"), status: orderStatus });
+
+  const nowTs = Date.now();
+  const orders = cleanupExpiredOrders24h();
+  orders.unshift({
+    id: "ord_" + nowTs,
+    timestamp: nowTs,
+    userName: users[0].name,
+    userEmail: users[0].email || "",
+    supplierOrderId: supOrderId,
+    categoryName: catName,
+    packageName: product.name,
+    qty: orderQty,
+    target: targetInput,
+    price: totalPrice,
+    date: new Date(nowTs).toLocaleString("ar-SY"),
+    status: orderStatus
+  });
   setDB("orders", orders);
+
+  const dailyStats = getUserDailyOrdersStats(users[0]);
   if (btn) { btn.disabled = false; btn.innerText = "تأكيد الطلب والشحن الفوري"; }
   updateUserUI();
-  alert(`✅ تم إرسال الطلب بنجاح!\nالمستلم: ${targetInput}\nالكمية: ${orderQty}`);
+  alert(`✅ تم إرسال الطلب بنجاح!\nالمستلم: ${targetInput}\nالكمية: ${orderQty}\n📊 عدد طلباتك اليوم: ${dailyStats.count}`);
   backToCategories();
 }
 
