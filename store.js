@@ -1,4 +1,4 @@
-// --- store.js (النسخة الكاملة: حساب الأرباح + حرية تعديل الكمية + حذف تلقائي كل 24 ساعة) ---
+// --- store.js (النسخة الكاملة: دعم الحسابات الجاهزة بدون حقل ID + عرض رد المورد + حساب الأرباح + تنظيف 24 ساعة) ---
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
 let activeDepositMethod = null;
@@ -34,6 +34,21 @@ function getActiveSupplierConfig() {
     checkUrl: isParabyte ? `${baseUrl}/api/v2/check` : `${baseUrl}/client/api/check`,
     token: savedToken
   };
+}
+
+// اكتشاف المنتجات التي لا تحتاج حقل إدخال (تُسلَّم بالحساب أو الكود في الرد مباشرة)
+function isNoTargetProduct(catName, product = null) {
+  if (product && product.noParams === true) return true;
+  const text = `${catName || ""} ${product?.name || ""}`.toLowerCase();
+  return (
+    text.includes("chatgpt") ||
+    text.includes("gpt") ||
+    text.includes("حساب جاهز") ||
+    text.includes("حسابات جاهزة") ||
+    text.includes("تسليم فوري") ||
+    text.includes("كود") ||
+    text.includes("بطاقة")
+  );
 }
 
 function cleanupExpiredOrders24h() {
@@ -182,7 +197,14 @@ async function syncOrdersWithSupplier() {
     const users = getDB("users", []);
     orders.forEach(o => {
       const info = statusMap[String(o.supplierOrderId)];
-      if (!info || o.isFinalized) return;
+      if (!info) return;
+      const deliveryCodes = Array.isArray(info.delivery) && info.delivery.length > 0 ? info.delivery.join(" | ") : "";
+      const supReply = deliveryCodes || info.reply || info.replay || info.note || info.reason || info.message || "";
+      if (supReply && o.supplierReply !== supReply) {
+        o.supplierReply = supReply;
+        changed = true;
+      }
+      if (o.isFinalized) return;
       const st = String(info.status || info.state || "").toLowerCase();
       if (["accept", "completed", "complete", "success", "done", "مكتمل"].includes(st)) {
         o.status = "مكتمل ✓"; o.isFinalized = true; changed = true;
@@ -208,15 +230,24 @@ function showOrderDetailsModal(orderId) {
   const createdMs = Number(order.timestamp || Date.now());
   const remainingHrs = Math.max(0, Math.ceil((TWENTY_FOUR_HOURS_MS - (Date.now() - createdMs)) / (1000 * 60 * 60)));
 
+  const replyBlock = order.supplierReply
+    ? `<div style="margin-top:10px;background:#0f172a;border:1px solid #10b981;padding:10px;border-radius:10px;">
+        <div style="font-size:0.76rem;color:#10b981;font-weight:800;margin-bottom:4px;">🎁 الحساب / الكود المستلم من المورد:</div>
+        <div style="font-size:0.84rem;color:#fff;word-break:break-all;background:#050b18;padding:8px;border-radius:8px;" dir="ltr">${order.supplierReply}</div>
+        <button type="button" onclick="navigator.clipboard.writeText(${JSON.stringify(order.supplierReply)});alert('✅ تم نسخ بيانات الحساب!');" style="margin-top:6px;background:#10b981;border:none;color:#fff;padding:5px 12px;border-radius:8px;font-size:0.76rem;font-weight:800;cursor:pointer;">نسخ البيانات</button>
+      </div>`
+    : `<div style="margin-top:8px;font-size:0.76rem;color:#94a3b8;">ℹ️ في حال كان المنتج حساباً جاهزاً أو كوداً، سيظهر هنا فور اكتمال الطلب من المورد.</div>`;
+
   titleEl.innerText = "تفاصيل الطلب";
   bodyEl.innerHTML = `<div style="background:#050b18;padding:14px;border-radius:14px;margin-bottom:12px;">
     <p><strong>المنتج:</strong> ${order.packageName}</p>
     <p><strong>الكمية:</strong> ${order.qty || 1}</p>
-    <p><strong>المستلم:</strong> ${order.target}</p>
+    ${order.target && order.target !== "تسليم بالحساب / الرد" ? `<p><strong>المستلم:</strong> ${order.target}</p>` : ""}
     <p><strong>المبلغ:</strong> ${formatStoreAmount(order.price)}</p>
     <p><strong>الحالة:</strong> ${order.status}</p>
     <p><strong>رقم المورد:</strong> ${order.supplierOrderId || order.id}</p>
-    <p style="font-size:0.78rem;color:#f59e0b;margin-top:8px;">⏳ يُحذف تلقائياً من السجل بعد: ${remainingHrs} ساعة</p>
+    ${replyBlock}
+    <p style="font-size:0.78rem;color:#f59e0b;margin-top:10px;">⏳ يُحذف تلقائياً من السجل بعد: ${remainingHrs} ساعة</p>
   </div><button onclick="openFeatureModal('orders')" class="btn-send-deposit">رجوع</button>`;
   modal.classList.remove("hidden");
 }
@@ -250,7 +281,8 @@ function openFeatureModal(type) {
       `;
       bodyEl.innerHTML = summaryHeader + (orders.length ? orders.map(o => `<div style="background:#0f172a;padding:12px;border-radius:12px;margin-bottom:8px;border-right:3px solid ${String(o.status).includes('مكتمل') ? '#10b981' : (String(o.status).includes('مرفوض') ? '#ef4444' : '#f59e0b')};">
         <div style="display:flex;justify-content:space-between;"><strong>${o.packageName} (×${o.qty || 1})</strong><span style="color:#38bdf8;">${formatStoreAmount(o.price)}</span></div>
-        <div style="font-size:0.78rem;color:#94a3b8;margin-top:4px;">المستلم: ${o.target} | ${o.status}</div>
+        <div style="font-size:0.78rem;color:#94a3b8;margin-top:4px;">${o.target && o.target !== "تسليم بالحساب / الرد" ? `المستلم: ${o.target} | ` : ""}${o.status}</div>
+        ${o.supplierReply ? `<div style="font-size:0.75rem;color:#10b981;margin-top:4px;">🎁 تم استلام الحساب / الكود (اضغط التفاصيل)</div>` : ""}
         <button onclick="showOrderDetailsModal('${o.id}')" style="margin-top:6px;background:#0284c7;border:none;color:#fff;padding:4px 10px;border-radius:6px;font-size:0.76rem;">التفاصيل</button>
       </div>`).join("") : `<p style="text-align:center;color:#94a3b8;padding:16px;">لا توجد طلبات خلال آخر 24 ساعة.</p>`);
     };
@@ -405,20 +437,25 @@ function openCategory(catId, catName, catImage, parentInfo = null) {
   catProducts.forEach(p => {
     const unitUSD = calculateProductFinalPrice(p);
     const isVar = isVariableQuantityProduct(p);
+    const noTarget = isNoTargetProduct(catName, p);
     const hasList = Array.isArray(p.qtyValues) && p.qtyValues.length > 0;
     const nl = (p.name || "").toLowerCase();
     const defMin = nl.includes("mtn") ? 10 : (nl.includes("سيرياتيل") || nl.includes("syriatel") ? 1.92 : 1);
     const minQ = hasList ? Number(p.qtyValues[0]) : (p.qtyValues?.min || defMin);
     const maxQ = hasList ? Number(p.qtyValues[p.qtyValues.length - 1]) : (p.qtyValues?.max || 100000);
     const listStr = hasList ? encodeURIComponent(JSON.stringify(p.qtyValues)) : "";
-    opts += `<option value="${p.id}" data-price="${unitUSD}" data-varqty="${isVar ? '1' : '0'}" data-min="${minQ}" data-max="${maxQ}" data-qtylist="${listStr}">${p.name} (${isVar ? formatStoreAmount(unitUSD) + ' للوحدة' : formatStoreAmount(unitUSD)})</option>`;
+    opts += `<option value="${p.id}" data-price="${unitUSD}" data-varqty="${isVar ? '1' : '0'}" data-notarget="${noTarget ? '1' : '0'}" data-min="${minQ}" data-max="${maxQ}" data-qtylist="${listStr}">${p.name} (${isVar ? formatStoreAmount(unitUSD) + ' للوحدة' : formatStoreAmount(unitUSD)})</option>`;
   });
 
+  const hideTargetInitially = isNoTargetProduct(catName);
   const cfg = getTargetFieldConfig(catName);
   container.className = "service-order-wrapper";
   container.innerHTML = `<div class="service-top-card"><div class="service-logo-box"><img src="${defImg}"></div><h2 class="service-title-text">${catName}</h2></div>
     <form class="service-order-form" onsubmit="handleServiceOrder(event,'${catId}','${catName.replace(/'/g, "\\'")}')">
-      <div class="field-block"><label class="field-label">${cfg.label}</label><input type="text" id="srv-target-input" class="field-input" placeholder="${cfg.placeholder}" required dir="ltr"></div>
+      <div class="field-block ${hideTargetInitially ? 'hidden' : ''}" id="srv-target-block">
+        <label class="field-label">${cfg.label}</label>
+        <input type="text" id="srv-target-input" class="field-input" placeholder="${cfg.placeholder}" ${hideTargetInitially ? '' : 'required'} dir="ltr">
+      </div>
       <div class="field-block"><label class="field-label">اختر الباقة</label><div class="select-dropdown-box"><select id="srv-package-select" class="field-select" required onchange="onPackageSelectChange()">${opts}</select></div></div>
       <div class="field-block hidden" id="srv-qty-block"><label class="field-label" id="srv-qty-label" style="color:#38bdf8;">الكمية المطلوبة:</label><div id="srv-qty-control-wrap"></div></div>
       <div class="order-summary-bar"><span>السعر المطلوب:</span><strong id="srv-price-display" style="color:var(--accent-cyan);font-size:1.1rem;">${formatStoreAmount(0)}</strong></div>
@@ -429,9 +466,21 @@ function openCategory(catId, catName, catImage, parentInfo = null) {
 function onPackageSelectChange(preserveQty = false) {
   const select = document.getElementById("srv-package-select"), display = document.getElementById("srv-price-display");
   const qtyBlock = document.getElementById("srv-qty-block"), qtyWrap = document.getElementById("srv-qty-control-wrap"), qtyLabel = document.getElementById("srv-qty-label");
+  const targetBlock = document.getElementById("srv-target-block"), targetInput = document.getElementById("srv-target-input");
   if (!select || !display) return;
   const opt = select.options[select.selectedIndex];
   if (!opt || !opt.dataset.price) { display.innerText = formatStoreAmount(0); qtyBlock?.classList.add("hidden"); return; }
+
+  const hideTarget = opt.dataset.notarget === "1";
+  if (targetBlock && targetInput) {
+    targetBlock.classList.toggle("hidden", hideTarget);
+    if (hideTarget) {
+      targetInput.removeAttribute("required");
+      targetInput.value = "";
+    } else {
+      targetInput.setAttribute("required", "required");
+    }
+  }
 
   const unitUSD = parseFloat(opt.dataset.price) || 0, isVar = opt.dataset.varqty === "1";
   const minQ = parseFloat(opt.dataset.min || "1"), maxQ = parseFloat(opt.dataset.max || "100000");
@@ -466,11 +515,18 @@ async function handleServiceOrder(e, catId, catName) {
   e.preventDefault();
   const users = getDB("users", []);
   if (!users[0] || !users[0].name || users[0].name === "زائر") { if (typeof openAuthModal === "function") openAuthModal(); return; }
-  const targetInput = document.getElementById("srv-target-input").value.trim();
   const selectEl = document.getElementById("srv-package-select");
   const prodId = selectEl.value;
   const product = getDB("products", []).find(p => p.id === prodId);
   if (!product) return;
+
+  const isNoTarget = isNoTargetProduct(catName, product) || (selectEl.options[selectEl.selectedIndex]?.dataset.notarget === "1");
+  const rawTarget = (document.getElementById("srv-target-input")?.value || "").trim();
+  if (!isNoTarget && !rawTarget) {
+    alert("⚠️ يرجى إدخال المعرف أو الرقم المطلوب!");
+    return;
+  }
+  const targetInput = isNoTarget ? "تسليم بالحساب / الرد" : rawTarget;
 
   const isVar = isVariableQuantityProduct(product);
   const opt = selectEl.options[selectEl.selectedIndex];
@@ -499,14 +555,17 @@ async function handleServiceOrder(e, catId, catName) {
   try {
     let res;
     if (supCfg.type === "parabyte_v2") {
+      const bodyObj = { product_id: isNaN(Number(supId)) ? supId : Number(supId), qty: orderQty, order_uuid: uuid };
+      if (!isNoTarget) bodyObj.params = { [product.paramField || "player_id"]: rawTarget };
       res = await fetch(`${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(supCfg.orderUrl)}&token=${encodeURIComponent(supCfg.token)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json", "api-token": supCfg.token },
-        body: JSON.stringify({ product_id: isNaN(Number(supId)) ? supId : Number(supId), qty: orderQty, order_uuid: uuid, params: { [product.paramField || "player_id"]: targetInput } })
+        body: JSON.stringify(bodyObj)
       });
     } else {
       const pKey = product.paramField || "playerId";
-      const tUrl = `${supCfg.orderUrl}/${encodeURIComponent(supId)}/params?qty=${encodeURIComponent(orderQty)}&${encodeURIComponent(pKey)}=${encodeURIComponent(targetInput)}&playerId=${encodeURIComponent(targetInput)}&order_uuid=${encodeURIComponent(uuid)}`;
+      const paramsPart = isNoTarget ? `qty=${encodeURIComponent(orderQty)}&order_uuid=${encodeURIComponent(uuid)}` : `qty=${encodeURIComponent(orderQty)}&${encodeURIComponent(pKey)}=${encodeURIComponent(rawTarget)}&playerId=${encodeURIComponent(rawTarget)}&order_uuid=${encodeURIComponent(uuid)}`;
+      const tUrl = `${supCfg.orderUrl}/${encodeURIComponent(supId)}/params?${paramsPart}`;
       res = await fetch(`${SUPPLIER_WORKER_URL}?url=${encodeURIComponent(tUrl)}&token=${encodeURIComponent(supCfg.token)}`, {
         headers: { "Accept": "application/json", "api-token": supCfg.token }
       });
@@ -555,7 +614,7 @@ async function handleServiceOrder(e, catId, catName) {
   const dailyStats = getUserDailyOrdersStats(users[0]);
   if (btn) { btn.disabled = false; btn.innerText = "تأكيد الطلب والشحن الفوري"; }
   updateUserUI();
-  alert(`✅ تم إرسال الطلب بنجاح!\nالمستلم: ${targetInput}\nالكمية: ${orderQty}\n📊 عدد طلباتك اليوم: ${dailyStats.count}`);
+  alert(`✅ تم إرسال الطلب بنجاح!\n${isNoTarget ? "سيصل الحساب الجاهز في تفاصيل الطلب فور التنفيذ" : `المستلم: ${targetInput}`}\n📊 عدد طلباتك اليوم: ${dailyStats.count}`);
   backToCategories();
 }
 
