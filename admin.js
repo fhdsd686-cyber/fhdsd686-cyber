@@ -75,430 +75,414 @@ function toggleMaintenanceMode() {
   const next = !current;
   setDB("maintenance_mode", next);
   updateMaintenanceAdminBtn();
-  alert(next ? "تم تفعيل وضع الصيانة للزوار." : "تم إيقاف وضع الصيانة وعاد المتجر للعمل.");
 }
 
 function updateMaintenanceAdminBtn() {
   const btn = document.getElementById("admin-maintenance-btn");
   if (!btn) return;
   const isMaint = !!getDB("maintenance_mode", false);
-  btn.style.background = isMaint ? "#f59e0b" : "#10b981";
-  btn.innerHTML = `<i class="fa-solid fa-power-off"></i> وضع الصيانة: ${isMaint ? "مفعل" : "معطل"}`;
+  btn.innerText = isMaint ? "وضع الصيانة: مفعل" : "وضع الصيانة: معطل";
+  btn.style.background = isMaint ? "#ef4444" : "#10b981";
 }
 
-// ----------------------------------------------------------------------------
-// 1. الإحصائيات العامة
-// ----------------------------------------------------------------------------
 function renderAdminStats() {
-  const allOrders = getDB("orders", []);
-  const deposits = getDB("deposit_requests", []);
-  const products = getDB("products", []);
-  const now = Date.now();
-  const oneDayMs = 24 * 60 * 60 * 1000;
-
-  const dailyOrders = allOrders.filter(o => {
-    const ts = Number(o.timestamp || (String(o.id || "").startsWith("ord_") ? String(o.id).split("_")[1] : now));
-    const isNotRejected = !String(o.status || "").includes("مرفوض");
-    return isNotRejected && (now - ts) < oneDayMs;
-  });
-
-  let dailySalesUSD = 0;
-  let dailyProfitUSD = 0;
-
-  dailyOrders.forEach(o => {
-    const sale = parseFloat(o.price || o.priceUSD || 0);
-    dailySalesUSD += sale;
-
-    if (o.profitUSD !== undefined && !isNaN(parseFloat(o.profitUSD))) {
-      dailyProfitUSD += parseFloat(o.profitUSD);
-    } else {
-      const matchedProd = products.find(p => p.name === o.packageName);
-      if (matchedProd && matchedProd.supplierPriceUSD !== undefined) {
-        const qty = parseFloat(o.qty || 1);
-        const cost = parseFloat(matchedProd.supplierPriceUSD) * qty;
-        dailyProfitUSD += Math.max(0, sale - cost);
-      }
-    }
-  });
-
-  const approvedDeposits = deposits
-    .filter(d => d.status === "approved" || d.status === "مقبول")
-    .reduce((sum, d) => sum + (parseFloat(d.amountUSD || d.amount || 0)), 0);
-
   const salesEl = document.getElementById("stat-sales");
-  const ordersEl = document.getElementById("stat-orders-count");
+  const countEl = document.getElementById("stat-orders-count");
   const depEl = document.getElementById("stat-total-deposits");
+  
+  const orders = getDB("user_orders", []);
+  const deposits = getDB("deposit_requests", []).filter(d => d.status === "approved");
+  
+  let totalSales = orders.reduce((sum, o) => sum + (parseFloat(o.totalUSD) || 0), 0);
+  let totalDep = deposits.reduce((sum, d) => sum + (parseFloat(d.amountUSD) || 0), 0);
 
-  if (salesEl) {
-    salesEl.innerHTML = `$${dailySalesUSD.toFixed(2)} <div style="font-size:0.75rem; color:#10b981; margin-top:4px;">الربح الصافي (24س): +$${dailyProfitUSD.toFixed(2)}</div>`;
-  }
-  if (ordersEl) ordersEl.textContent = dailyOrders.length;
-  if (depEl) depEl.textContent = `$${approvedDeposits.toFixed(2)}`;
+  if (salesEl) salesEl.innerText = `$${totalSales.toFixed(2)}`;
+  if (countEl) countEl.innerText = orders.length;
+  if (depEl) depEl.innerText = `$${totalDep.toFixed(2)}`;
 }
 
-// ----------------------------------------------------------------------------
-// 2. نظام التسعير والعروض
-// ----------------------------------------------------------------------------
 function renderPricingOffersSection() {
   const globalInput = document.getElementById("global-profit-percent");
-  if (globalInput) {
-    globalInput.value = parseFloat(getDB("global_profit_percent", 0)) || 0;
-  }
+  if (globalInput) globalInput.value = getDB("global_profit_percent", 0);
 
-  const listEl = document.getElementById("category-offers-list");
-  if (!listEl) return;
-
-  const categories = getDB("categories", []);
-  const catPercents = getDB("category_profit_percents", {});
-
-  listEl.innerHTML = categories.map(cat => {
-    const currentVal = catPercents[cat.id] !== undefined ? catPercents[cat.id] : "";
-    return `
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:#0c1527; padding:12px; border-radius:12px; margin-bottom:8px; border:1px solid rgba(56,189,248,0.15);">
-        <div style="font-weight:700; font-size:0.88rem; color:#fff;">${cat.name}</div>
-        <div style="display:flex; align-items:center; gap:6px;">
-          <input type="number" step="any" id="cat-offer-${cat.id}" value="${currentVal}" placeholder="عام" style="width:75px; padding:6px 8px; border-radius:8px; background:#050b18; border:1px solid #334155; color:#fff; text-align:center;">
-          <button type="button" onclick="saveCategoryProfitPercent('${cat.id}')" style="background:#0284c7; color:#fff; border:none; padding:6px 12px; border-radius:8px; font-weight:700; cursor:pointer;">حفظ</button>
-        </div>
-      </div>
-    `;
-  }).join("");
-}
-
-function saveGlobalProfitPercent() {
-  const val = parseFloat(document.getElementById("global-profit-percent")?.value) || 0;
-  setDB("global_profit_percent", val);
-  recalculateAllProductPrices();
-  alert(`تم حفظ النسبة العامة (${val}%) وتحديث أسعار جميع المنتجات!`);
-}
-
-function saveCategoryProfitPercent(catId) {
-  const raw = document.getElementById(`cat-offer-${catId}`)?.value;
-  const catPercents = getDB("category_profit_percents", {});
-  if (raw === "" || raw === null || isNaN(parseFloat(raw))) {
-    delete catPercents[catId];
-  } else {
-    catPercents[catId] = parseFloat(raw);
-  }
-  setDB("category_profit_percents", catPercents);
-  recalculateAllProductPrices();
-  alert("تم تحديث نسبة العرض لهذا القسم وتعديل أسعار منتجاته!");
-}
-
-function recalculateAllProductPrices() {
-  const products = getDB("products", []);
-  const globalPercent = parseFloat(getDB("global_profit_percent", 0)) || 0;
-  const catPercents = getDB("category_profit_percents", {});
-
-  const updated = products.map(p => {
-    const baseCost = parseFloat(p.supplierPriceUSD !== undefined ? p.supplierPriceUSD : p.priceUSD) || 0;
-    const pct = (p.customPercent !== undefined && p.customPercent !== null && p.customPercent !== "")
-      ? parseFloat(p.customPercent)
-      : (catPercents[p.categoryId] !== undefined ? parseFloat(catPercents[p.categoryId]) : globalPercent);
-    const newUSD = +(baseCost * (1 + pct / 100)).toFixed(4);
-    return {
-      ...p,
-      supplierPriceUSD: baseCost,
-      priceUSD: newUSD,
-      priceSYP: Math.round(newUSD * 155)
-    };
-  });
-
-  setDB("products", updated);
-}
-
-// ----------------------------------------------------------------------------
-// 3. إعدادات وهوية المتجر
-// ----------------------------------------------------------------------------
-function loadSiteSettingsIntoForm() {
-  const settings = getDB("site_settings", {});
-  if (document.getElementById("setting-site-name")) document.getElementById("setting-site-name").value = settings.name || "Mohannad kard";
-  if (document.getElementById("setting-whatsapp-number")) document.getElementById("setting-whatsapp-number").value = settings.whatsapp || "0957455972";
-  if (document.getElementById("setting-site-logo")) document.getElementById("setting-site-logo").value = settings.logo || "";
-  if (document.getElementById("setting-site-banner")) document.getElementById("setting-site-banner").value = Array.isArray(settings.banners) ? settings.banners.join("\n") : (settings.banner || "");
-}
-
-function handleSiteSettingsUpdate(e) {
-  e.preventDefault();
-  const name = document.getElementById("setting-site-name").value.trim();
-  const whatsapp = document.getElementById("setting-whatsapp-number").value.trim();
-  const logo = document.getElementById("setting-site-logo").value.trim();
-  const bannerText = document.getElementById("setting-site-banner").value.trim();
-  const banners = bannerText ? bannerText.split("\n").map(s => s.trim()).filter(Boolean) : [];
-
-  setDB("site_settings", {
-    name,
-    whatsapp,
-    logo,
-    banner: banners[0] || "",
-    banners
-  });
-
-  if (typeof loadSiteSettings === "function") loadSiteSettings();
-  alert("تم حفظ إعدادات وهوية المتجر بنجاح!");
-}
-
-// ----------------------------------------------------------------------------
-// 4. إدارة المستخدمين والترقيات
-// ----------------------------------------------------------------------------
-function renderAdminUsers() {
-  const container = document.getElementById("admin-users-list");
+  const container = document.getElementById("category-offers-list");
   if (!container) return;
 
-  const users = getDB("users", []);
-  if (users.length === 0) {
-    container.innerHTML = `<p style="color:#94a3b8;">لا يوجد مستخدمون مسجلون حالياً.</p>`;
-    return;
-  }
+  const categories = getDB("categories", typeof initialCategories !== "undefined" ? initialCategories : []);
+  const catPercents = getDB("category_profit_percents", {});
 
-  container.innerHTML = users.map(u => `
-    <div style="background:#0c1527; border:1px solid rgba(56,189,248,0.2); border-radius:14px; padding:14px; margin-bottom:10px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <div>
-          <strong style="color:#fff; font-size:0.95rem;">${u.name || u.username}</strong>
-          <span style="background:#0284c7; color:#fff; font-size:0.72rem; padding:2px 8px; border-radius:10px; margin-right:6px;">${u.rank || "عضو"}</span>
-          <div style="font-size:0.78rem; color:#94a3b8;">${u.email || ""} ${u.whatsapp ? " | واتساب: " + u.whatsapp : ""}</div>
-        </div>
-        <div style="font-weight:900; color:#10b981; font-size:1rem;">$${(parseFloat(u.balanceUSD) || 0).toFixed(3)}</div>
-      </div>
-      <div style="display:flex; gap:6px; flex-wrap:wrap;">
-        <button onclick="adminAdjustUserBalance('${u.id}', 1)" style="background:#10b981; color:#fff; border:none; padding:6px 10px; border-radius:8px; font-size:0.78rem; font-weight:700; cursor:pointer;">+ تعديل رصيد</button>
-        <button onclick="adminDeleteUser('${u.id}')" style="background:#ef4444; color:#fff; border:none; padding:6px 10px; border-radius:8px; font-size:0.78rem; font-weight:700; cursor:pointer;">حذف المستخدم</button>
+  container.innerHTML = categories.map(cat => `
+    <div style="display:flex; justify-content:space-between; align-items:center; background:#0c1527; padding:10px; border-radius:10px; margin-bottom:8px; border:1px solid rgba(56,189,248,0.2);">
+      <span style="font-size:0.85rem; font-weight:700; color:#fff;">${cat.name}</span>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <input type="number" step="any" id="cat-pct-${cat.id}" value="${catPercents[cat.id] !== undefined ? catPercents[cat.id] : ''}" placeholder="النسبة %" style="width:90px; background:#162444; border:1px solid #334155; color:#fff; padding:6px; border-radius:8px; text-align:center;">
+        <button type="button" onclick="saveCategoryProfitPercent('${cat.id}')" style="background:#0284c7; color:#fff; border:none; padding:6px 12px; border-radius:8px; font-weight:700; cursor:pointer;">حفظ</button>
       </div>
     </div>
   `).join("");
 }
 
-function adminAdjustUserBalance(userId) {
-  const users = getDB("users", []);
-  const idx = users.findIndex(u => String(u.id) === String(userId));
-  if (idx === -1) return;
-
-  const valStr = prompt(`الرصيد الحالي لـ (${users[idx].name || users[idx].username}) هو $${(parseFloat(users[idx].balanceUSD) || 0).toFixed(3)}.\nأدخل المبلغ المراد إضافته (أو بالسالب للخصم):`);
-  if (valStr === null || valStr.trim() === "") return;
-  const delta = parseFloat(valStr);
-  if (isNaN(delta)) { alert("يرجى إدخال رقم صحيح!"); return; }
-
-  users[idx].balanceUSD = Math.max(0, +((parseFloat(users[idx].balanceUSD) || 0) + delta).toFixed(4));
-  setDB("users", users);
-
-  const cur = getDB("currentUser", null);
-  if (cur && String(cur.id) === String(userId)) {
-    setDB("currentUser", users[idx]);
-    if (typeof updateUserUI === "function") updateUserUI();
-  }
-
-  renderAdminUsers();
-  alert("تم تحديث رصيد المستخدم بنجاح!");
+function saveGlobalProfitPercent() {
+  const val = parseFloat(document.getElementById("global-profit-percent")?.value) || 0;
+  setDB("global_profit_percent", val);
+  alert("تم حفظ نسبة الربح العامة بنجاح!");
 }
 
-function adminDeleteUser(userId) {
-  if (!confirm("هل أنت متأكد من حذف هذا المستخدم نهائياً؟")) return;
-  const users = getDB("users", []).filter(u => String(u.id) !== String(userId));
-  setDB("users", users);
+function saveCategoryProfitPercent(catId) {
+  const val = parseFloat(document.getElementById(`cat-pct-${catId}`)?.value);
+  const catPercents = getDB("category_profit_percents", {});
+  if (isNaN(val)) {
+    delete catPercents[catId];
+  } else {
+    catPercents[catId] = val;
+  }
+  setDB("category_profit_percents", catPercents);
+  alert("تم حفظ نسبة القسم بنجاح!");
+}
+
+function loadSiteSettingsIntoForm() {
+  const settings = getDB("site_settings", {
+    siteName: "Mohannad kard",
+    whatsapp: "963957455972",
+    logo: "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=100&q=80",
+    banner: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1000&q=80"
+  });
+
+  const nameEl = document.getElementById("setting-site-name");
+  const waEl = document.getElementById("setting-whatsapp-number");
+  const logoEl = document.getElementById("setting-site-logo");
+  const bannerEl = document.getElementById("setting-site-banner");
+
+  if (nameEl) nameEl.value = settings.siteName || "";
+  if (waEl) waEl.value = settings.whatsapp || "";
+  if (logoEl) logoEl.value = settings.logo || "";
+  if (bannerEl) bannerEl.value = settings.banner || "";
+}
+
+function handleSiteSettingsUpdate(e) {
+  e.preventDefault();
+  const settings = {
+    siteName: document.getElementById("setting-site-name")?.value.trim() || "Mohannad kard",
+    whatsapp: document.getElementById("setting-whatsapp-number")?.value.trim() || "963957455972",
+    logo: document.getElementById("setting-site-logo")?.value.trim() || "",
+    banner: document.getElementById("setting-site-banner")?.value.trim() || ""
+  };
+
+  setDB("site_settings", settings);
+  alert("تم حفظ إعدادات المتجر بنجاح!");
+  if (typeof loadSiteSettings === "function") loadSiteSettings();
+}
+
+function renderAdminUsers() {
+  const container = document.getElementById("admin-users-list");
+  if (!container) return;
+  const users = getDB("app_users", []);
+
+  if (!users.length) {
+    container.innerHTML = `<p style="color:#94a3b8;">لا يوجد مسجلين حالياً.</p>`;
+    return;
+  }
+
+  container.innerHTML = users.map(u => `
+    <div style="background:#0c1527; padding:12px; border-radius:12px; margin-bottom:10px; border:1px solid rgba(56,189,248,0.2); display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <div style="font-weight:800; color:#fff;">${u.name || "مستخدم"}</div>
+        <div style="font-size:0.78rem; color:#94a3b8;">${u.email} | الرتبة: <span style="color:#38bdf8;">${u.rank || "عضو"}</span></div>
+        <div style="font-size:0.78rem; color:#10b981; font-weight:700;">الرصيد: $${(parseFloat(u.balance) || 0).toFixed(2)}</div>
+      </div>
+      <button type="button" onclick="deleteAppUser('${u.email}')" style="background:#ef4444; color:#fff; border:none; padding:6px 10px; border-radius:8px; font-weight:700; cursor:pointer;">حذف</button>
+    </div>
+  `).join("");
+}
+
+function deleteAppUser(email) {
+  if (!confirm(`هل أنت متأكد من حذف المستخدم ${email}؟`)) return;
+  const users = getDB("app_users", []).filter(u => u.email !== email);
+  setDB("app_users", users);
   renderAdminUsers();
 }
 
 function submitUserUpgrade() {
-  const query = (document.getElementById("upgrade-search-input")?.value || "").trim().toLowerCase();
-  const newRank = document.getElementById("upgrade-role-select")?.value || "VIP 1";
-  if (!query) { alert("أدخل اسم أو بريد المستخدم!"); return; }
+  const query = document.getElementById("upgrade-search-input")?.value.trim().toLowerCase();
+  const newRole = document.getElementById("upgrade-role-select")?.value;
+  if (!query) { alert("أدخل البريد أو اسم المستخدم"); return; }
 
-  const users = getDB("users", []);
-  const idx = users.findIndex(u =>
-    (u.email && u.email.toLowerCase() === query) ||
-    (u.username && u.username.toLowerCase() === query) ||
-    (u.name && u.name.toLowerCase() === query)
-  );
+  const users = getDB("app_users", []);
+  const user = users.find(u => u.email.toLowerCase() === query || (u.name && u.name.toLowerCase().includes(query)));
 
-  if (idx === -1) { alert("لم يتم العثور على المستخدم!"); return; }
-  users[idx].rank = newRank;
-  setDB("users", users);
+  if (!user) { alert("لم يتم العثور على المستخدم!"); return; }
 
-  const cur = getDB("currentUser", null);
-  if (cur && String(cur.id) === String(users[idx].id)) {
-    setDB("currentUser", users[idx]);
-    if (typeof updateUserUI === "function") updateUserUI();
-  }
-
-  alert(`تمت ترقية المستخدم إلى (${newRank}) بنجاح!`);
+  user.rank = newRole;
+  setDB("app_users", users);
+  alert(`تم ترقية المستخدم ${user.name} إلى (${newRole}) بنجاح!`);
 }
 
-// ----------------------------------------------------------------------------
-// 5. إدارة الأقسام والمنتجات
-// ----------------------------------------------------------------------------
+function renderAdminProducts() {
+  const tbody = document.getElementById("admin-products-table");
+  if (!tbody) return;
+  const products = getDB("products", typeof initialProducts !== "undefined" ? initialProducts : []);
+
+  tbody.innerHTML = products.map(p => `
+    <tr>
+      <td>${p.name}</td>
+      <td>${p.categoryId || "-"}</td>
+      <td>$${parseFloat(p.priceUSD || 0).toFixed(2)}</td>
+      <td><button type="button" style="background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:6px; cursor:pointer;" onclick="deleteAdminProduct('${p.id}')">حذف</button></td>
+    </tr>
+  `).join("");
+}
+
 function populateAdminProductCategories() {
   const sel = document.getElementById("prod-category-select");
   if (!sel) return;
-  const cats = getDB("categories", []);
-  sel.innerHTML = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
-}
-
-function populateAdminParentCategories() {
-  const sel = document.getElementById("cat-parent-select");
-  if (!sel) return;
-  const cats = getDB("categories", []).filter(c => !c.parentId);
-  sel.innerHTML = `<option value="">قسم رئيسي (يظهر في الواجهة)</option>` +
-    cats.map(c => `<option value="${c.id}">قسم فرعي داخل: ${c.name}</option>`).join("");
-}
-
-function handleAddCategory(e) {
-  e.preventDefault();
-  const name = document.getElementById("cat-name").value.trim();
-  const parentId = document.getElementById("cat-parent-select").value || null;
-  const image = document.getElementById("cat-image").value.trim() || "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80";
-
-  const cats = getDB("categories", []);
-  cats.push({
-    id: "cat_" + Date.now(),
-    name,
-    parentId,
-    image
-  });
-  setDB("categories", cats);
-  e.target.reset();
-  renderAdminCategories();
-  if (typeof renderCategories === "function") renderCategories();
-  alert("تمت إضافة القسم بنجاح!");
-}
-
-function renderAdminCategories() {
-  const tbody = document.getElementById("admin-categories-table");
-  if (!tbody) return;
-  const cats = getDB("categories", []);
-  tbody.innerHTML = cats.map(c => {
-    const parent = c.parentId ? cats.find(p => p.id === c.parentId) : null;
-    return `
-      <tr>
-        <td>${c.name}</td>
-        <td>${parent ? "فرعي (" + parent.name + ")" : "رئيسي"}</td>
-        <td>
-          <button onclick="deleteAdminCategory('${c.id}')" style="background:#ef4444; color:#fff; border:none; padding:5px 10px; border-radius:6px; cursor:pointer;">حذف</button>
-        </td>
-      </tr>
-    `;
-  }).join("");
-}
-
-function deleteAdminCategory(catId) {
-  if (!confirm("هل تريد حذف هذا القسم؟")) return;
-  const cats = getDB("categories", []).filter(c => c.id !== catId && c.parentId !== catId);
-  setDB("categories", cats);
-  renderAdminCategories();
-  if (typeof renderCategories === "function") renderCategories();
+  const categories = getDB("categories", typeof initialCategories !== "undefined" ? initialCategories : []);
+  sel.innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
 }
 
 function handleAddProduct(e) {
   e.preventDefault();
-  const categoryId = document.getElementById("prod-category-select").value;
-  const name = document.getElementById("prod-name").value.trim();
-  const supplierPriceUSD = parseFloat(document.getElementById("prod-price-usd").value) || 0;
-  const customPctRaw = document.getElementById("prod-custom-percent")?.value;
-  const sypManual = parseFloat(document.getElementById("prod-price-syp")?.value);
+  const categoryId = document.getElementById("prod-category-select")?.value;
+  const name = document.getElementById("prod-name")?.value.trim();
+  const priceUSD = parseFloat(document.getElementById("prod-price-usd")?.value) || 0;
   const desc = document.getElementById("prod-desc")?.value.trim() || "";
   const image = document.getElementById("prod-image")?.value.trim() || "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80";
 
-  const globalPercent = parseFloat(getDB("global_profit_percent", 0)) || 0;
-  const catPercents = getDB("category_profit_percents", {});
-  const pct = (customPctRaw !== "" && customPctRaw !== undefined && !isNaN(parseFloat(customPctRaw)))
-    ? parseFloat(customPctRaw)
-    : (catPercents[categoryId] !== undefined ? parseFloat(catPercents[categoryId]) : globalPercent);
-
-  const finalUSD = +(supplierPriceUSD * (1 + pct / 100)).toFixed(4);
-  const finalSYP = !isNaN(sypManual) && sypManual > 0 ? sypManual : Math.round(finalUSD * 155);
-
-  const products = getDB("products", []);
+  const products = getDB("products", typeof initialProducts !== "undefined" ? initialProducts : []);
   products.push({
     id: "prod_" + Date.now(),
     categoryId,
     name,
-    supplierPriceUSD,
-    customPercent: (customPctRaw !== "" && !isNaN(parseFloat(customPctRaw))) ? parseFloat(customPctRaw) : null,
-    priceUSD: finalUSD,
-    priceSYP: finalSYP,
+    priceUSD,
+    priceSYP: Math.round(priceUSD * 155),
     desc,
     image
   });
 
   setDB("products", products);
   e.target.reset();
-  renderAdminProducts();
   alert("تمت إضافة المنتج بنجاح!");
+  switchAdminSection("products");
 }
 
-function renderAdminProducts() {
-  const tbody = document.getElementById("admin-products-table");
-  if (!tbody) return;
-  const products = getDB("products", []);
-  const cats = getDB("categories", []);
+function deleteAdminProduct(prodId) {
+  if (!confirm("هل تريد حذف هذا المنتج؟")) return;
+  setDB("products", getDB("products", []).filter(p => p.id !== prodId));
+  renderAdminProducts();
+}
 
-  tbody.innerHTML = products.map(p => {
-    const cat = cats.find(c => c.id === p.categoryId);
-    const cost = parseFloat(p.supplierPriceUSD || p.priceUSD || 0).toFixed(3);
-    const sell = parseFloat(p.priceUSD || 0).toFixed(3);
+function populateAdminParentCategories() {
+  const sel = document.getElementById("cat-parent-select");
+  if (!sel) return;
+  const categories = getDB("categories", typeof initialCategories !== "undefined" ? initialCategories : []);
+  const mainCats = categories.filter(c => !c.parentId);
+  sel.innerHTML = `<option value="">قسم رئيسي</option>` + mainCats.map(c => `<option value="${c.id}">فرعي داخل: ${c.name}</option>`).join("");
+}
+
+function renderAdminCategories() {
+  const tbody = document.getElementById("admin-categories-table");
+  if (!tbody) return;
+  const categories = getDB("categories", typeof initialCategories !== "undefined" ? initialCategories : []);
+
+  tbody.innerHTML = categories.map(c => {
+    const parent = c.parentId ? categories.find(p => p.id === c.parentId) : null;
     return `
       <tr>
-        <td>${p.name}</td>
-        <td>${cat ? cat.name : "-"}</td>
-        <td>$${cost} / <strong style="color:#10b981;">$${sell}</strong></td>
-        <td>
-          <button onclick="deleteAdminProduct('${p.id}')" style="background:#ef4444; color:#fff; border:none; padding:5px 10px; border-radius:6px; cursor:pointer;">حذف</button>
-        </td>
+        <td>${c.name}</td>
+        <td>${parent ? `فرعي (${parent.name})` : "رئيسي"}</td>
+        <td><button type="button" style="background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:6px; cursor:pointer;" onclick="deleteAdminCategory('${c.id}')">حذف</button></td>
       </tr>
     `;
   }).join("");
 }
 
-function deleteAdminProduct(prodId) {
-  if (!confirm("هل تريد حذف هذا المنتج؟")) return;
-  const products = getDB("products", []).filter(p => p.id !== prodId);
-  setDB("products", products);
-  renderAdminProducts();
+function handleAddCategory(e) {
+  e.preventDefault();
+  const name = document.getElementById("cat-name")?.value.trim();
+  const parentId = document.getElementById("cat-parent-select")?.value || null;
+  const image = document.getElementById("cat-image")?.value.trim() || "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80";
+
+  const categories = getDB("categories", typeof initialCategories !== "undefined" ? initialCategories : []);
+  categories.push({ id: "cat_" + Date.now(), name, parentId: parentId || null, image });
+
+  setDB("categories", categories);
+  e.target.reset();
+  alert("تمت إضافة القسم بنجاح!");
+  switchAdminSection("categories");
 }
 
-// ----------------------------------------------------------------------------
-// 6. جلب المنتجات من المورد
-// ----------------------------------------------------------------------------
+function deleteAdminCategory(catId) {
+  if (!confirm("هل تريد حذف هذا القسم؟")) return;
+  setDB("categories", getDB("categories", []).filter(c => c.id !== catId && c.parentId !== catId));
+  renderAdminCategories();
+}
+
+function renderAdminDepositRequests() {
+  const container = document.getElementById("deposit-requests-container");
+  if (!container) return;
+  const requests = getDB("deposit_requests", []);
+
+  if (!requests.length) {
+    container.innerHTML = `<p style="color:#94a3b8;">لا توجد طلبات إيداع حالياً.</p>`;
+    return;
+  }
+
+  container.innerHTML = requests.slice().reverse().map(req => {
+    const isPending = req.status === "pending" || req.status === "معلق" || req.status === "قيد الانتظار" || !req.status;
+    const amt = parseFloat(req.amountUSD || req.amount || 0);
+    return `
+      <div style="background:#0c1527; padding:12px; border-radius:12px; margin-bottom:10px; border:1px solid rgba(56,189,248,0.2);">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <strong>${req.userName || "مستخدم"}</strong>
+          <span style="color:#38bdf8; font-weight:800;">$${amt.toFixed(2)}</span>
+        </div>
+        <div style="font-size:0.78rem; color:#cbd5e1; margin-bottom:6px;">الوسيلة: ${req.methodName || "-"} | المرسل: ${req.sender || "-"}</div>
+        ${req.note ? `<div style="font-size:0.75rem; color:#94a3b8; margin-bottom:6px;">ملاحظة: ${req.note}</div>` : ""}
+        ${(req.receipt || req.receiptImage) ? `<img src="${req.receipt || req.receiptImage}" style="max-width:140px; border-radius:8px; margin-bottom:8px; display:block;">` : ""}
+        ${isPending ? `
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn-submit" style="background:#10b981; margin:0; padding:6px;" onclick="processDepositRequest('${req.id}', true)">قبول وإضافة الرصيد</button>
+            <button type="button" class="btn-submit" style="background:#ef4444; margin:0; padding:6px;" onclick="processDepositRequest('${req.id}', false)">رفض</button>
+          </div>
+        ` : `<span style="font-size:0.78rem; color:${req.status === 'approved' ? '#10b981' : '#ef4444'};">الحالة: ${req.status === 'approved' ? 'مقبول' : 'مرفوض'}</span>`}
+      </div>
+    `;
+  }).join("");
+}
+
+function processDepositRequest(reqId, approve) {
+  const requests = getDB("deposit_requests", []);
+  const idx = requests.findIndex(r => String(r.id) === String(reqId));
+  if (idx === -1) return;
+
+  requests[idx].status = approve ? "approved" : "rejected";
+  setDB("deposit_requests", requests);
+
+  if (approve) {
+    const req = requests[idx];
+    const amountToAdd = parseFloat(req.amountUSD || req.amount || 0);
+    const users = getDB("app_users", []);
+    const user = users.find(u => u.email === req.userEmail || u.name === req.userName);
+    if (user) {
+      user.balance = (parseFloat(user.balance) || 0) + amountToAdd;
+      setDB("app_users", users);
+    }
+  }
+
+  renderAdminDepositRequests();
+  alert(approve ? "تم قبول الطلب وإضافة الرصيد بنجاح!" : "تم رفض الطلب.");
+}
+
+function renderAdminDepositMethods() {
+  const container = document.getElementById("admin-methods-container");
+  if (!container) return;
+  const methods = getDB("deposit_methods", typeof initialDepositMethods !== "undefined" ? initialDepositMethods : []);
+
+  if (!methods.length) {
+    container.innerHTML = `<p style="color:#94a3b8;">لا توجد وسائل إيداع مضافة.</p>`;
+    return;
+  }
+
+  container.innerHTML = methods.map(m => `
+    <div style="background:#0c1527; padding:12px; border-radius:12px; margin-bottom:10px; border:1px solid rgba(56,189,248,0.2); display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <div style="font-weight:800; color:#fff;">${m.name}</div>
+        <div style="font-size:0.78rem; color:#94a3b8;">الحساب: ${m.account} | الصرف: ${m.rate} ل.س</div>
+      </div>
+      <button type="button" onclick="deleteAdminDepositMethod('${m.id}')" style="background:#ef4444; color:#fff; border:none; padding:6px 10px; border-radius:8px; font-weight:700; cursor:pointer;">حذف</button>
+    </div>
+  `).join("");
+}
+
+function handleAddDepositMethod(e) {
+  e.preventDefault();
+  const name = document.getElementById("method-name")?.value.trim();
+  const account = document.getElementById("method-account")?.value.trim();
+  const rate = parseFloat(document.getElementById("method-rate")?.value) || 155;
+  const qr = document.getElementById("method-qr")?.value.trim() || "";
+  const icon = document.getElementById("method-icon")?.value.trim() || "";
+
+  const methods = getDB("deposit_methods", typeof initialDepositMethods !== "undefined" ? initialDepositMethods : []);
+  methods.push({ id: "m_" + Date.now(), name, account, rate, qr, icon });
+
+  setDB("deposit_methods", methods);
+  e.target.reset();
+  alert("تمت إضافة وسيلة الدفع بنجاح!");
+  switchAdminSection("deposit-methods");
+}
+
+function deleteAdminDepositMethod(mId) {
+  if (!confirm("هل تريد حذف وسيلة الدفع هذه؟")) return;
+  setDB("deposit_methods", getDB("deposit_methods", []).filter(m => m.id !== mId));
+  renderAdminDepositMethods();
+}
+
 const ADMIN_SHAMS_URL = "https://api.shams4store.com/client/api/products";
 const ADMIN_SHAMS_TOKEN = "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427";
 
+const defaultSupplierCatalog = [
+  { supplierId: "SUP-101", app: "PUBG Mobile", name: "شحن 60 شدة ببجي عالمية (ID)", supplierPriceUSD: 0.92, image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=300&q=80", desc: "شحن فوري عبر الآيدي (ID) خلال ثوانٍ" },
+  { supplierId: "SUP-102", app: "PUBG Mobile", name: "شحن 325 شدة ببجي عالمية (ID)", supplierPriceUSD: 4.55, image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=300&q=80", desc: "شحن مباشر بالآيدي لجميع الحسابات العالمية" },
+  { supplierId: "SUP-103", app: "PUBG Mobile", name: "شحن 660 شدة ببجي عالمية (ID)", supplierPriceUSD: 9.10, image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=300&q=80", desc: "شحن فوري وآمن 100% بالآيدي" },
+  { supplierId: "SUP-201", app: "Free Fire", name: "شحن 100 جوهرة فري فاير (ID)", supplierPriceUSD: 1.05, image: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=300&q=80", desc: "شحن مباشر بالآيدي خلال دقيقة" },
+  { supplierId: "SUP-301", app: "TikTok", name: "1000 متابع تيك توك حقيقي ومستقر", supplierPriceUSD: 1.40, image: "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?auto=format&fit=crop&w=300&q=80", desc: "ضع رابط الحساب - تنفيذ تلقائي سريع" }
+];
+
 function getSupplierCatalog() {
-  return getDB("supplier_catalog", []);
+  const customCatalog = getDB("supplier_catalog", []);
+  return [...customCatalog, ...defaultSupplierCatalog];
 }
 
 function populateSupplierCategoriesDropdown() {
-  const sel = document.getElementById("supplier-target-category");
-  if (!sel) return;
-  const cats = getDB("categories", []);
-  sel.innerHTML = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
+  const selectEl = document.getElementById("supplier-target-category");
+  if (!selectEl) return;
+
+  const categories = getDB("categories", typeof initialCategories !== "undefined" ? initialCategories : []);
+  if (!categories.length) {
+    selectEl.innerHTML = `<option value="">لا توجد أقسام - أضف قسماً أولاً</option>`;
+    return;
+  }
+
+  selectEl.innerHTML = categories.map(cat => {
+    const parent = cat.parentId ? categories.find(c => c.id === cat.parentId) : null;
+    const label = parent ? `${parent.name} ⬅ ${cat.name}` : cat.name;
+    return `<option value="${cat.id}">${label}</option>`;
+  }).join("");
+
+  const savedUrl = getDB("supplier_api_url", ADMIN_SHAMS_URL);
+  const savedKey = getDB("supplier_api_key", ADMIN_SHAMS_TOKEN);
 
   const urlInput = document.getElementById("supplier-api-url");
   const keyInput = document.getElementById("supplier-api-key");
-  if (urlInput && !urlInput.value) urlInput.value = getDB("supplier_api_url", ADMIN_SHAMS_URL);
-  if (keyInput && !keyInput.value) keyInput.value = getDB("supplier_api_key", ADMIN_SHAMS_TOKEN);
+  if (urlInput) urlInput.value = savedUrl;
+  if (keyInput) keyInput.value = savedKey;
 
   searchSupplierCatalog();
 }
 
 function searchSupplierCatalog() {
+  const query = (document.getElementById("supplier-search-input")?.value || "").trim().toLowerCase();
   const container = document.getElementById("supplier-results-container");
   const infoEl = document.getElementById("supplier-results-info");
+  const targetCatId = document.getElementById("supplier-target-category")?.value;
+
   if (!container) return;
 
-  const query = (document.getElementById("supplier-search-input")?.value || "").trim().toLowerCase();
-  const targetCatId = document.getElementById("supplier-target-category")?.value;
   const catalog = getSupplierCatalog();
   const existingProducts = getDB("products", []);
 
   const filtered = query
     ? catalog.filter(item =>
-        (item.name && item.name.toLowerCase().includes(query)) ||
-        (item.app && item.app.toLowerCase().includes(query))
+        item.name.toLowerCase().includes(query) ||
+        item.app.toLowerCase().includes(query) ||
+        (item.desc && item.desc.toLowerCase().includes(query))
       )
     : catalog;
 
-  if (infoEl) {
-    infoEl.textContent = `إجمالي المنتجات المتاحة في المورد: ${catalog.length} | المعروض: ${Math.min(filtered.length, 120)}`;
+  if (infoEl) infoEl.textContent = `عدد المنتجات المطابقة في المورد: ${filtered.length} منتج`;
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8; background:#0c1527; border-radius:12px;">لا توجد منتجات مطابقة لـ "${query}"</div>`;
+    return;
   }
 
   const globalPercent = parseFloat(getDB("global_profit_percent", 0)) || 0;
@@ -578,123 +562,4 @@ function addSupplierProductToStore(supplierId) {
   setDB("products", products);
   renderAdminProducts();
   searchSupplierCatalog();
-}
-
-// ----------------------------------------------------------------------------
-// 7. طلبات وطرق الإيداع
-// ----------------------------------------------------------------------------
-function renderAdminDepositRequests() {
-  const container = document.getElementById("deposit-requests-container");
-  if (!container) return;
-
-  const requests = getDB("deposit_requests", []);
-  if (requests.length === 0) {
-    container.innerHTML = `<p style="color:#94a3b8;">لا توجد طلبات إيداع حالياً.</p>`;
-    return;
-  }
-
-  container.innerHTML = requests.slice().reverse().map(req => `
-    <div style="background:#0c1527; border:1px solid rgba(56,189,248,0.25); border-radius:14px; padding:14px; margin-bottom:10px;">
-      <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-        <strong style="color:#fff;">${req.userName || "مستخدم"}</strong>
-        <span style="color:#38bdf8; font-weight:800;">$${parseFloat(req.amountUSD || 0).toFixed(2)}</span>
-      </div>
-      <div style="font-size:0.8rem; color:#cbd5e1; margin-bottom:6px;">
-        الوسيلة: ${req.methodName || "-"} | المرسل: ${req.sender || "-"}<br>
-        الحالة: <strong>${req.status || "قيد المراجعة"}</strong>
-      </div>
-      ${req.receiptImage ? `<img src="${req.receiptImage}" style="max-width:100%; max-height:180px; border-radius:10px; margin-bottom:8px;">` : ""}
-      ${req.status === "pending" || req.status === "قيد المراجعة" ? `
-        <div style="display:flex; gap:8px;">
-          <button onclick="approveDepositRequest('${req.id}')" style="flex:1; background:#10b981; color:#fff; border:none; padding:8px; border-radius:8px; font-weight:700; cursor:pointer;">قبول وإضافة الرصيد</button>
-          <button onclick="rejectDepositRequest('${req.id}')" style="flex:1; background:#ef4444; color:#fff; border:none; padding:8px; border-radius:8px; font-weight:700; cursor:pointer;">رفض</button>
-        </div>
-      ` : ""}
-    </div>
-  `).join("");
-}
-
-function approveDepositRequest(reqId) {
-  const requests = getDB("deposit_requests", []);
-  const reqIdx = requests.findIndex(r => String(r.id) === String(reqId));
-  if (reqIdx === -1) return;
-
-  const req = requests[reqIdx];
-  requests[reqIdx].status = "approved";
-  setDB("deposit_requests", requests);
-
-  const users = getDB("users", []);
-  const uIdx = users.findIndex(u => String(u.id) === String(req.userId));
-  if (uIdx !== -1) {
-    users[uIdx].balanceUSD = +((parseFloat(users[uIdx].balanceUSD) || 0) + (parseFloat(req.amountUSD) || 0)).toFixed(4);
-    setDB("users", users);
-
-    const cur = getDB("currentUser", null);
-    if (cur && String(cur.id) === String(req.userId)) {
-      setDB("currentUser", users[uIdx]);
-      if (typeof updateUserUI === "function") updateUserUI();
-    }
-  }
-
-  renderAdminDepositRequests();
-  alert("تم قبول طلب الإيداع وإضافة الرصيد لحساب المستخدم!");
-}
-
-function rejectDepositRequest(reqId) {
-  const requests = getDB("deposit_requests", []);
-  const reqIdx = requests.findIndex(r => String(r.id) === String(reqId));
-  if (reqIdx === -1) return;
-
-  requests[reqIdx].status = "rejected";
-  setDB("deposit_requests", requests);
-  renderAdminDepositRequests();
-  alert("تم رفض طلب الإيداع.");
-}
-
-function renderAdminDepositMethods() {
-  const container = document.getElementById("admin-methods-container");
-  if (!container) return;
-
-  const methods = getDB("depositMethods", []);
-  container.innerHTML = methods.map(m => `
-    <div style="display:flex; justify-content:space-between; align-items:center; background:#0c1527; padding:12px; border-radius:12px; margin-bottom:8px; border:1px solid rgba(56,189,248,0.2);">
-      <div>
-        <strong style="color:#fff;">${m.name}</strong>
-        <div style="font-size:0.78rem; color:#94a3b8;">${m.account} (1$ = ${m.rate})</div>
-      </div>
-      <button onclick="deleteDepositMethod('${m.id}')" style="background:#ef4444; color:#fff; border:none; padding:6px 10px; border-radius:8px; cursor:pointer;">حذف</button>
-    </div>
-  `).join("");
-}
-
-function handleAddDepositMethod(e) {
-  e.preventDefault();
-  const name = document.getElementById("method-name").value.trim();
-  const account = document.getElementById("method-account").value.trim();
-  const currency = document.getElementById("method-currency").value.trim() || "USD";
-  const rate = parseFloat(document.getElementById("method-rate").value) || 155;
-  const qr = document.getElementById("method-qr").value.trim() || `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(account)}`;
-  const icon = document.getElementById("method-icon").value.trim() || "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=100&q=80";
-
-  const methods = getDB("depositMethods", []);
-  methods.push({
-    id: "m_" + Date.now(),
-    name,
-    account,
-    currency,
-    rate,
-    qr,
-    icon
-  });
-  setDB("depositMethods", methods);
-  e.target.reset();
-  renderAdminDepositMethods();
-  alert("تمت إضافة طريقة الإيداع بنجاح!");
-}
-
-function deleteDepositMethod(methodId) {
-  if (!confirm("هل تريد حذف طريقة الإيداع هذه؟")) return;
-  const methods = getDB("depositMethods", []).filter(m => String(m.id) !== String(methodId));
-  setDB("depositMethods", methods);
-  renderAdminDepositMethods();
 }
