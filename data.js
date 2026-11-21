@@ -1,176 +1,178 @@
-// --- قاعدة البيانات السحابية المتزامنة (Firebase Firestore + LocalStorage Cache) ---
+// ============================================================================
+// قاعدة البيانات والمزامنة السحابية الفورية مع Firebase (data.js - v=160)
+// ============================================================================
 
 const initialCategories = [
-  { id: "cat_subs", name: "قسم الاشتراكات", parentId: null, image: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=300&q=80" },
-  { id: "cat_syria_telecom", name: "خدمات شركات الاتصالات السورية", parentId: null, image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=300&q=80" },
-  { id: "cat_social", name: "خدمات السوشال ميديا", parentId: null, image: "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?auto=format&fit=crop&w=300&q=80" },
-  { id: "cat_games", name: "قسم شحن جميع الألعاب", parentId: null, image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=300&q=80" },
-  { id: "cat_live", name: "قسم شحن عملات لمنصات البثوث", parentId: null, image: "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80" }
+  {
+    id: "cat_games",
+    name: "قسم شحن جميع الألعاب",
+    parentId: null,
+    image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=300&q=80"
+  },
+  {
+    id: "cat_apps",
+    name: "قسم شحن التطبيقات",
+    parentId: null,
+    image: "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?auto=format&fit=crop&w=300&q=80"
+  },
+  {
+    id: "cat_social",
+    name: "خدمات السوشال ميديا",
+    parentId: null,
+    image: "https://images.unsplash.com/photo-1611162618071-b39a2ec055fb?auto=format&fit=crop&w=300&q=80"
+  },
+  {
+    id: "cat_syria_balance",
+    name: "قسم خدمات الرصيد السوري",
+    parentId: null,
+    image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=300&q=80"
+  },
+  {
+    id: "cat_subscriptions",
+    name: "قسم الاشتراكات",
+    parentId: null,
+    image: "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80"
+  },
+  {
+    id: "cat_numbers",
+    name: "قسم الأرقام",
+    parentId: null,
+    image: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=300&q=80"
+  }
 ];
-
-const initialProducts = [];
 
 const initialDepositMethods = [
   {
-    id: "dm_shamcash",
+    id: "dm_sham_syp",
     name: "شام كاش سوري",
     account: "b7a6624b69166fb60e741400cee2b8bd",
     currency: "USD",
-    rate: 15000,
+    rate: 155,
     qrImage: "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=b7a6624b69166fb60e741400cee2b8bd",
     icon: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=100&q=80"
   }
 ];
 
-// قائمة المفاتيح المشتركة التي تتزامن بين جميع الهواتف عبر السحابة
-const CLOUD_SHARED_KEYS = [
-  "site_settings",
+// مفاتيح البيانات المشتركة بين جميع المستخدمين في السحابة (باستثناء الجلسة المحلية users)
+const CLOUD_SYNC_KEYS = [
   "categories",
   "products",
   "depositMethods",
   "deposit_requests",
+  "cloud_users_registry",
+  "user_notifications",
   "orders",
+  "site_settings",
+  "admin_whatsapp",
   "global_profit_percent",
   "category_profit_percents",
   "maintenance_mode",
-  "user_notifications",
-  "cloud_users_registry"
+  "supplier_api_url",
+  "supplier_api_key",
+  "supplier_catalog"
 ];
 
-let firestoreDB = null;
-let isApplyingRemoteSnapshot = false;
-
-// تهيئة الاتصال مع Firestore بمجرد تحميل الصفحة
-(function initCloudSync() {
-  if (typeof firebase !== "undefined" && firebase.firestore) {
-    firestoreDB = firebase.firestore();
-    startRealtimeCloudListeners();
-  }
-})();
-
-// قراءة البيانات محلياً مع ضمان السرعة الفائقة
-function getDB(key, defaultValue) {
+function getDB(key, defaultValue = null) {
   try {
-    const raw = localStorage.getItem("mk_" + key);
-    if (raw === null || raw === undefined) return defaultValue;
+    const raw = localStorage.getItem(key);
+    if (raw === null || raw === undefined || raw === "undefined") {
+      return defaultValue;
+    }
     return JSON.parse(raw);
   } catch (e) {
     return defaultValue;
   }
 }
 
-// حفظ البيانات محلياً ومزامنتها فوراً مع السحابة لجميع الهواتف
 function setDB(key, value) {
   try {
-    localStorage.setItem("mk_" + key, JSON.stringify(value));
+    localStorage.setItem(key, JSON.stringify(value));
   } catch (e) {
-    console.error("Local Save Error:", e);
+    console.warn("Storage write error:", e);
   }
 
-  // إذا تم تحديث قائمة المستخدمين المحلية، نرفع بيانات المستخدم النشط إلى السجل السحابي المشترك
-  if (key === "users" && Array.isArray(value) && value.length > 0 && value[0].name !== "زائر") {
-    syncCurrentUserToCloudRegistry(value[0]);
-  }
-
-  // رفع المفتاح إلى Firestore إذا كان ضمن المفاتيح المشتركة ولم يكن قادماً من تحديث سحابي
-  if (firestoreDB && !isApplyingRemoteSnapshot && CLOUD_SHARED_KEYS.includes(key)) {
-    firestoreDB.collection("store_data").doc(key).set({
-      payload: JSON.stringify(value),
-      updatedAt: Date.now()
-    }).catch(err => console.warn("Cloud Sync Write Warning:", err));
+  // رفع التغيير فوراً إلى Firebase Firestore إذا كان المفتاح مشتركاً
+  if (CLOUD_SYNC_KEYS.includes(key) && typeof firebase !== "undefined" && firebase.firestore) {
+    try {
+      const db = firebase.firestore();
+      db.collection("store_data").doc("main_db").set(
+        {
+          [key]: JSON.stringify(value),
+          updatedAt: Date.now()
+        },
+        { merge: true }
+      ).catch(err => console.warn("Cloud save error:", err));
+    } catch (e) {}
   }
 }
 
-// مزامنة بيانات المستخدم الحالي (رصيده، رتبته، حالة الحظر) مع السجل السحابي
-function syncCurrentUserToCloudRegistry(localUser) {
-  if (!firestoreDB || !localUser || !localUser.name || localUser.name === "زائر") return;
+// تهيئة البيانات الأساسية والمزامنة الفورية من Firebase عند فتح الموقع
+(function initCloudDatabaseSync() {
+  if (!getDB("categories")) {
+    localStorage.setItem("categories", JSON.stringify(initialCategories));
+  }
+  if (!getDB("depositMethods")) {
+    localStorage.setItem("depositMethods", JSON.stringify(initialDepositMethods));
+  }
 
-  const registry = getDB("cloud_users_registry", {});
-  const userKey = (localUser.email || localUser.name).toLowerCase().trim();
+  if (typeof firebase === "undefined" || !firebase.firestore) return;
+  const db = firebase.firestore();
 
-  registry[userKey] = {
-    ...registry[userKey],
-    ...localUser,
-    lastSeen: Date.now()
-  };
+  db.collection("store_data").doc("main_db").onSnapshot(
+    doc => {
+      if (!doc.exists) return;
+      const cloud = doc.data() || {};
+      let uiNeedsRefresh = false;
 
-  isApplyingRemoteSnapshot = true;
-  localStorage.setItem("mk_cloud_users_registry", JSON.stringify(registry));
-  isApplyingRemoteSnapshot = false;
-
-  firestoreDB.collection("store_data").doc("cloud_users_registry").set({
-    payload: JSON.stringify(registry),
-    updatedAt: Date.now()
-  }).catch(() => {});
-}
-
-// الاستماع اللحظي لأي تغيير يحدث من أي هاتف وتحديث الشاشة فوراً
-function startRealtimeCloudListeners() {
-  if (!firestoreDB) return;
-
-  CLOUD_SHARED_KEYS.forEach((key) => {
-    firestoreDB.collection("store_data").doc(key).onSnapshot((doc) => {
-      if (!doc.exists) {
-        // إذا كانت السحابة فارغة لأول مرة، ارفع البيانات الموجودة على هذا الهاتف إليها
-        const existingLocal = getDB(key, null);
-        if (existingLocal !== null) {
-          firestoreDB.collection("store_data").doc(key).set({
-            payload: JSON.stringify(existingLocal),
-            updatedAt: Date.now()
-          }).catch(() => {});
+      CLOUD_SYNC_KEYS.forEach(key => {
+        if (cloud[key] !== undefined && cloud[key] !== null) {
+          try {
+            const parsed = typeof cloud[key] === "string" ? JSON.parse(cloud[key]) : cloud[key];
+            const currentRaw = localStorage.getItem(key);
+            const nextRaw = JSON.stringify(parsed);
+            if (currentRaw !== nextRaw) {
+              localStorage.setItem(key, nextRaw);
+              uiNeedsRefresh = true;
+            }
+          } catch (e) {}
         }
-        return;
+      });
+
+      // تحديث رصيد المستخدم المسجل حالياً فوراً من السحابة
+      const reg = getDB("cloud_users_registry", {});
+      const localUsers = getDB("users", []);
+      if (Array.isArray(localUsers) && localUsers[0] && localUsers[0].name !== "زائر") {
+        const uEmail = (localUsers[0].email || "").toLowerCase().trim();
+        const uName = (localUsers[0].name || "").toLowerCase().trim();
+        const uFull = (localUsers[0].fullname || "").toLowerCase().trim();
+
+        const matched = Object.values(reg).find(
+          u =>
+            u &&
+            ((uEmail && (u.email || "").toLowerCase().trim() === uEmail) ||
+              (uName && ((u.name || "").toLowerCase().trim() === uName || (u.fullname || "").toLowerCase().trim() === uName)) ||
+              (uFull && ((u.name || "").toLowerCase().trim() === uFull || (u.fullname || "").toLowerCase().trim() === uFull)))
+        );
+
+        if (matched) {
+          const newBal = Number(matched.balanceUSD || 0);
+          if (Number(localUsers[0].balanceUSD || 0) !== newBal || (matched.role && matched.role !== localUsers[0].role)) {
+            localUsers[0].balanceUSD = newBal;
+            if (matched.role) localUsers[0].role = matched.role;
+            localStorage.setItem("users", JSON.stringify(localUsers));
+            uiNeedsRefresh = true;
+          }
+        }
       }
 
-      const data = doc.data();
-      if (!data || !data.payload) return;
-
-      try {
-        const parsed = JSON.parse(data.payload);
-        isApplyingRemoteSnapshot = true;
-        localStorage.setItem("mk_" + key, JSON.stringify(parsed));
-        isApplyingRemoteSnapshot = false;
-
-        // تحديث واجهة المتجر تلقائياً حسب البيانات الجديدة
-        refreshUIAfterCloudSync(key, parsed);
-      } catch (e) {
-        isApplyingRemoteSnapshot = false;
-      }
-    });
-  });
-}
-
-// تحديث عناصر الواجهة فور وصول بيانات جديدة من السحابة
-function refreshUIAfterCloudSync(key, parsedData) {
-  if (key === "site_settings" && typeof loadSiteSettings === "function") {
-    loadSiteSettings();
-  }
-  if ((key === "categories" || key === "category_profit_percents" || key === "global_profit_percent") && typeof renderCategories === "function") {
-    renderCategories();
-  }
-  if (key === "maintenance_mode" && typeof checkMaintenanceGate === "function") {
-    checkMaintenanceGate();
-  }
-  if (key === "user_notifications" && typeof checkIncomingNotifications === "function") {
-    checkIncomingNotifications();
-  }
-  if (key === "deposit_requests" && typeof renderAdminDepositRequests === "function") {
-    renderAdminDepositRequests();
-  }
-
-  // تحديث رصيد ورتبة وحالة حظر المستخدم الحالي إذا عدّلها المدير من هاتف آخر
-  if (key === "cloud_users_registry" && parsedData) {
-    const users = getDB("users", []);
-    if (Array.isArray(users) && users.length > 0 && users[0].name !== "زائر") {
-      const userKey = (users[0].email || users[0].name).toLowerCase().trim();
-      const cloudProfile = parsedData[userKey];
-      if (cloudProfile) {
-        users[0].balanceUSD = cloudProfile.balanceUSD;
-        users[0].role = cloudProfile.role;
-        users[0].isBanned = cloudProfile.isBanned;
-        localStorage.setItem("mk_users", JSON.stringify(users));
+      if (uiNeedsRefresh) {
+        if (typeof loadSiteSettings === "function") loadSiteSettings();
+        if (typeof renderCategories === "function") renderCategories();
         if (typeof updateUserUI === "function") updateUserUI();
+        if (typeof checkIncomingNotifications === "function") checkIncomingNotifications();
+        if (typeof checkMaintenanceGate === "function") checkMaintenanceGate();
       }
-    }
-  }
-}
+    },
+    err => console.warn("Firestore snapshot error:", err)
+  );
+})();
