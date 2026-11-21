@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=161">
+  <link rel="stylesheet" href="style.css?v=162">
 
   <style>
     .hidden,
@@ -1143,10 +1143,10 @@
   </script>
 
   <!-- ملفات السكربت -->
-  <script src="data.js?v=161"></script>
-  <script src="auth.js?v=161"></script>
-  <script src="store.js?v=161"></script>
-  <script src="admin.js?v=161"></script>
+  <script src="data.js?v=162"></script>
+  <script src="auth.js?v=162"></script>
+  <script src="store.js?v=162"></script>
+  <script src="admin.js?v=162"></script>
 
   <script>
     (function() {
@@ -1291,25 +1291,29 @@
       }
     };
 
-    window.addEventListener("load", function() {
-      setTimeout(function() {
-        const container = document.getElementById("categories-container");
-        if (container && container.children.length === 0) {
-          if (typeof renderCategories === "function") {
-            renderCategories();
-          } else if (typeof initialCategories !== "undefined") {
-            const cats = (typeof getDB === "function" ? getDB("categories", initialCategories) : initialCategories) || initialCategories;
-            container.innerHTML = cats.filter(c => !c.parentId).map(c => `
-              <div class="cat-app-item" onclick="if(typeof openCategory==='function')openCategory('${c.id}','${c.name}','${c.image || ''}',null)">
-                <div class="cat-app-avatar"><img src="${c.image || ''}" alt="${c.name}"></div>
-                <span class="cat-app-label">${c.name}</span>
-              </div>
-            `).join("");
+    // إصلاح فوري وتلقائي للأقسام وطرق الإيداع والواجهة عند فتح الصفحة
+    (function forceRepairStoreUI() {
+      try {
+        const rawCats = localStorage.getItem("categories");
+        if (!rawCats || rawCats === "[]" || rawCats === "null" || rawCats === "undefined") {
+          if (typeof initialCategories !== "undefined" && Array.isArray(initialCategories)) {
+            localStorage.setItem("categories", JSON.stringify(initialCategories));
           }
         }
+        const rawMethods = localStorage.getItem("depositMethods");
+        if (!rawMethods || rawMethods === "[]" || rawMethods === "null") {
+          if (typeof initialDepositMethods !== "undefined" && Array.isArray(initialDepositMethods)) {
+            localStorage.setItem("depositMethods", JSON.stringify(initialDepositMethods));
+          }
+        }
+        if (typeof loadSiteSettings === "function") loadSiteSettings();
+        if (typeof renderCategories === "function") renderCategories();
         if (typeof updateUserUI === "function") updateUserUI();
-      }, 500);
-    });
-  </script>
-</body>
-</html>
+      } catch (e) {
+        console.warn("UI Repair:", e);
+      }
+    })();
+
+    window.addEventListener("load", function() {
+      setTimeout(function() {
+        const container = document.getElementByI
