@@ -1,4 +1,4 @@
-// --- store.js (النسخة الكاملة: تغيير رقم واتساب الإدارة والزبون + المحرك الشامل للموردين + تنظيف 24 ساعة) ---
+// --- store.js (النسخة الكاملة: مزامنة الرصيد اللحظية من Firebase + واتساب + المحرك الشامل للموردين + تنظيف 24 ساعة) ---
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
 let activeDepositMethod = null;
@@ -169,6 +169,71 @@ function getUserDailyOrdersStats(user) {
   return { count: userOrders.length, totalUSD, userOrders };
 }
 
+// مزامنة الرصيد والمستوى والإشعارات لحظياً من Firebase إلى جهاز المستخدم
+function syncUserFromRegistry(registry) {
+  if (!registry || typeof registry !== "object") return;
+  const users = getDB("users", []);
+  if (!Array.isArray(users) || !users[0] || users[0].name === "زائر") return;
+
+  const uEmail = (users[0].email || "").toLowerCase().trim();
+  const uName = (users[0].name || "").toLowerCase().trim();
+  const uFull = (users[0].fullname || "").toLowerCase().trim();
+
+  const matched = Object.values(registry).find(u =>
+    u && (
+      (uEmail && (u.email || "").toLowerCase().trim() === uEmail) ||
+      (uName && ((u.name || "").toLowerCase().trim() === uName || (u.fullname || "").toLowerCase().trim() === uName)) ||
+      (uFull && ((u.name || "").toLowerCase().trim() === uFull || (u.fullname || "").toLowerCase().trim() === uFull))
+    )
+  );
+
+  if (matched) {
+    const cloudBal = Number(matched.balanceUSD || 0);
+    const localBal = Number(users[0].balanceUSD || 0);
+    if (cloudBal !== localBal || (matched.role && matched.role !== users[0].role)) {
+      users[0].balanceUSD = cloudBal;
+      if (matched.role) users[0].role = matched.role;
+      localStorage.setItem("users", JSON.stringify(users));
+      updateUserUI();
+    }
+  }
+}
+
+function startLiveUserBalanceSync() {
+  try {
+    syncUserFromRegistry(getDB("cloud_users_registry", {}));
+  } catch (e) {}
+
+  if (typeof firebase === "undefined" || !firebase.firestore) return;
+  const db = firebase.firestore();
+
+  // الاستماع للمسارات المحتملة لقاعدة البيانات في Firebase
+  ["store_data/main_db", "app_data/store", "database/main"].forEach(path => {
+    const [col, docId] = path.split("/");
+    db.collection(col).doc(docId).onSnapshot(doc => {
+      if (!doc.exists) return;
+      const cloudData = doc.data() || {};
+      let reg = cloudData.cloud_users_registry || {};
+      if (typeof reg === "string") {
+        try { reg = JSON.parse(reg); } catch (e) { reg = {}; }
+      }
+      if (reg && Object.keys(reg).length > 0) {
+        localStorage.setItem("cloud_users_registry", JSON.stringify(reg));
+        syncUserFromRegistry(reg);
+      }
+      if (cloudData.user_notifications) {
+        const notifs = typeof cloudData.user_notifications === "string"
+          ? JSON.parse(cloudData.user_notifications)
+          : cloudData.user_notifications;
+        if (Array.isArray(notifs)) {
+          localStorage.setItem("user_notifications", JSON.stringify(notifs));
+          checkIncomingNotifications();
+        }
+      }
+    }, () => {});
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   try { cleanupExpiredOrders24h(); } catch (e) {}
   try { loadSiteSettings(); } catch (e) {}
@@ -176,10 +241,12 @@ document.addEventListener("DOMContentLoaded", () => {
   try { updateUserUI(); } catch (e) {}
   try { initSavedTheme(); } catch (e) {}
   try { checkIncomingNotifications(); } catch (e) {}
+  try { startLiveUserBalanceSync(); } catch (e) {}
   setInterval(() => {
     try { cleanupExpiredOrders24h(); } catch (e) {}
+    try { syncUserFromRegistry(getDB("cloud_users_registry", {})); } catch (e) {}
     try { checkIncomingNotifications(); } catch (e) {}
-  }, 60000);
+  }, 5000);
   if (typeof checkMaintenanceGate === "function") checkMaintenanceGate();
   if (typeof checkAuthGate === "function") checkAuthGate();
 });
@@ -828,6 +895,13 @@ async function handleServiceOrder(e, catId, catName) {
   users[0].balanceUSD = Number((users[0].balanceUSD - totalPrice).toFixed(3));
   setDB("users", users);
 
+  const registry = getDB("cloud_users_registry", {});
+  const regKey = (users[0].email || users[0].name || "").toLowerCase().trim();
+  if (registry[regKey]) {
+    registry[regKey].balanceUSD = users[0].balanceUSD;
+    setDB("cloud_users_registry", registry);
+  }
+
   const unitSupplierCost = Number(product.supplierPriceUSD !== undefined ? product.supplierPriceUSD : (product.priceUSD || 0));
   const totalSupplierCost = Number((unitSupplierCost * orderQty).toFixed(4));
   const orderProfitUSD = Number(Math.max(0, totalPrice - totalSupplierCost).toFixed(4));
@@ -882,17 +956,4 @@ function updateUserUI() {
   if (document.getElementById("side-user-rank")) document.getElementById("side-user-rank").innerText = user.role || "عضو";
   if (document.getElementById("header-user-rank")) document.getElementById("header-user-rank").innerText = user.role || "عضو";
   if (document.getElementById("drawer-avatar")) document.getElementById("drawer-avatar").src = user.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
-  const waLabel = document.getElementById("user-whatsapp-label");
-  if (waLabel) waLabel.innerText = user.phone ? `واتساب: ${user.phone}` : "إضافة / تغيير رقم واتساب";
-  const adminLink = document.getElementById("admin-panel-link");
-  if (adminLink) adminLink.style.display = isCurrentUserAdmin(user) ? "flex" : "none";
-}
-
-function showStore() { currentParentCategory = null; backToCategories(); toggleSidebar(false); }
-function toggleSidebar(force) {
-  const drawer = document.getElementById("sidebar-drawer"), backdrop = document.getElementById("drawer-backdrop");
-  if (!drawer || !backdrop) return;
-  const isOpen = (typeof force === "boolean") ? !force : drawer.classList.contains("open");
-  drawer.classList.toggle("open", !isOpen);
-  backdrop.classList.toggle("hidden", isOpen);
-}
+  const waLabel = document.getElementById("user-wha
