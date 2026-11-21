@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=158">
+  <link rel="stylesheet" href="style.css?v=160">
 
   <style>
     .hidden,
@@ -31,11 +31,11 @@
       background: rgba(3, 7, 18, 0.85) !important;
       backdrop-filter: blur(6px);
       display: flex !important;
-      align-items: center !important;
+      align-items: flex-start !important;
       justify-content: center !important;
       z-index: 99999 !important;
-      padding: 16px;
-      overflow-y: auto;
+      padding: 24px 16px 50px !important;
+      overflow-y: auto !important;
     }
 
     .admin-wrapper {
@@ -58,6 +58,7 @@
       color: #fff;
       box-shadow: 0 15px 40px rgba(245, 158, 11, 0.25);
       animation: authPop 0.25s ease-out;
+      margin: auto;
     }
 
     .maintenance-icon {
@@ -265,6 +266,7 @@
       color: #0f172a;
       box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4);
       animation: authPop 0.25s ease-out;
+      margin: auto;
     }
 
     .logout-icon-circle {
@@ -327,7 +329,7 @@
       position: relative;
       color: #fff;
       animation: authPop 0.25s ease-out;
-      margin: auto;
+      margin: 0 auto;
     }
 
     .deposit-methods-pills {
@@ -618,7 +620,7 @@
     
     <!-- البانر الترويجي -->
     <div class="banner-card">
-      <img src="https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80" alt="Banner">
+      <img src="https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80" alt="Banner" onerror="this.src='https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80'">
       <div class="banner-dots">
         <span class="b-dot active"></span>
         <span class="b-dot"></span>
@@ -1133,10 +1135,10 @@
   </script>
 
   <!-- ملفات السكربت -->
-  <script src="data.js?v=158"></script>
-  <script src="auth.js?v=158"></script>
-  <script src="store.js?v=158"></script>
-  <script src="admin.js?v=158"></script>
+  <script src="data.js?v=160"></script>
+  <script src="auth.js?v=160"></script>
+  <script src="store.js?v=160"></script>
+  <script src="admin.js?v=160"></script>
 
   <script>
     (function() {
@@ -1280,6 +1282,27 @@
         alert("خطأ في الاتصال: " + err.message);
       }
     };
+
+    // حماية تلقائية لضمان رسم الأقسام وتحديث الواجهة دائماً
+    window.addEventListener("load", function() {
+      setTimeout(function() {
+        const container = document.getElementById("categories-container");
+        if (container && container.children.length === 0) {
+          if (typeof renderCategories === "function") {
+            renderCategories();
+          } else if (typeof initialCategories !== "undefined") {
+            const cats = (typeof getDB === "function" ? getDB("categories", initialCategories) : initialCategories) || initialCategories;
+            container.innerHTML = cats.filter(c => !c.parentId).map(c => `
+              <div class="cat-app-item" onclick="if(typeof openCategory==='function')openCategory('${c.id}','${c.name}','${c.image || ''}',null)">
+                <div class="cat-app-avatar"><img src="${c.image || ''}" alt="${c.name}"></div>
+                <span class="cat-app-label">${c.name}</span>
+              </div>
+            `).join("");
+          }
+        }
+        if (typeof updateUserUI === "function") updateUserUI();
+      }, 500);
+    });
   </script>
 </body>
 </html>
