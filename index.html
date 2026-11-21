@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=162">
+  <link rel="stylesheet" href="style.css?v=163">
 
   <style>
     .hidden,
@@ -1143,10 +1143,10 @@
   </script>
 
   <!-- ملفات السكربت -->
-  <script src="data.js?v=162"></script>
-  <script src="auth.js?v=162"></script>
-  <script src="store.js?v=162"></script>
-  <script src="admin.js?v=162"></script>
+  <script src="data.js?v=163"></script>
+  <script src="auth.js?v=163"></script>
+  <script src="store.js?v=163"></script>
+  <script src="admin.js?v=163"></script>
 
   <script>
     (function() {
@@ -1291,29 +1291,14 @@
       }
     };
 
-    // إصلاح فوري وتلقائي للأقسام وطرق الإيداع والواجهة عند فتح الصفحة
+    // إصلاح نهائي للسحابة والواجهة ورسم الأقسام مباشرة
     (function forceRepairStoreUI() {
-      try {
-        const rawCats = localStorage.getItem("categories");
-        if (!rawCats || rawCats === "[]" || rawCats === "null" || rawCats === "undefined") {
-          if (typeof initialCategories !== "undefined" && Array.isArray(initialCategories)) {
-            localStorage.setItem("categories", JSON.stringify(initialCategories));
-          }
-        }
-        const rawMethods = localStorage.getItem("depositMethods");
-        if (!rawMethods || rawMethods === "[]" || rawMethods === "null") {
-          if (typeof initialDepositMethods !== "undefined" && Array.isArray(initialDepositMethods)) {
-            localStorage.setItem("depositMethods", JSON.stringify(initialDepositMethods));
-          }
-        }
-        if (typeof loadSiteSettings === "function") loadSiteSettings();
-        if (typeof renderCategories === "function") renderCategories();
-        if (typeof updateUserUI === "function") updateUserUI();
-      } catch (e) {
-        console.warn("UI Repair:", e);
-      }
-    })();
-
-    window.addEventListener("load", function() {
-      setTimeout(function() {
-        const container = document.getElementByI
+      const fallbackCats = (typeof initialCategories !== "undefined" && Array.isArray(initialCategories) && initialCategories.length > 0)
+        ? initialCategories
+        : [
+            { id: "cat_games", name: "قسم شحن جميع الألعاب", parentId: null, image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=300&q=80" },
+            { id: "cat_apps", name: "قسم شحن التطبيقات", parentId: null, image: "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?auto=format&fit=crop&w=300&q=80" },
+            { id: "cat_social", name: "خدمات السوشال ميديا", parentId: null, image: "https://images.unsplash.com/photo-1611162618071-b39a2ec055fb?auto=format&fit=crop&w=300&q=80" },
+            { id: "cat_syria_balance", name: "قسم خدمات الرصيد السوري", parentId: null, image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=300&q=80" },
+            { id: "cat_subscriptions", name: "قسم الاشتراكات", parentId: null, image: "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80" },
+            { id: "cat_numbers", name: "قسم الأرقام", pare
