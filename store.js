@@ -1,4 +1,4 @@
-// --- store.js (النسخة الكاملة: مزامنة الرصيد اللحظية من Firebase + واتساب + المحرك الشامل للموردين + تنظيف 24 ساعة) ---
+// --- store.js (v=160: مزامنة الرصيد اللحظية + واتساب + المحرك الشامل للموردين + تنظيف 24 ساعة) ---
 let bannerInterval = null;
 let currentDepositCurrency = "USD";
 let activeDepositMethod = null;
@@ -169,7 +169,6 @@ function getUserDailyOrdersStats(user) {
   return { count: userOrders.length, totalUSD, userOrders };
 }
 
-// مزامنة الرصيد والمستوى والإشعارات لحظياً من Firebase إلى جهاز المستخدم
 function syncUserFromRegistry(registry) {
   if (!registry || typeof registry !== "object") return;
   const users = getDB("users", []);
@@ -207,7 +206,6 @@ function startLiveUserBalanceSync() {
   if (typeof firebase === "undefined" || !firebase.firestore) return;
   const db = firebase.firestore();
 
-  // الاستماع للمسارات المحتملة لقاعدة البيانات في Firebase
   ["store_data/main_db", "app_data/store", "database/main"].forEach(path => {
     const [col, docId] = path.split("/");
     db.collection(col).doc(docId).onSnapshot(doc => {
@@ -956,4 +954,6 @@ function updateUserUI() {
   if (document.getElementById("side-user-rank")) document.getElementById("side-user-rank").innerText = user.role || "عضو";
   if (document.getElementById("header-user-rank")) document.getElementById("header-user-rank").innerText = user.role || "عضو";
   if (document.getElementById("drawer-avatar")) document.getElementById("drawer-avatar").src = user.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
-  const waLabel = document.getElementById("user-wha
+  const waLabel = document.getElementById("user-whatsapp-label");
+  if (waLabel) waLabel.innerText = user.phone ? `واتساب: ${user.phone}` : "إضافة / تغيير رقم واتساب";
+  const adminLink = document.getElemen
