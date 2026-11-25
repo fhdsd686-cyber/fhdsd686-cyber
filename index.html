@@ -962,6 +962,10 @@
         <button class="admin-nav-item" onclick="switchAdminSection('deposit-requests')">طلبات الإيداع</button>
         <button class="admin-nav-item" onclick="switchAdminSection('deposit-methods')">طرق الإيداع</button>
         <button class="admin-nav-item" onclick="switchAdminSection('add-deposit-method')">إضافة طريقة إيداع</button>
+        <!-- 🌟 زر ربط بوابة الدفع الأوتوماتيكية الجديد -->
+        <button class="admin-nav-item" onclick="switchAdminSection('payment-gateway-setup')" style="color:#10b981; font-weight:800;">
+          <i class="fa-solid fa-credit-card"></i> ربط بوابة الدفع الأوتوماتيكية
+        </button>
       </nav>
 
       <div class="admin-content-area">
@@ -1109,6 +1113,36 @@
             <button type="submit" class="btn-submit">حفظ الطريقة</button>
           </form>
         </section>
+
+        <!-- 🌟 قسم ربط بوابة الدفع الأوتوماتيكية الجديد -->
+        <section id="sec-payment-gateway-setup" class="hidden">
+          <h4><i class="fa-solid fa-credit-card" style="color:#10b981;"></i> إعدادات ربط بوابة الدفع الأوتوماتيكية (شام كاش / سيريتل كاش)</h4>
+
+          <div style="background:#0c1527; padding:16px; border-radius:14px; margin-bottom:16px; border:1.5px solid rgba(16, 185, 129, 0.3);">
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label style="display:block; margin-bottom:5px; color:#cbd5e1; font-size:0.85rem;">اختر بوابة الدفع المراد ربطها:</label>
+              <select id="gateway-provider-select" style="width:100%; background:#050b18; border:1.5px solid rgba(56,189,248,0.25); border-radius:12px; padding:10px; color:#fff; outline:none;">
+                <option value="sham_cash">شام كاش (Sham Cash API)</option>
+                <option value="syriatel_cash">سيريتل كاش أوتوماتيك</option>
+              </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label style="display:block; margin-bottom:5px; color:#cbd5e1; font-size:0.85rem;">رابط الـ Webhook أو API الخاص بالبوابة:</label>
+              <input type="text" id="gateway-api-endpoint" placeholder="https://api.gateway.com/v1/webhook" dir="ltr" style="width:100%; background:#050b18; border:1.5px solid rgba(56,189,248,0.25); border-radius:12px; padding:10px; color:#fff; outline:none;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 16px;">
+              <label style="display:block; margin-bottom:5px; color:#cbd5e1; font-size:0.85rem;">مفتاح المصادقة السري (API Secret Key / Token):</label>
+              <input type="password" id="gateway-secret-token" placeholder="أدخل مفتاح الربط الخاص بحسابك..." dir="ltr" style="width:100%; background:#050b18; border:1.5px solid rgba(56,189,248,0.25); border-radius:12px; padding:10px; color:#fff; outline:none;">
+            </div>
+
+            <button type="button" class="btn-submit" style="background:#10b981; width:100%; padding:12px; border:none; border-radius:12px; color:#fff; font-weight:bold; cursor:pointer;" onclick="savePaymentGatewaySettings()">
+              <i class="fa-solid fa-check"></i> حفظ ورابط الربط الأوتوماتيكي
+            </button>
+          </div>
+        </section>
+
       </div>
     </div>
   </div>
@@ -1193,7 +1227,7 @@
       const amount = document.getElementById('deposit-input-val')?.value;
       const sender = document.getElementById('deposit-sender-info')?.value;
       const method = document.getElementById('deposit-active-name')?.innerText || "شام كاش";
-      const submitBtn = document.querySelector('.btn-send-deposit');
+      const submitBtn = document.getElementById('btn-submit-dep');
 
       if (submitBtn) {
         submitBtn.innerText = "جاري الإرسال...";
@@ -1267,57 +1301,4 @@
         if (!Array.isArray(rawList) || rawList.length === 0) {
           alert("تم حفظ بيانات المورد، ولكن رد السيرفر لم يُرجع منتجات: " + JSON.stringify(data).slice(0, 300));
           return;
-        }
-
-        const mapped = rawList.map((item, idx) => {
-          let detectedParam = "playerId";
-          let hasNoParams = false;
-
-          if (Array.isArray(item.params)) {
-            if (item.params.length === 0) {
-              hasNoParams = true;
-            } else {
-              detectedParam = typeof item.params[0] === "string" ? item.params[0] : (item.params[0].name || item.params[0].key || "playerId");
-            }
-          } else if (item.params && typeof item.params === "object") {
-            const keys = Object.keys(item.params);
-            if (keys.length === 0) hasNoParams = true;
-            else detectedParam = keys[0];
-          } else if (adapter.type === "smm_panel") {
-            detectedParam = "link";
-          }
-
-          let rawPrice = parseFloat(item.price || item.rate || item.cost || 0);
-          if (adapter.type === "smm_panel" && Number(item.max || 0) > 10) {
-            rawPrice = Number((rawPrice / 1000).toFixed(6));
-          }
-
-          const qtyInfo = item.qty_values || item.quantities || (adapter.type === "smm_panel" && item.min ? { min: Number(item.min), max: Number(item.max || 100000) } : null);
-
-          return {
-            supplierId: String(item.id || item.service || item.product_id || `SUP-${idx + 1}`),
-            supplierApiUrl: url,
-            supplierApiKey: key,
-            supplierApiType: adapter.type,
-            app: item.category_name || item.category?.name || item.category || item.group || "المورد",
-            name: item.name || item.title || item.service_name || `منتج #${idx + 1}`,
-            supplierPriceUSD: rawPrice,
-            productType: (adapter.type === "smm_panel" || qtyInfo) ? "variable" : (item.product_type || "package"),
-            qtyValues: qtyInfo,
-            paramField: detectedParam,
-            noParams: hasNoParams,
-            image: item.image || item.icon || item.category?.image || "https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=300&q=80",
-            desc: item.desc || item.description || item.notes || ""
-          };
-        });
-
-        setDB("supplier_catalog", mapped);
-        alert(`🎉 تم تفعيل المورد (${adapter.type}) وجلب ${mapped.length} منتج بنجاح!`);
-        if (typeof searchSupplierCatalog === "function") searchSupplierCatalog();
-      } catch (err) {
-        alert("خطأ في الاتصال: " + err.message);
-      }
-    };
-  </script>
-</body>
-</html>
+  
