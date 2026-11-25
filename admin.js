@@ -1,5 +1,5 @@
 // ============================================================================
-// لوحة تحكم الإدارة الكاملة + إدارة وحظر المستخدمين وتعديل الأرصدة (admin.js)
+// لوحة تحكم الإدارة الكاملة + الحذف التلقائي للإيداعات القديمة (admin.js)
 // ============================================================================
 
 const ADMIN_SECTIONS = [
@@ -225,7 +225,7 @@ window.savePaymentGatewaySettings = function() {
   alert("🎉 تم حفظ إعدادات بوابة الدفع الأوتوماتيكية بنجاح وأصبحت جاهزة للربط!");
 };
 
-// 🌟 قسم المستخدمين مع أزرار تعديل الرصيد، الحظر، والحذف
+// إدارة المستخدمين
 function renderAdminUsers() {
   const container = document.getElementById("admin-users-list");
   if (!container) return;
@@ -265,7 +265,7 @@ function renderAdminUsers() {
             <i class="fa-solid fa-wallet"></i> تعديل الرصيد
           </button>
           <button type="button" onclick="adminToggleBanUser('${key}')" style="flex:1; min-width:85px; background:${isBanned ? '#10b981' : '#f59e0b'}; color:#fff; border:none; padding:6px; border-radius:8px; font-size:0.75rem; font-weight:bold; cursor:pointer;">
-            <i class="fa-solid ${isBanned ? 'fa-unlock' : 'fa-ban'}"></i> ${isBanned ? 'إلغاء الحظر' : 'حظر الحساب'}
+            <i class="fa-solid ${isBanned ? 'fa-unlock' : 'fa-ban'}"></i> ${isBanned ? 'إلغاء الحظر' : 'حظر'}
           </button>
           <button type="button" onclick="adminDeleteUser('${key}')" style="flex:1; min-width:85px; background:#ef4444; color:#fff; border:none; padding:6px; border-radius:8px; font-size:0.75rem; font-weight:bold; cursor:pointer;">
             <i class="fa-solid fa-trash"></i> حذف
@@ -276,7 +276,6 @@ function renderAdminUsers() {
   }).join("");
 }
 
-// تعديل رصيد المستخدم
 window.adminEditUserBalance = function(userKey) {
   const registry = getDB("cloud_users_registry", {});
   const users = getDB("users", []);
@@ -312,7 +311,6 @@ window.adminEditUserBalance = function(userKey) {
   renderAdminUsers();
 };
 
-// حظر أو إلغاء حظر المستخدم
 window.adminToggleBanUser = function(userKey) {
   const registry = getDB("cloud_users_registry", {});
   const users = getDB("users", []);
@@ -325,8 +323,7 @@ window.adminToggleBanUser = function(userKey) {
   }
 
   const nextState = !isCurrentlyBanned;
-  const confirmMsg = nextState ? "⚠️ هل أنت متأكد من حظر هذا المستخدم؟" : "فك حظر هذا المستخدم؟";
-  if (!confirm(confirmMsg)) return;
+  if (!confirm(nextState ? "⚠️ هل أنت متأكد من حظر هذا المستخدم؟" : "فك حظر هذا المستخدم؟")) return;
 
   if (registry[userKey]) {
     registry[userKey].isBanned = nextState;
@@ -343,7 +340,6 @@ window.adminToggleBanUser = function(userKey) {
   renderAdminUsers();
 };
 
-// حذف المستخدم نهائياً
 window.adminDeleteUser = function(userKey) {
   if (!confirm("⚠️ هل أنت متأكد من رغبتك في حذف هذا الحساب نهائياً؟")) return;
 
@@ -408,13 +404,28 @@ function renderAdminCategories() {
   tbody.innerHTML = categories.map(c => `<tr><td>${c.name}</td><td>رئيسي</td><td>-</td></tr>`).join("");
 }
 
+// 🌟 طلبات الإيداع مع الحذف التلقائي بعد 48 ساعة وأزرار القبول والرفض
 function renderAdminDepositRequests() {
   const container = document.getElementById("deposit-requests-container");
   if (!container) return;
-  const requests = getDB("deposit_requests", []);
+  
+  let requests = getDB("deposit_requests", []);
+  const now = Date.now();
+  const fortyEightHoursMs = 48 * 60 * 60 * 1000;
+
+  const filteredRequests = requests.filter(req => {
+    if (!req.timestamp) return true;
+    const reqTime = new Date(req.timestamp).getTime();
+    return (now - reqTime) <= fortyEightHoursMs;
+  });
+
+  if (filteredRequests.length !== requests.length) {
+    setDB("deposit_requests", filteredRequests);
+    requests = filteredRequests;
+  }
 
   if (!requests.length) {
-    container.innerHTML = `<p style="color:#94a3b8;">لا توجد طلبات إيداع حالياً.</p>`;
+    container.innerHTML = `<p style="color:#94a3b8; text-align:center; padding:20px;">لا توجد طلبات إيداع حديثة (تم حذف الطلبات الأقدم من 48 ساعة تلقائياً).</p>`;
     return;
   }
 
