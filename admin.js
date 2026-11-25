@@ -1,5 +1,5 @@
 // ============================================================================
-// لوحة تحكم الإدارة الكاملة + ربط بوابة الدفع الأوتوماتيكية + الأرباح (admin.js)
+// لوحة تحكم الإدارة الكاملة + الأزرار والقبول الفوري للإيداع (admin.js)
 // ============================================================================
 
 const ADMIN_SECTIONS = [
@@ -16,7 +16,7 @@ const ADMIN_SECTIONS = [
   "deposit-requests",
   "deposit-methods",
   "add-deposit-method",
-  "payment-gateway-setup" // 🌟 قسم ربط بوابة الدفع الأوتوماتيكية الجديد
+  "payment-gateway-setup"
 ];
 
 function openAdminPanel() {
@@ -211,7 +211,6 @@ function handleSiteSettingsUpdate(e) {
   alert("✅ تم حفظ إعدادات المتجر ورقم الواتساب الجديد بنجاح!");
 }
 
-// 🌟 دالة حفظ إعدادات بوابة الدفع الأوتوماتيكية
 window.savePaymentGatewaySettings = function() {
   const provider = document.getElementById("gateway-provider-select")?.value;
   const endpoint = document.getElementById("gateway-api-endpoint")?.value.trim();
@@ -309,6 +308,7 @@ function renderAdminCategories() {
   tbody.innerHTML = categories.map(c => `<tr><td>${c.name}</td><td>رئيسي</td><td>-</td></tr>`).join("");
 }
 
+// 🌟 دالة عرض طلبات الإيداع مع أزرار القبول والرفض
 function renderAdminDepositRequests() {
   const container = document.getElementById("deposit-requests-container");
   if (!container) return;
@@ -319,19 +319,79 @@ function renderAdminDepositRequests() {
     return;
   }
 
-  container.innerHTML = requests.slice().reverse().map(req => {
+  container.innerHTML = requests.slice().reverse().map((req, revIdx) => {
+    const originalIndex = requests.length - 1 - revIdx;
     const amt = parseFloat(req.amountUSD || req.amount || 0);
+    const isPending = !req.status || req.status === "pending" || req.status === "معلق";
+
+    const actionsHTML = isPending
+      ? `<div style="display:flex; gap:8px; margin-top:10px;">
+           <button type="button" onclick="approveDepositRequest(${originalIndex})" style="flex:1; background:#10b981; color:#fff; border:none; padding:8px; border-radius:8px; font-weight:bold; cursor:pointer;">
+             <i class="fa-solid fa-check"></i> قبول وإضافة الرصيد
+           </button>
+           <button type="button" onclick="rejectDepositRequest(${originalIndex})" style="flex:1; background:#ef4444; color:#fff; border:none; padding:8px; border-radius:8px; font-weight:bold; cursor:pointer;">
+             <i class="fa-solid fa-xmark"></i> رفض
+           </button>
+         </div>`
+      : "";
+
     return `
       <div style="background:#0c1527; padding:12px; border-radius:12px; margin-bottom:10px; border:1px solid rgba(56,189,248,0.2);">
         <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-          <strong>${req.userName || "مستخدم"}</strong>
+          <strong>${req.userName || req.userEmail || "مستخدم"}</strong>
           <span style="color:#38bdf8; font-weight:800;">$${amt.toFixed(2)}</span>
         </div>
         <div style="font-size:0.78rem; color:#cbd5e1;">المرسل: ${req.sender || "-"} | الحالة: ${req.status || "معلق"}</div>
+        ${actionsHTML}
       </div>
     `;
   }).join("");
 }
+
+window.approveDepositRequest = function(index) {
+  const requests = getDB("deposit_requests", []);
+  const req = requests[index];
+  if (!req) return;
+
+  const amt = parseFloat(req.amountUSD || req.amount || 0);
+  const userKey = (req.userEmail || req.userName || "").toLowerCase().trim();
+
+  const registry = getDB("cloud_users_registry", {});
+  if (registry[userKey]) {
+    registry[userKey].balanceUSD = (parseFloat(registry[userKey].balanceUSD || 0) + amt);
+    setDB("cloud_users_registry", registry);
+  }
+
+  const users = getDB("users", []);
+  const uIdx = users.findIndex(u => (u.email || u.name || "").toLowerCase().trim() === userKey);
+  if (uIdx !== -1) {
+    users[uIdx].balanceUSD = (parseFloat(users[uIdx].balanceUSD || 0) + amt);
+    setDB("users", users);
+  }
+
+  const currentUser = getDB("currentUser", null);
+  if (currentUser && (currentUser.email || currentUser.name || "").toLowerCase().trim() === userKey) {
+    currentUser.balanceUSD = (parseFloat(currentUser.balanceUSD || 0) + amt);
+    setDB("currentUser", currentUser);
+  }
+
+  requests[index].status = "approved";
+  setDB("deposit_requests", requests);
+
+  alert(`✅ تم قبول الطلب وإضافة $${amt.toFixed(2)} لحساب المستخدم بنجاح!`);
+  renderAdminDepositRequests();
+  renderAdminStats();
+};
+
+window.rejectDepositRequest = function(index) {
+  if (!confirm("هل أنت متأكد من رفض هذا الطلب؟")) return;
+  const requests = getDB("deposit_requests", []);
+  if (!requests[index]) return;
+
+  requests[index].status = "مرفوض";
+  setDB("deposit_requests", requests);
+  renderAdminDepositRequests();
+};
 
 function renderAdminDepositMethods() {
   const container = document.getElementById("admin-methods-container");
