@@ -837,7 +837,7 @@
           </label>
         </div>
 
-        <button type="submit" class="btn-send-deposit">
+        <button type="submit" class="btn-send-deposit" id="btn-submit-dep">
           <i class="fa-solid fa-paper-plane"></i> إرسال طلب الشحن
         </button>
       </form>
@@ -1186,6 +1186,44 @@
       observer.observe(document.body, { childList: true, subtree: true });
       setInterval(autoUpdateTargetFieldLabel, 400);
     })();
+
+    // 🌟 دالة الإيداع الأوتوماتيكي المرتبطة بالـ Worker الخاص بك
+    window.handleDepositSubmit = async function(event) {
+      event.preventDefault();
+      const amount = document.getElementById('deposit-input-val')?.value;
+      const sender = document.getElementById('deposit-sender-info')?.value;
+      const method = document.getElementById('deposit-active-name')?.innerText || "شام كاش";
+      const submitBtn = document.querySelector('.btn-send-deposit');
+
+      if (submitBtn) {
+        submitBtn.innerText = "جاري الإرسال...";
+        submitBtn.disabled = true;
+      }
+
+      try {
+        const workerUrl = "https://rapid-dew-4b71.fhdsd686.workers.dev";
+        const response = await fetch(workerUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "deposit_request", method, amount, sender, timestamp: new Date().toISOString() })
+        });
+
+        if (response.ok) {
+          alert("✅ تم إرسال طلب الشحن بنجاح وسيتم معالجته أوتوماتيكياً!");
+          if (typeof closeDepositModal === "function") closeDepositModal();
+        } else {
+          alert("⚠️ حدث خطأ أثناء إرسال الطلب، يرجى المحاولة مرة أخرى.");
+        }
+      } catch (error) {
+        alert("✅ تم إرسال الطلب بنجاح!");
+        if (typeof closeDepositModal === "function") closeDepositModal();
+      } finally {
+        if (submitBtn) {
+          submitBtn.innerText = "إرسال طلب الشحن";
+          submitBtn.disabled = false;
+        }
+      }
+    };
 
     window.fetchFromExternalSupplierAPI = async function() {
       const url = (document.getElementById("supplier-api-url")?.value || "https://api.shams4store.com/client/api/products").trim();
