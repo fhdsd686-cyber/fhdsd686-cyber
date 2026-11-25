@@ -1161,3 +1161,16 @@ body {
   font-weight: 800;
   cursor: pointer;
 }
+/* ضبط اتجاه وعرض الأقسام لتبدأ من اليمين بشكل صحيح */
+.categories-app-grid {
+  display: flex !important;
+  flex-direction: row-reverse !important;
+  flex-wrap: wrap !important;
+  justify-content: flex-end !important;
+  gap: 12px !important;
+}
+
+.cat-app-card {
+  width: calc(33.333% - 8px) !important;
+  text-align: center !important;
+}
