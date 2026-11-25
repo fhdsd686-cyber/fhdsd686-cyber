@@ -1,5 +1,5 @@
 // ============================================================================
-// لوحة تحكم الإدارة الكاملة + الأزرار والقبول الفوري للإيداع (admin.js)
+// لوحة تحكم الإدارة الكاملة + إدارة وحظر المستخدمين وتعديل الأرصدة (admin.js)
 // ============================================================================
 
 const ADMIN_SECTIONS = [
@@ -225,6 +225,7 @@ window.savePaymentGatewaySettings = function() {
   alert("🎉 تم حفظ إعدادات بوابة الدفع الأوتوماتيكية بنجاح وأصبحت جاهزة للربط!");
 };
 
+// 🌟 قسم المستخدمين مع أزرار تعديل الرصيد، الحظر، والحذف
 function renderAdminUsers() {
   const container = document.getElementById("admin-users-list");
   if (!container) return;
@@ -249,17 +250,116 @@ function renderAdminUsers() {
   container.innerHTML = usersList.map(u => {
     const key = (u.email || u.name).toLowerCase().trim();
     const bal = parseFloat(u.balanceUSD || 0).toFixed(3);
+    const isBanned = !!u.isBanned;
+
     return `
-      <div style="background:#0c1527; padding:12px; border-radius:12px; margin-bottom:10px; border:1px solid rgba(56,189,248,0.2);">
+      <div style="background:#0c1527; padding:14px; border-radius:12px; margin-bottom:12px; border:1px solid ${isBanned ? '#ef4444' : 'rgba(56,189,248,0.2)'};">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <strong>${u.fullname || u.name} (${u.role || "عضو"})</strong>
+          <strong>${u.fullname || u.name} (${u.role || "عضو"}) ${isBanned ? '<span style="color:#ef4444; font-size:0.75rem;">[محظور]</span>' : ''}</strong>
           <span style="color:#38bdf8; font-weight:800;">$${bal}</span>
         </div>
-        <div style="font-size:0.78rem; color:#94a3b8;">${u.name} | ${u.email || ""}</div>
+        <div style="font-size:0.78rem; color:#94a3b8; margin-bottom:10px;">${u.name} | ${u.email || ""}</div>
+        
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button type="button" onclick="adminEditUserBalance('${key}')" style="flex:1; min-width:85px; background:#0284c7; color:#fff; border:none; padding:6px; border-radius:8px; font-size:0.75rem; font-weight:bold; cursor:pointer;">
+            <i class="fa-solid fa-wallet"></i> تعديل الرصيد
+          </button>
+          <button type="button" onclick="adminToggleBanUser('${key}')" style="flex:1; min-width:85px; background:${isBanned ? '#10b981' : '#f59e0b'}; color:#fff; border:none; padding:6px; border-radius:8px; font-size:0.75rem; font-weight:bold; cursor:pointer;">
+            <i class="fa-solid ${isBanned ? 'fa-unlock' : 'fa-ban'}"></i> ${isBanned ? 'إلغاء الحظر' : 'حظر الحساب'}
+          </button>
+          <button type="button" onclick="adminDeleteUser('${key}')" style="flex:1; min-width:85px; background:#ef4444; color:#fff; border:none; padding:6px; border-radius:8px; font-size:0.75rem; font-weight:bold; cursor:pointer;">
+            <i class="fa-solid fa-trash"></i> حذف
+          </button>
+        </div>
       </div>
     `;
   }).join("");
 }
+
+// تعديل رصيد المستخدم
+window.adminEditUserBalance = function(userKey) {
+  const registry = getDB("cloud_users_registry", {});
+  const users = getDB("users", []);
+
+  let currentBal = 0;
+  if (registry[userKey]) currentBal = parseFloat(registry[userKey].balanceUSD || 0);
+  else {
+    const found = users.find(u => (u.email || u.name).toLowerCase().trim() === userKey);
+    if (found) currentBal = parseFloat(found.balanceUSD || 0);
+  }
+
+  const newAmount = prompt(`أدخل الرصيد الجديد للمستخدم (الرصيد الحالي: $${currentBal}):`, currentBal);
+  if (newAmount === null) return;
+
+  const parsed = parseFloat(newAmount);
+  if (isNaN(parsed)) {
+    alert("⚠️ يرجى إدخال رقم صحيح!");
+    return;
+  }
+
+  if (registry[userKey]) {
+    registry[userKey].balanceUSD = parsed;
+    setDB("cloud_users_registry", registry);
+  }
+
+  const uIdx = users.findIndex(u => (u.email || u.name).toLowerCase().trim() === userKey);
+  if (uIdx !== -1) {
+    users[uIdx].balanceUSD = parsed;
+    setDB("users", users);
+  }
+
+  alert(`✅ تم تحديث رصيد المستخدم إلى $${parsed.toFixed(3)} بنجاح!`);
+  renderAdminUsers();
+};
+
+// حظر أو إلغاء حظر المستخدم
+window.adminToggleBanUser = function(userKey) {
+  const registry = getDB("cloud_users_registry", {});
+  const users = getDB("users", []);
+
+  let isCurrentlyBanned = false;
+  if (registry[userKey]) isCurrentlyBanned = !!registry[userKey].isBanned;
+  else {
+    const found = users.find(u => (u.email || u.name).toLowerCase().trim() === userKey);
+    if (found) isCurrentlyBanned = !!found.isBanned;
+  }
+
+  const nextState = !isCurrentlyBanned;
+  const confirmMsg = nextState ? "⚠️ هل أنت متأكد من حظر هذا المستخدم؟" : "فك حظر هذا المستخدم؟";
+  if (!confirm(confirmMsg)) return;
+
+  if (registry[userKey]) {
+    registry[userKey].isBanned = nextState;
+    setDB("cloud_users_registry", registry);
+  }
+
+  const uIdx = users.findIndex(u => (u.email || u.name).toLowerCase().trim() === userKey);
+  if (uIdx !== -1) {
+    users[uIdx].isBanned = nextState;
+    setDB("users", users);
+  }
+
+  alert(nextState ? "🚫 تم حظر المستخدم بنجاح!" : "🟢 تم إلغاء حظر المستخدم بنجاح!");
+  renderAdminUsers();
+};
+
+// حذف المستخدم نهائياً
+window.adminDeleteUser = function(userKey) {
+  if (!confirm("⚠️ هل أنت متأكد من رغبتك في حذف هذا الحساب نهائياً؟")) return;
+
+  const registry = getDB("cloud_users_registry", {});
+  if (registry[userKey]) {
+    delete registry[userKey];
+    setDB("cloud_users_registry", registry);
+  }
+
+  let users = getDB("users", []);
+  users = users.filter(u => (u.email || u.name).toLowerCase().trim() !== userKey);
+  setDB("users", users);
+
+  alert("🗑️ تم حذف الحساب بنجاح!");
+  renderAdminUsers();
+};
 
 function populateAdminProductCategories() {
   const sel = document.getElementById("prod-category-select");
@@ -308,7 +408,6 @@ function renderAdminCategories() {
   tbody.innerHTML = categories.map(c => `<tr><td>${c.name}</td><td>رئيسي</td><td>-</td></tr>`).join("");
 }
 
-// 🌟 دالة عرض طلبات الإيداع مع أزرار القبول والرفض
 function renderAdminDepositRequests() {
   const container = document.getElementById("deposit-requests-container");
   if (!container) return;
