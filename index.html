@@ -5,15 +5,82 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard - متجر مهند</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=159">
+  <link rel="stylesheet" href="style.css?v=160">
 
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+    body { background-color: #060b19; color: #ffffff; direction: rtl; padding-top: 68px; padding-bottom: 85px; overflow-x: hidden; }
+
     .hidden { display: none !important; }
+
+    /* الهيدر العلوي */
+    .main-header {
+      position: fixed; top: 0; left: 0; right: 0; height: 62px;
+      background: #0b1329; border-bottom: 1px solid rgba(56, 189, 248, 0.15);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 14px; z-index: 1000;
+    }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .site-logo-img { width: 36px; height: 36px; border-radius: 10px; object-fit: cover; border: 1.5px solid #38bdf8; }
+    .site-title-text { font-size: 1.05rem; font-weight: 800; color: #ffffff; }
+    .header-left { display: flex; align-items: center; gap: 8px; }
+    .vip-badge-tag { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; font-size: 0.7rem; font-weight: 800; padding: 3px 8px; border-radius: 8px; }
+    
+    .balance-pill {
+      background: rgba(2, 132, 199, 0.2); border: 1px solid #38bdf8; color: #38bdf8;
+      padding: 5px 10px; border-radius: 20px; font-size: 0.82rem; font-weight: 800;
+      display: flex; align-items: center; gap: 6px; cursor: pointer;
+    }
+
+    /* المحتوى الرئيسي */
+    .store-container { max-width: 650px; margin: 0 auto; padding: 12px; }
+    
+    .banner-card {
+      position: relative; width: 100%; height: 165px; border-radius: 18px; overflow: hidden; margin-bottom: 14px;
+      border: 1px solid rgba(56, 189, 248, 0.25); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); cursor: pointer;
+    }
+    .banner-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .search-pill-box { position: relative; margin-bottom: 18px; }
+    .search-pill-box input {
+      width: 100%; background: #0f172a; border: 1.5px solid rgba(56, 189, 248, 0.25);
+      border-radius: 25px; padding: 11px 40px 11px 16px; color: #fff; font-size: 0.9rem; outline: none;
+    }
+    .search-pill-box i { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #38bdf8; }
+
+    /* 🌟 شبكة الأقسام (3 أعمدة ثابتة ونظيفة) */
+    .categories-app-grid {
+      display: grid !important;
+      grid-template-columns: repeat(3, 1fr) !important;
+      gap: 12px !important;
+      margin-bottom: 20px !important;
+    }
+    .cat-app-card {
+      background: #0b1329 !important;
+      border: 1px solid rgba(56, 189, 248, 0.18) !important;
+      border-radius: 16px !important;
+      padding: 12px 6px !important;
+      text-align: center !important;
+      cursor: pointer !important;
+    }
+    .cat-app-card img {
+      width: 68px !important;
+      height: 68px !important;
+      border-radius: 16px !important;
+      object-fit: cover !important;
+      margin-bottom: 6px !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    .cat-app-label {
+      font-size: 0.78rem !important;
+      font-weight: 700 !important;
+      color: #e2e8f0 !important;
+      display: block !important;
+    }
+
+    /* نافذة الإيداع */
     .modal-overlay {
-      position: fixed !important; inset: 0 !important;
-      background: rgba(3, 7, 18, 0.85) !important; backdrop-filter: blur(6px);
-      display: flex !important; align-items: center !important; justify-content: center !important;
-      z-index: 99999 !important; padding: 16px; overflow-y: auto;
+      position: fixed; inset: 0; background: rgba(3, 7, 18, 0.85); backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center; z-index: 99999; padding: 16px; overflow-y: auto;
     }
     .shawy-deposit-card {
       width: 100%; max-width: 410px; background: #0b1329; border: 1px solid rgba(56, 189, 248, 0.25);
@@ -24,7 +91,7 @@
       width: 32px; height: 32px; border-radius: 50%; color: #fff; font-size: 1rem; cursor: pointer; z-index: 10;
       display: flex; align-items: center; justify-content: center;
     }
-    /* شبكة وسائل الإيداع (3 أعمدة متناسقة) */
+
     .deposit-methods-pills {
       display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 10px !important; margin-bottom: 14px;
     }
@@ -34,7 +101,7 @@
       padding: 10px 6px !important; color: #e2e8f0 !important; font-size: 0.75rem !important; font-weight: 700 !important; text-align: center !important; gap: 6px !important; cursor: pointer;
     }
     .method-pill-btn.active { background: rgba(2, 132, 199, 0.3) !important; border-color: #38bdf8 !important; }
-    
+
     .deposit-method-header {
       background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(56, 189, 248, 0.15);
       border-radius: 18px; padding: 14px; margin-bottom: 16px; text-align: center;
@@ -59,6 +126,19 @@
       width: 100%; background: #0284c7; color: #ffffff; border: none; padding: 13px;
       border-radius: 14px; font-size: 0.98rem; font-weight: 800; cursor: pointer; margin-top: 8px;
     }
+
+    /* الشريط السفلي */
+    .bottom-floating-bar {
+      position: fixed; bottom: 0; left: 0; right: 0; height: 64px;
+      background: #0b1329; border-top: 1px solid rgba(56, 189, 248, 0.2);
+      display: flex; align-items: center; justify-content: space-around; z-index: 1000;
+    }
+    .bottom-tab-btn { background: none; border: none; color: #94a3b8; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 0.72rem; font-weight: 700; cursor: pointer; }
+    .bottom-tab-btn i { font-size: 1.15rem; }
+    .home-circle-icon {
+      width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #0284c7, #38bdf8);
+      color: #fff; display: flex; align-items: center; justify-content: center; margin-top: -18px; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.5);
+    }
   </style>
 </head>
 <body>
@@ -81,8 +161,9 @@
 
   <!-- الحاوية الرئيسية -->
   <main class="store-container">
-    <!-- البانر القابل للنقر (يفتح قناة الواتساب) -->
-    <div class="banner-card" onclick="openWhatsappChannel()" style="cursor: pointer;">
+    
+    <!-- البانر الترويجي (قناة الواتساب) -->
+    <div class="banner-card" onclick="openWhatsappChannel()">
       <img src="https://i.postimg.cc/Gm9gjWp1/file-00000000136081f4b02d6faa027c408c.png" alt="Banner">
     </div>
 
@@ -91,11 +172,19 @@
       <input type="text" placeholder="ابحث عن قسم...">
     </div>
 
-    <!-- شبكة الأقسام -->
+    <!-- شبكة الأقسام الرئيسية (3 أعمدة ثابتة) -->
     <div class="categories-app-grid">
       <div class="cat-app-card" onclick="openDepositModal()">
         <img src="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=100&q=80" alt="deposit">
         <span class="cat-app-label">إضافة رصيد</span>
+      </div>
+      <div class="cat-app-card">
+        <img src="https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=100&q=80" alt="games">
+        <span class="cat-app-label">شحن ألعاب</span>
+      </div>
+      <div class="cat-app-card">
+        <img src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=100&q=80" alt="telecom">
+        <span class="cat-app-label">اتصالات سوريا</span>
       </div>
     </div>
   </main>
@@ -164,6 +253,29 @@
     </div>
   </div>
 
+  <!-- الشريط السفلي -->
+  <nav class="bottom-floating-bar">
+    <button class="bottom-tab-btn" onclick="openDepositModal()">
+      <i class="fa-solid fa-circle-arrow-up"></i>
+      <span>إيداع</span>
+    </button>
+    <button class="bottom-tab-btn" onclick="openDepositModal()">
+      <i class="fa-solid fa-wallet"></i>
+      <span>المحفظة</span>
+    </button>
+    <button class="bottom-tab-btn">
+      <div class="home-circle-icon"><i class="fa-solid fa-house"></i></div>
+    </button>
+    <button class="bottom-tab-btn">
+      <i class="fa-solid fa-cart-shopping"></i>
+      <span>الطلبات</span>
+    </button>
+    <button class="bottom-tab-btn">
+      <i class="fa-regular fa-bell"></i>
+      <span>الإشعارات</span>
+    </button>
+  </nav>
+
   <script>
     function openDepositModal() {
       document.getElementById('deposit-modal').classList.remove('hidden');
@@ -184,7 +296,6 @@
       window.open("https://whatsapp.com/channel/YOUR_CHANNEL_LINK", '_blank');
     }
 
-    // إرسال الطلب أوتوماتيكياً للـ Worker
     async function handleDepositSubmit(event) {
       event.preventDefault();
       const amount = document.getElementById('deposit-amount').value;
