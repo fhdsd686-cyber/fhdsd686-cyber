@@ -1,5 +1,5 @@
 // ============================================================================
-// لوحة تحكم الإدارة الكاملة + تفاصيل الحساب الكاملة + الحذف التلقائي (admin.js)
+// لوحة تحكم الإدارة الكاملة + رابط قناة الواتساب + إدارة المستخدمين (admin.js)
 // ============================================================================
 
 const ADMIN_SECTIONS = [
@@ -179,17 +179,20 @@ function loadSiteSettingsIntoForm() {
   const settings = getDB("site_settings", {
     siteName: "Mohannad kard",
     whatsapp: "0957455972",
+    whatsappChannel: "",
     logo: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80",
     banners: ["https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80"]
   });
 
   const nameEl = document.getElementById("setting-site-name");
   const waEl = document.getElementById("setting-whatsapp-number");
+  const channelEl = document.getElementById("setting-whatsapp-channel"); // خانة قناة الواتساب الجديدة
   const logoEl = document.getElementById("setting-site-logo");
   const bannerEl = document.getElementById("setting-site-banner");
 
   if (nameEl) nameEl.value = settings.siteName || settings.name || "Mohannad kard";
   if (waEl) waEl.value = settings.whatsapp || getDB("admin_whatsapp", "0957455972");
+  if (channelEl) channelEl.value = settings.whatsappChannel || getDB("whatsapp_channel_link", "");
   if (logoEl) logoEl.value = settings.logo || "";
   if (bannerEl) {
     const arr = Array.isArray(settings.banners) ? settings.banners : (settings.banner ? [settings.banner] : []);
@@ -201,14 +204,17 @@ function handleSiteSettingsUpdate(e) {
   e.preventDefault();
   const siteName = document.getElementById("setting-site-name")?.value.trim() || "Mohannad kard";
   const whatsapp = document.getElementById("setting-whatsapp-number")?.value.trim() || "0957455972";
+  const whatsappChannel = document.getElementById("setting-whatsapp-channel")?.value.trim() || "";
   const logo = document.getElementById("setting-site-logo")?.value.trim();
   const bannerRaw = document.getElementById("setting-site-banner")?.value || "";
   const banners = bannerRaw.split("\n").map(s => s.trim()).filter(Boolean);
 
   setDB("admin_whatsapp", whatsapp);
-  setDB("site_settings", { name: siteName, siteName, whatsapp, logo, banner: banners[0] || "", banners });
+  setDB("whatsapp_channel_link", whatsappChannel);
+  setDB("site_settings", { name: siteName, siteName, whatsapp, whatsappChannel, logo, banner: banners[0] || "", banners });
+  
   if (typeof loadSiteSettings === "function") loadSiteSettings();
-  alert("✅ تم حفظ إعدادات المتجر ورقم الواتساب الجديد بنجاح!");
+  alert("✅ تم حفظ إعدادات المتجر ورابط قناة الواتساب بنجاح!");
 }
 
 window.savePaymentGatewaySettings = function() {
@@ -225,7 +231,7 @@ window.savePaymentGatewaySettings = function() {
   alert("🎉 تم حفظ إعدادات بوابة الدفع الأوتوماتيكية بنجاح وأصبحت جاهزة للربط!");
 };
 
-// 🌟 إدارة المستخدمين مع زر عرض التفاصيل الكاملة
+// إدارة المستخدمين والتفاصيل
 function renderAdminUsers() {
   const container = document.getElementById("admin-users-list");
   if (!container) return;
@@ -279,7 +285,6 @@ function renderAdminUsers() {
   }).join("");
 }
 
-// 🌟 دالة عرض تفاصيل الحساب الكاملة للمسؤول
 window.adminViewUserDetails = function(userKey) {
   const registry = getDB("cloud_users_registry", {});
   const users = getDB("users", []);
