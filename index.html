@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=158">
+  <link rel="stylesheet" href="style.css?v=159">
 
   <style>
     .hidden,
@@ -616,10 +616,10 @@
   <!-- الحاوية الرئيسية للمتجر -->
   <main class="store-container">
     
-    <!-- البانر الترويجي -->
-    <div class="banner-card">
-      <img src="https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80" alt="Banner">
-      <div class="banner-dots">
+    <!-- 🌟 البانر الترويجي المتحرك (يبدل بين صور الإعلانات من الإعدادات ويفتح قناة الواتساب) -->
+    <div class="banner-card" id="dynamic-banner-slider" onclick="handleBannerClick()" style="cursor: pointer; position: relative; overflow: hidden;">
+      <img src="https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80" id="main-banner-img" alt="Banner" style="transition: opacity 0.4s ease-in-out;">
+      <div class="banner-dots" id="main-banner-dots">
         <span class="b-dot active"></span>
         <span class="b-dot"></span>
       </div>
@@ -962,7 +962,6 @@
         <button class="admin-nav-item" onclick="switchAdminSection('deposit-requests')">طلبات الإيداع</button>
         <button class="admin-nav-item" onclick="switchAdminSection('deposit-methods')">طرق الإيداع</button>
         <button class="admin-nav-item" onclick="switchAdminSection('add-deposit-method')">إضافة طريقة إيداع</button>
-        <!-- 🌟 زر ربط بوابة الدفع الأوتوماتيكية الجديد -->
         <button class="admin-nav-item" onclick="switchAdminSection('payment-gateway-setup')" style="color:#10b981; font-weight:800;">
           <i class="fa-solid fa-credit-card"></i> ربط بوابة الدفع الأوتوماتيكية
         </button>
@@ -995,7 +994,7 @@
         </section>
 
         <section id="sec-site-settings" class="hidden">
-          <h4>تغيير لوجو وهوية ورقم واتساب المتجر</h4>
+          <h4>تغيير لوجو وهوية ورقم وقناة واتساب المتجر</h4>
           <form onsubmit="handleSiteSettingsUpdate(event)">
             <div class="form-group">
               <label>اسم المتجر:</label>
@@ -1005,13 +1004,18 @@
               <label>رقم واتساب الإدارة والدعم (مثال: 0957455972):</label>
               <input type="tel" id="setting-whatsapp-number" placeholder="0957455972" dir="ltr" required>
             </div>
+            <!-- 🌟 خانة رابط قناة الواتساب المدمجة -->
+            <div class="form-group">
+              <label style="color:#38bdf8; font-weight:bold;">رابط قناة الواتساب (يُفتح عند الضغط على البانر الإعلاني):</label>
+              <input type="url" id="setting-whatsapp-channel" placeholder="https://whatsapp.com/channel/..." dir="ltr">
+            </div>
             <div class="form-group">
               <label>رابط لوجو الموقع:</label>
               <input type="text" id="setting-site-logo" placeholder="https://i.postimg.cc/..." required>
             </div>
             <div class="form-group">
-              <label>روابط صور الإعلانات (كل رابط في سطر):</label>
-              <textarea id="setting-site-banner" rows="3"></textarea>
+              <label>روابط صور الإعلانات المتحركة (ضع كل رابط صورة في سطر جديد):</label>
+              <textarea id="setting-site-banner" rows="3" placeholder="رابط الصورة الأولى&#10;رابط صورة بانر قناة الواتساب"></textarea>
             </div>
             <button type="submit" class="btn-submit">حفظ التغييرات</button>
           </form>
@@ -1114,7 +1118,6 @@
           </form>
         </section>
 
-        <!-- 🌟 قسم ربط بوابة الدفع الأوتوماتيكية الجديد -->
         <section id="sec-payment-gateway-setup" class="hidden">
           <h4><i class="fa-solid fa-credit-card" style="color:#10b981;"></i> إعدادات ربط بوابة الدفع الأوتوماتيكية (شام كاش / سيريتل كاش)</h4>
 
@@ -1167,12 +1170,55 @@
   </script>
 
   <!-- ملفات السكربت -->
-  <script src="data.js?v=158"></script>
-  <script src="auth.js?v=158"></script>
-  <script src="store.js?v=158"></script>
-  <script src="admin.js?v=158"></script>
+  <script src="data.js?v=159"></script>
+  <script src="auth.js?v=159"></script>
+  <script src="store.js?v=159"></script>
+  <script src="admin.js?v=159"></script>
 
   <script>
+    // 🌟 نظام البانرات المتحركة + فتح رابط قناة الواتساب عند النقر
+    let activeBannerSlide = 0;
+
+    function getActiveBannersList() {
+      const settings = typeof getDB === "function" ? getDB("site_settings", {}) : {};
+      if (Array.isArray(settings.banners) && settings.banners.length > 0) {
+        return settings.banners;
+      }
+      return ["https://images.unsplash.com/photo-1614680376593-902f749f7ffc?auto=format&fit=crop&w=600&q=80"];
+    }
+
+    function rotateMainBanners() {
+      const banners = getActiveBannersList();
+      const imgEl = document.getElementById("main-banner-img");
+      const dotsEl = document.getElementById("main-banner-dots");
+      if (!imgEl || banners.length === 0) return;
+
+      activeBannerSlide = (activeBannerSlide + 1) % banners.length;
+      imgEl.style.opacity = "0.35";
+      setTimeout(() => {
+        imgEl.src = banners[activeBannerSlide];
+        imgEl.style.opacity = "1";
+      }, 250);
+
+      if (dotsEl) {
+        dotsEl.innerHTML = banners.map((_, i) =>
+          `<span class="b-dot ${i === activeBannerSlide ? 'active' : ''}"></span>`
+        ).join("");
+      }
+    }
+
+    window.handleBannerClick = function() {
+      const channelUrl = typeof getDB === "function"
+        ? (getDB("whatsapp_channel_link", "") || getDB("site_settings", {}).whatsappChannel || "")
+        : "";
+      if (channelUrl && channelUrl.startsWith("http")) {
+        window.open(channelUrl, "_blank");
+      }
+    };
+
+    setInterval(rotateMainBanners, 4000);
+
+    // تحديث تسميات الحقول تلقائياً حسب القسم
     (function() {
       function autoUpdateTargetFieldLabel() {
         const titleEl = document.getElementById("current-category-title");
@@ -1221,7 +1267,7 @@
       setInterval(autoUpdateTargetFieldLabel, 400);
     })();
 
-    // 🌟 دالة الإيداع الأوتوماتيكي المرتبطة بالـ Worker الخاص بك
+    // دالة الإيداع الأوتوماتيكي المرتبطة بالـ Worker
     window.handleDepositSubmit = async function(event) {
       event.preventDefault();
       const amount = document.getElementById('deposit-input-val')?.value;
@@ -1250,55 +1296,4 @@
         }
       } catch (error) {
         alert("✅ تم إرسال الطلب بنجاح!");
-        if (typeof closeDepositModal === "function") closeDepositModal();
-      } finally {
-        if (submitBtn) {
-          submitBtn.innerText = "إرسال طلب الشحن";
-          submitBtn.disabled = false;
-        }
-      }
-    };
-
-    window.fetchFromExternalSupplierAPI = async function() {
-      const url = (document.getElementById("supplier-api-url")?.value || "https://api.shams4store.com/client/api/products").trim();
-      const key = (document.getElementById("supplier-api-key")?.value || "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427").trim();
-
-      if (!url || !key) {
-        alert("يرجى إدخال رابط API ومفتاح API Key أولاً!");
-        return;
-      }
-
-      setDB("supplier_api_url", url);
-      setDB("supplier_api_key", key);
-
-      const infoEl = document.getElementById("supplier-results-info");
-      if (infoEl) infoEl.innerHTML = `<span style="color:#10b981; font-weight:bold;">✅ جاري التعرف على المورد وسحب المنتجات...</span>`;
-
-      try {
-        const adapter = (typeof detectSupplierAdapter === "function")
-          ? detectSupplierAdapter(url, key)
-          : { type: "shams_style", productsUrl: url, token: key };
-
-        let fetchTargetUrl = url;
-        if (adapter.type === "smm_panel") {
-          fetchTargetUrl = `${adapter.productsUrl}?key=${encodeURIComponent(key)}&action=services`;
-        }
-
-        const workerUrl = `https://rapid-dew-4b71.fhdsd686.workers.dev/?url=${encodeURIComponent(fetchTargetUrl)}&token=${encodeURIComponent(key)}`;
-        const res = await fetch(workerUrl, {
-          method: "GET",
-          headers: {
-            "Accept": "application/json",
-            "api-token": key,
-            "Authorization": `Bearer ${key}`
-          }
-        });
-        const data = await res.json();
-        const rawList = Array.isArray(data)
-          ? data
-          : (data.products || data.services || (data.data && Array.isArray(data.data) ? data.data : (data.data?.products || data.data?.data || [])));
-
-        if (!Array.isArray(rawList) || rawList.length === 0) {
-          alert("تم حفظ بيانات المورد، ولكن رد السيرفر لم يُرجع منتجات: " + JSON.stringify(data).slice(0, 300));
-          return;
-  
+        if (type
