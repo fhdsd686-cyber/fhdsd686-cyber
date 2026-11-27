@@ -1,5 +1,5 @@
 // ============================================================================
-// لوحة تحكم الإدارة الكاملة + الحذف التلقائي للإيداعات القديمة (admin.js)
+// لوحة تحكم الإدارة الكاملة + تفاصيل الحساب الكاملة + الحذف التلقائي (admin.js)
 // ============================================================================
 
 const ADMIN_SECTIONS = [
@@ -225,7 +225,7 @@ window.savePaymentGatewaySettings = function() {
   alert("🎉 تم حفظ إعدادات بوابة الدفع الأوتوماتيكية بنجاح وأصبحت جاهزة للربط!");
 };
 
-// إدارة المستخدمين
+// 🌟 إدارة المستخدمين مع زر عرض التفاصيل الكاملة
 function renderAdminUsers() {
   const container = document.getElementById("admin-users-list");
   if (!container) return;
@@ -261,13 +261,16 @@ function renderAdminUsers() {
         <div style="font-size:0.78rem; color:#94a3b8; margin-bottom:10px;">${u.name} | ${u.email || ""}</div>
         
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
-          <button type="button" onclick="adminEditUserBalance('${key}')" style="flex:1; min-width:85px; background:#0284c7; color:#fff; border:none; padding:6px; border-radius:8px; font-size:0.75rem; font-weight:bold; cursor:pointer;">
-            <i class="fa-solid fa-wallet"></i> تعديل الرصيد
+          <button type="button" onclick="adminViewUserDetails('${key}')" style="flex:1; min-width:70px; background:#8b5cf6; color:#fff; border:none; padding:6px; border-radius:8px; font-size:0.75rem; font-weight:bold; cursor:pointer;">
+            <i class="fa-solid fa-eye"></i> التفاصيل
           </button>
-          <button type="button" onclick="adminToggleBanUser('${key}')" style="flex:1; min-width:85px; background:${isBanned ? '#10b981' : '#f59e0b'}; color:#fff; border:none; padding:6px; border-radius:8px; font-size:0.75rem; font-weight:bold; cursor:pointer;">
-            <i class="fa-solid ${isBanned ? 'fa-unlock' : 'fa-ban'}"></i> ${isBanned ? 'إلغاء الحظر' : 'حظر'}
+          <button type="button" onclick="adminEditUserBalance('${key}')" style="flex:1; min-width:70px; background:#0284c7; color:#fff; border:none; padding:6px; border-radius:8px; font-size:0.75rem; font-weight:bold; cursor:pointer;">
+            <i class="fa-solid fa-wallet"></i> الرصيد
           </button>
-          <button type="button" onclick="adminDeleteUser('${key}')" style="flex:1; min-width:85px; background:#ef4444; color:#fff; border:none; padding:6px; border-radius:8px; font-size:0.75rem; font-weight:bold; cursor:pointer;">
+          <button type="button" onclick="adminToggleBanUser('${key}')" style="flex:1; min-width:70px; background:${isBanned ? '#10b981' : '#f59e0b'}; color:#fff; border:none; padding:6px; border-radius:8px; font-size:0.75rem; font-weight:bold; cursor:pointer;">
+            <i class="fa-solid ${isBanned ? 'fa-unlock' : 'fa-ban'}"></i> ${isBanned ? 'فك الحظر' : 'حظر'}
+          </button>
+          <button type="button" onclick="adminDeleteUser('${key}')" style="flex:1; min-width:70px; background:#ef4444; color:#fff; border:none; padding:6px; border-radius:8px; font-size:0.75rem; font-weight:bold; cursor:pointer;">
             <i class="fa-solid fa-trash"></i> حذف
           </button>
         </div>
@@ -275,6 +278,46 @@ function renderAdminUsers() {
     `;
   }).join("");
 }
+
+// 🌟 دالة عرض تفاصيل الحساب الكاملة للمسؤول
+window.adminViewUserDetails = function(userKey) {
+  const registry = getDB("cloud_users_registry", {});
+  const users = getDB("users", []);
+
+  let userData = registry[userKey];
+  if (!userData) {
+    userData = users.find(u => (u.email || u.name).toLowerCase().trim() === userKey);
+  }
+
+  if (!userData) {
+    alert("⚠️ لم يتم العثور على بيانات هذا المستخدم!");
+    return;
+  }
+
+  const name = userData.fullname || userData.name || "غير متوفر";
+  const username = userData.name || "غير متوفر";
+  const email = userData.email || "غير متوفر";
+  const password = userData.password || "غير مسجلة محلياً (مشفرة بـ Firebase Auth)";
+  const role = userData.role || "عضو";
+  const balance = parseFloat(userData.balanceUSD || 0).toFixed(3);
+  const createdAt = userData.createdAt || userData.joinedAt || "غير متوفر";
+  const status = userData.isBanned ? "محظور 🚫" : "نشط ومصرح له 🟢";
+
+  const detailsMessage = `
+📋 تفاصيل حساب المستخدم:
+-------------------------------------
+👤 الاسم الكامل: ${name}
+🔹 اسم المستخدم: ${username}
+📧 البريد الإلكتروني: ${email}
+🔑 كلمة المرور: ${password}
+👑 المستوى / الصلاحية: ${role}
+💰 الرصيد الحالي: $${balance}
+📅 تاريخ الإنشاء: ${createdAt}
+🔒 حالة الحساب: ${status}
+  `.trim();
+
+  alert(detailsMessage);
+};
 
 window.adminEditUserBalance = function(userKey) {
   const registry = getDB("cloud_users_registry", {});
@@ -404,7 +447,7 @@ function renderAdminCategories() {
   tbody.innerHTML = categories.map(c => `<tr><td>${c.name}</td><td>رئيسي</td><td>-</td></tr>`).join("");
 }
 
-// 🌟 طلبات الإيداع مع الحذف التلقائي بعد 48 ساعة وأزرار القبول والرفض
+// طلبات الإيداع مع الحذف التلقائي بعد 48 ساعة
 function renderAdminDepositRequests() {
   const container = document.getElementById("deposit-requests-container");
   if (!container) return;
