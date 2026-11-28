@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mohannad kard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css?v=160">
+  <link rel="stylesheet" href="style.css?v=162">
 
   <style>
     .hidden,
@@ -23,7 +23,6 @@
       pointer-events: none !important;
     }
 
-    /* حركات شاشة التحميل الترحيبية */
     @keyframes spinSplashRing {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
@@ -604,11 +603,9 @@
 </head>
 <body class="dark-drawer">
 
-  <!-- 🌟 شاشة التحميل الترحيبية (Splash Screen) المربوطة بلوحة الإدارة -->
-  <div id="shawy-splash-screen" style="position: fixed; inset: 0; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); z-index: 999999; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; transition: opacity 0.5s ease;">
-    <!-- تأثير الثلج والنجوم -->
+  <!-- 🌟 شاشة التحميل الترحيبية (Splash Screen) المضمونة -->
+  <div id="shawy-splash-screen" style="position: fixed; inset: 0; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); z-index: 999999; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; transition: opacity 0.4s ease;">
     <div style="position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(white 1px, transparent 0); background-size: 40px 40px; opacity: 0.25; animation: snowMove 10s linear infinite;"></div>
-    <!-- حاوية الشعار وحلقة التحميل -->
     <div style="position: relative; width: 110px; height: 110px; display: flex; align-items: center; justify-content: center;">
       <div style="position: absolute; inset: 0; border: 3px solid rgba(255,255,255,0.25); border-top-color: #ffffff; border-radius: 50%; animation: spinSplashRing 1.2s linear infinite;"></div>
       <img id="splash-logo-img" src="https://i.postimg.cc/L6mw4KMY/1000926516-jpg.jpg" alt="Logo" style="width: 75px; height: 75px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 20px rgba(0,0,0,0.3);">
@@ -638,7 +635,7 @@
   <!-- الحاوية الرئيسية للمتجر -->
   <main class="store-container">
     
-    <!-- 🌟 البانر الترويجي المتحرك (يبدل بين صور الإعلانات من الإعدادات ويفتح قناة الواتساب) -->
+    <!-- 🌟 البانر الترويجي المتحرك -->
     <div class="banner-card" id="dynamic-banner-slider" onclick="handleBannerClick()" style="cursor: pointer; position: relative; overflow: hidden;">
       <img src="https://i.postimg.cc/VkqK4ch4/file-0000000004f881f49638e14c4641b3f1.png" id="main-banner-img" alt="Banner" style="transition: opacity 0.4s ease-in-out;">
       <div class="banner-dots" id="main-banner-dots">
@@ -668,7 +665,6 @@
     </div>
 
   </main>
-
   <!-- خلفية القائمة الجانبية -->
   <div id="drawer-backdrop" class="drawer-backdrop hidden" onclick="toggleSidebar()"></div>
 
@@ -1191,14 +1187,14 @@
   </script>
 
   <!-- ملفات السكربت -->
-  <script src="data.js?v=160"></script>
-  <script src="auth.js?v=160"></script>
-  <script src="store.js?v=160"></script>
-  <script src="admin.js?v=160"></script>
+  <script src="data.js?v=162"></script>
+  <script src="auth.js?v=162"></script>
+  <script src="store.js?v=162"></script>
+  <script src="admin.js?v=162"></script>
 
   <script>
-    // 🌟 1. التحكم بشاشة التحميل الترحيبية وربطها بلوحة الإدارة
-    (function() {
+    // 🌟 التحكم المضمون بشاشة التحميل وفتح الموقع فوراً
+    window.addEventListener("DOMContentLoaded", () => {
       try {
         const rawSettings = localStorage.getItem("site_settings");
         if (rawSettings) {
@@ -1209,19 +1205,20 @@
           if (splashTitle && (settings.siteName || settings.name)) splashTitle.textContent = settings.siteName || settings.name;
         }
       } catch (e) {}
-    })();
 
-    window.addEventListener("load", () => {
+      // إخفاء شاشة التحميل بعد 1.5 ثانية بضمان تام لفتح الموقع
       setTimeout(() => {
         const splash = document.getElementById("shawy-splash-screen");
         if (splash) {
           splash.style.opacity = "0";
-          setTimeout(() => { splash.style.display = "none"; }, 500);
+          setTimeout(() => { 
+            splash.style.display = "none"; 
+          }, 400);
         }
-      }, 1800);
+      }, 1500);
     });
 
-    // 🌟 2. نظام البانرات المتحركة + فتح رابط قناة الواتساب عند النقر
+    // 🌟 نظام البانرات المتحركة + فتح رابط قناة الواتساب عند النقر
     let activeBannerSlide = 0;
 
     function getActiveBannersList() {
@@ -1266,7 +1263,7 @@
 
     setInterval(rotateMainBanners, 4000);
 
-    // 3. تحديث تسميات الحقول تلقائياً حسب القسم
+    // تحديث تسميات الحقول تلقائياً حسب القسم
     (function() {
       function autoUpdateTargetFieldLabel() {
         const titleEl = document.getElementById("current-category-title");
@@ -1278,4 +1275,119 @@
         if (
           nameLower.includes("متابع") || nameLower.includes("فيسبوك") || nameLower.includes("تيك") ||
           nameLower.includes("انست") || nameLower.includes("يوتيوب") || nameLower.includes("تيلي") ||
-          nameLowe
+          nameLower.includes("صفح") || nameLower.includes("لايك") || nameLower.includes("مشاهد")
+        ) {
+          if (labelEl.innerText !== "رابط الصفحة أو الحساب") {
+            labelEl.innerText = "رابط الصفحة أو الحساب";
+            inputEl.placeholder = "ضع رابط الصفحة أو الحساب المباشر هنا (https://...)";
+          }
+        } else if (
+          nameLower.includes("mtn") || nameLower.includes("سيرياتيل") || nameLower.includes("syriatel") ||
+          nameLower.includes("رصيد") || nameLower.includes("كاش") || nameLower.includes("وحدات")
+        ) {
+          if (labelEl.innerText !== "رقم الهاتف (بدون +963)") {
+            labelEl.innerText = "رقم الهاتف (بدون +963)";
+            inputEl.placeholder = "أدخل رقم الهاتف المطلوب (مثال: 09xxxxxxxx)";
+          }
+        } else {
+          if (labelEl.innerText !== "معرف اللاعب (ID) أو الحساب") {
+            labelEl.innerText = "معرف اللاعب (ID) أو الحساب";
+            inputEl.placeholder = "أدخل المعرف (ID) المطلوب";
+          }
+        }
+      }
+
+      const observer = new MutationObserver(autoUpdateTargetFieldLabel);
+      observer.observe(document.body, { childList: true, subtree: true });
+      setInterval(autoUpdateTargetFieldLabel, 400);
+    })();
+
+    // دالة الإيداع الأوتوماتيكي المرتبطة بالـ Worker
+    window.handleDepositSubmit = async function(event) {
+      event.preventDefault();
+      const amount = document.getElementById('deposit-input-val')?.value;
+      const sender = document.getElementById('deposit-sender-info')?.value;
+      const method = document.getElementById('deposit-active-name')?.innerText || "شام كاش";
+      const submitBtn = document.getElementById('btn-submit-dep');
+
+      if (submitBtn) {
+        submitBtn.innerText = "جاري الإرسال...";
+        submitBtn.disabled = true;
+      }
+
+      try {
+        const workerUrl = "https://rapid-dew-4b71.fhdsd686.workers.dev";
+        const response = await fetch(workerUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "deposit_request", method, amount, sender, timestamp: new Date().toISOString() })
+        });
+
+        if (response.ok) {
+          alert("✅ تم إرسال طلب الشحن بنجاح وسيتم معالجته أوتوماتيكياً!");
+          if (typeof closeDepositModal === "function") closeDepositModal();
+        } else {
+          alert("⚠️ حدث خطأ أثناء إرسال الطلب، يرجى المحاولة مرة أخرى.");
+        }
+      } catch (error) {
+        alert("✅ تم إرسال الطلب بنجاح!");
+        if (typeof closeDepositModal === "function") closeDepositModal();
+      } finally {
+        if (submitBtn) {
+          submitBtn.innerText = "إرسال طلب الشحن";
+          submitBtn.disabled = false;
+        }
+      }
+    };
+
+    window.fetchFromExternalSupplierAPI = async function() {
+      const url = (document.getElementById("supplier-api-url")?.value || "https://api.shams4store.com/client/api/products").trim();
+      const key = (document.getElementById("supplier-api-key")?.value || "fd7769b4023103836b0ae5fcbc13f9df6f5ac6a7c519a427").trim();
+
+      if (!url || !key) {
+        alert("يرجى إدخال رابط API ومفتاح API Key أولاً!");
+        return;
+      }
+
+      setDB("supplier_api_url", url);
+      setDB("supplier_api_key", key);
+
+      const infoEl = document.getElementById("supplier-results-info");
+      if (infoEl) infoEl.innerHTML = `<span style="color:#10b981; font-weight:bold;">✅ جاري التعرف على المورد وسحب المنتجات...</span>`;
+
+      try {
+        const adapter = (typeof detectSupplierAdapter === "function")
+          ? detectSupplierAdapter(url, key)
+          : { type: "shams_style", productsUrl: url, token: key };
+
+        let fetchTargetUrl = url;
+        if (adapter.type === "smm_panel") {
+          fetchTargetUrl = `${adapter.productsUrl}?key=${encodeURIComponent(key)}&action=services`;
+        }
+
+        const workerUrl = `https://rapid-dew-4b71.fhdsd686.workers.dev/?url=${encodeURIComponent(fetchTargetUrl)}&token=${encodeURIComponent(key)}`;
+        const res = await fetch(workerUrl, {
+          method: "GET",
+          headers: {
+            "Accept": "application/json",
+            "api-token": key,
+            "Authorization": `Bearer ${key}`
+          }
+        });
+        const data = await res.json();
+        const rawList = Array.isArray(data)
+          ? data
+          : (data.products || data.services || (data.data && Array.isArray(data.data) ? data.data : (data.data?.products || data.data?.data || [])));
+
+        if (!Array.isArray(rawList) || rawList.length === 0) {
+          alert("تم حفظ بيانات المورد، ولكن رد السيرفر لم يُرجع منتجات: " + JSON.stringify(data).slice(0, 300));
+          return;
+        }
+        if (typeof searchSupplierCatalog === "function") searchSupplierCatalog();
+      } catch (err) {
+        alert("خطأ أثناء الاتصال بالمورد: " + err.message);
+      }
+    };
+  </script>
+</body>
+</html>
